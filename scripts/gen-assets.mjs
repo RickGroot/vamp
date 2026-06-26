@@ -124,11 +124,57 @@ class Canvas {
 				if (cov > 0) this.blend(x, y, colorFn(x, y), cov);
 			}
 	}
+	// Filled rounded rectangle (signed-distance, anti-aliased).
+	roundRect(x, y, w, h, r, rgb, alpha = 1) {
+		const x0 = Math.max(0, Math.floor(x - 1)), x1 = Math.min(this.w - 1, Math.ceil(x + w + 1));
+		const y0 = Math.max(0, Math.floor(y - 1)), y1 = Math.min(this.h - 1, Math.ceil(y + h + 1));
+		const cx = x + w / 2, cy = y + h / 2, hx = w / 2 - r, hy = h / 2 - r;
+		for (let py = y0; py <= y1; py++)
+			for (let px = x0; px <= x1; px++) {
+				const qx = Math.abs(px + 0.5 - cx) - hx;
+				const qy = Math.abs(py + 0.5 - cy) - hy;
+				const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+				const cov = Math.max(0, Math.min(1, 0.5 - d)) * alpha;
+				if (cov > 0) this.blend(px, py, rgb, cov);
+			}
+	}
+	circle(cx, cy, r, rgb, alpha = 1) {
+		const x0 = Math.max(0, Math.floor(cx - r - 1)), x1 = Math.min(this.w - 1, Math.ceil(cx + r + 1));
+		const y0 = Math.max(0, Math.floor(cy - r - 1)), y1 = Math.min(this.h - 1, Math.ceil(cy + r + 1));
+		for (let py = y0; py <= y1; py++)
+			for (let px = x0; px <= x1; px++) {
+				const d = Math.hypot(px + 0.5 - cx, py + 0.5 - cy) - r;
+				const cov = Math.max(0, Math.min(1, 0.5 - d)) * alpha;
+				if (cov > 0) this.blend(px, py, rgb, cov);
+			}
+	}
 	rgb() {
 		const b = Buffer.alloc(this.w * this.h * 3);
 		for (let i = 0; i < this.buf.length; i++) b[i] = Math.max(0, Math.min(255, Math.round(this.buf[i])));
 		return b;
 	}
+}
+
+// Chord-quality palette (matches the app's colour-coding).
+const PALETTE = ['#1FB6A6', '#7B61FF', '#FF7B00', '#F0445A', '#E255A1', '#2E9BF0'].map(hex);
+
+// Soft diagonal-gradient glow centred at (gcx,gcy) so the dark field has depth.
+function glow(cv, gcx, gcy, strength = 0.08, spread = 6) {
+	for (let y = 0; y < cv.h; y++)
+		for (let x = 0; x < cv.w; x++) {
+			const dx = (x - gcx) / cv.w;
+			const dy = (y - gcy) / cv.h;
+			const g = Math.max(0, 1 - (dx * dx + dy * dy) * spread);
+			if (g > 0) cv.blend(x, y, grad((x / cv.w + y / cv.h) / 2), strength * g * g);
+		}
+}
+
+// A row/grid of colour-coded "chord card" chips, each with a little triad of dots.
+function chip(cv, x, y, w, h, color) {
+	cv.roundRect(x, y, w, h, Math.min(w, h) * 0.18, color);
+	const dotY = y + h / 2;
+	const dr = Math.min(w, h) * 0.075;
+	for (let k = 0; k < 3; k++) cv.circle(x + w / 2 + (k - 1) * dr * 3, dotY, dr, [255, 255, 255], 0.92);
 }
 
 // The V mark, matching static/vamp-icon.svg proportions, with a diagonal
@@ -221,6 +267,39 @@ function ogImage() {
 	return encodePNG(W, H, cv.rgb());
 }
 
+// ----------------------------------------------------- install promo shots
+function screenshotWide() {
+	const W = 1280, H = 720;
+	const cv = new Canvas(W, H);
+	cv.fill(BG);
+	glow(cv, W / 2, 210, 0.09, 5);
+	drawMark(cv, W / 2, 196, 196);
+	drawWord(cv, 'VAMP', W / 2, 360, 86, [255, 255, 255], 0.32, 0.085);
+	cv.stroke([[W / 2 - 86, 396], [W / 2 + 86, 396]], 4, (px) => grad((px - (W / 2 - 86)) / 172));
+	const n = 5, cw = 176, ch = 104, gap = 28;
+	let x = (W - (n * cw + (n - 1) * gap)) / 2;
+	for (let i = 0; i < n; i++, x += cw + gap) chip(cv, x, 486, cw, ch, PALETTE[i % PALETTE.length]);
+	return encodePNG(W, H, cv.rgb());
+}
+
+function screenshotNarrow() {
+	const W = 720, H = 1280;
+	const cv = new Canvas(W, H);
+	cv.fill(BG);
+	glow(cv, W / 2, 380, 0.1, 4);
+	drawMark(cv, W / 2, 360, 240);
+	drawWord(cv, 'VAMP', W / 2, 580, 98, [255, 255, 255], 0.32, 0.085);
+	cv.stroke([[W / 2 - 100, 624], [W / 2 + 100, 624]], 5, (px) => grad((px - (W / 2 - 100)) / 200));
+	const cw = 224, ch = 128, gx = 36, gy = 36, cols = 2, rows = 3;
+	const x0 = (W - (cols * cw + (cols - 1) * gx)) / 2, y0 = 724;
+	for (let r = 0; r < rows; r++)
+		for (let c = 0; c < cols; c++) {
+			const i = r * cols + c;
+			chip(cv, x0 + c * (cw + gx), y0 + r * (ch + gy), cw, ch, PALETTE[i % PALETTE.length]);
+		}
+	return encodePNG(W, H, cv.rgb());
+}
+
 // ----------------------------------------------------------------------- main
 console.log('Generating Vamp assets ->', OUT);
 writeIcon('pwa-192.png', 192, 0.6);
@@ -229,4 +308,8 @@ writeIcon('apple-touch-icon.png', 180, 0.66); // iOS rounds corners itself; no m
 writeIcon('favicon-48.png', 48, 0.66);
 writeFileSync(join(OUT, 'og-image.png'), ogImage());
 console.log('  og-image.png  1200x630');
+writeFileSync(join(OUT, 'screenshot-wide.png'), screenshotWide());
+console.log('  screenshot-wide.png  1280x720');
+writeFileSync(join(OUT, 'screenshot-narrow.png'), screenshotNarrow());
+console.log('  screenshot-narrow.png  720x1280');
 console.log('Done.');

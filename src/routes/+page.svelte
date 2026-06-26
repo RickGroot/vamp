@@ -32,6 +32,12 @@
 		inferKey(flattenSlots(progression.current.bars).map((f) => f.slot.chord))
 	);
 
+	// Tab title reflects the progression name once it's been named.
+	const pageTitle = $derived.by(() => {
+		const n = progression.current.name?.trim();
+		return n && n !== 'Untitled progression' ? `${n} · Vamp` : 'Vamp — Chord Sketchpad & Improv Trainer';
+	});
+
 	// Which bar the playhead is on (contains the active slot).
 	const playingBar = $derived.by(() => {
 		const active = progression.activeSlot;
@@ -73,6 +79,10 @@
 </script>
 
 <svelte:window onkeydown={onKeydown} />
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 <div class="frame">
 	<header class="head">

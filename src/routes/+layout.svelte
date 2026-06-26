@@ -2,7 +2,6 @@
 	import '../app.scss';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import favicon from '$lib/assets/favicon.svg';
 
 	let { children } = $props();
 
@@ -22,10 +21,6 @@
 		}
 	});
 </script>
-
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
 
 {@render children()}
 

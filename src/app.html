@@ -6,6 +6,9 @@
 		<meta name="text-scale" content="scale" />
 		<meta name="theme-color" content="#1c1a1f" />
 
+		<!-- Static title for pre-hydration / no-JS / scrapers. Because ssr=false,
+		     +page.svelte's svelte:head updates document.title client-side (e.g.
+		     "My tune · Vamp") without duplicating this tag in the static HTML. -->
 		<title>Vamp — Chord Sketchpad & Improv Trainer</title>
 		<meta
 			name="description"

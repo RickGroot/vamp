@@ -57,11 +57,31 @@ export default defineConfig(({ command }) => {
 						{ src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 						// Scalable source for browsers that prefer SVG app icons.
 						{ src: 'vamp-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
+					],
+					// Richer install UI on Android (narrow) and desktop (wide) Chromium.
+					screenshots: [
+						{
+							src: 'screenshot-wide.png',
+							sizes: '1280x720',
+							type: 'image/png',
+							form_factor: 'wide',
+							label: 'Vamp — sketch chord progressions and loop backing tracks to improvise over'
+						},
+						{
+							src: 'screenshot-narrow.png',
+							sizes: '720x1280',
+							type: 'image/png',
+							form_factor: 'narrow',
+							label: 'Vamp — a local-first chord sketchpad and improv trainer'
+						}
 					]
 				},
 				workbox: {
 					// Precache the app shell (incl. PNG icons). Samples are runtime-cached below.
 					globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+					// The share image + install screenshots are only fetched online by
+					// scrapers / the install dialog — no need to bloat the offline precache.
+					globIgnores: ['**/og-image.png', '**/screenshot-*.png'],
 					// SPA fallback for offline deep links.
 					navigateFallback: `${BASE_PATH}/`,
 					runtimeCaching: [
