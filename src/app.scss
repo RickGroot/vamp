@@ -1,0 +1,233 @@
+/* Vamp global styles — Hypersolid brand system.
+   Monochrome + a single orange accent, Suisse Int'l type, 4px grid, flat/sharp.
+   Tokens are the single source of truth; components use var(--…), never raw hex. */
+
+:root {
+	/* ---- Color: neutrals ---- */
+	--color-black: #1c1a1f;
+	--color-white: #ffffff;
+	--color-grey-800: #38383a;
+	--color-grey-600: #58595b;
+	--color-grey-500: #818286;
+	--color-grey-400: #b2b3b5;
+	--color-grey-200: #e4e4e4;
+	--color-grey-100: #f1f1f2;
+	--color-page-grey: #eeeeee;
+
+	/* ---- Color: accent ---- */
+	--color-orange: #ff7b00;
+	--color-orange-50: #fff1e4;
+	--color-orange-200: #ffc997;
+	--color-orange-700: #d74c00;
+
+	/* ---- Color: chord-quality palette (a bit more colour) ---- */
+	--c-major: #1fb6a6; /* teal */
+	--c-minor: #7b61ff; /* violet */
+	--c-dominant: #ff7b00; /* orange */
+	--c-diminished: #f0445a; /* red */
+	--c-augmented: #e255a1; /* pink */
+	--c-suspended: #2e9bf0; /* blue */
+	--c-other: #9a9ba0; /* grey */
+
+	/* Energetic gradient for the primary play action. */
+	--grad-play: linear-gradient(135deg, #ff7b00 0%, #e255a1 60%, #7b61ff 100%);
+
+	/* ---- Semantic ---- */
+	--color-bg: var(--color-white);
+	--color-text: var(--color-black);
+	--color-text-muted: var(--color-grey-600);
+	--color-text-faint: var(--color-grey-500);
+	--color-accent: var(--color-orange);
+	--color-border: var(--color-grey-200);
+	--color-divider: var(--color-black);
+
+	/* ---- Typography ---- */
+	--font-primary: "Suisse Int'l", 'Helvetica Neue', Arial, system-ui, sans-serif;
+
+	/* ---- Spacing (4px Precision Matrix) ---- */
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-6: 24px;
+	--space-8: 32px;
+	--space-12: 48px;
+	--space-16: 64px;
+	--space-24: 96px;
+
+	/* ---- Shape ---- */
+	--radius-none: 0px;
+	--radius-pill: 999px;
+	--border-hairline: 1px solid var(--color-black);
+
+	/* ---- Motion ---- */
+	--motion-fast: 120ms;
+	--motion-standard: 180ms;
+	--motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: var(--font-primary);
+	font-weight: 400;
+	font-size: 1rem;
+	line-height: 1.4;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+	font-weight: 300;
+	letter-spacing: -0.02em;
+	line-height: 1.05;
+	margin: 0;
+}
+
+button {
+	font-family: inherit;
+	cursor: pointer;
+}
+
+/* Uppercase tracked label — used for metadata, codes, small headers. */
+.label {
+	font-size: 0.6875rem;
+	font-weight: 400;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-text-muted);
+}
+
+/* The wordmark is the only Semi-Bold element. */
+.wordmark {
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	text-transform: uppercase;
+}
+
+/* Shared toolbar button (Undo/Redo, File, Share/export, …). */
+.bar-btn {
+	border: 1px solid var(--color-border);
+	background: transparent;
+	padding: var(--space-2) var(--space-3);
+	font-family: inherit;
+	font-size: 0.6875rem;
+	font-weight: 400;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-text);
+	border-radius: 0;
+
+	&:hover:not(:disabled) {
+		background: var(--color-black);
+		border-color: var(--color-black);
+		color: var(--color-white);
+	}
+
+	&:disabled {
+		color: var(--color-grey-400);
+		cursor: not-allowed;
+	}
+
+	&--on {
+		background: var(--c-major);
+		border-color: var(--c-major);
+		color: var(--color-white);
+	}
+}
+
+/* Shared dropdown menu (File, Share/export). */
+.vmenu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	margin-top: var(--space-1);
+	min-width: 220px;
+	background: var(--color-white);
+	border: 1px solid var(--color-black);
+	box-shadow: 0 8px 24px rgba(28, 26, 31, 0.14);
+	z-index: 50;
+	padding: var(--space-1);
+}
+
+.vmenu__row {
+	display: block;
+	width: 100%;
+	text-align: left;
+	border: 0;
+	background: transparent;
+	padding: var(--space-2) var(--space-3);
+	font-family: inherit;
+	font-size: 0.95rem;
+	color: var(--color-text);
+
+	&:hover {
+		background: var(--color-grey-100);
+	}
+}
+
+/* Shared labelled form-field (transport controls, loop control, …). */
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.field__row {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-2);
+}
+
+.field__input,
+.field__select {
+	font-family: inherit;
+	font-size: 1.25rem;
+	font-weight: 300;
+	letter-spacing: -0.02em;
+	color: var(--color-text);
+	background: var(--color-white);
+	border: 0;
+	border-bottom: var(--border-hairline);
+	padding: var(--space-1) 0;
+	border-radius: 0;
+
+	&:focus {
+		outline: none;
+		border-bottom-color: var(--color-accent);
+	}
+}
+
+.field__input {
+	/* Wide enough for a 3-digit BPM plus the native number spinner. */
+	width: 5.5ch;
+}
+
+.field__select {
+	min-width: 8ch;
+}
+
+.field__unit {
+	color: var(--color-text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}

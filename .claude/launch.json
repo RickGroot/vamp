@@ -1,0 +1,23 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "vamp-dev",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["dev", "--port", "5179"],
+			"port": 5179
+		},
+		{
+			"name": "vamp-preview",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["preview", "--port", "5180", "--strictPort"],
+			"port": 5180
+		},
+		{
+			"name": "vamp-static",
+			"runtimeExecutable": "node",
+			"runtimeArgs": ["scripts/preview-static.mjs"],
+			"port": 5181
+		}
+	]
+}
