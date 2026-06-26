@@ -72,6 +72,14 @@ pnpm check                      # type / svelte-check
 pnpm build                      # static production build -> build/
 ```
 
+Regenerate the brand raster assets (PWA icons, apple-touch icon, favicon PNG, and
+the Open Graph share image) from the gradient-V mark — dependency-free, no native
+image libs:
+
+```sh
+node scripts/gen-assets.mjs   # writes pwa-192/512.png, apple-touch-icon.png, favicon-48.png, og-image.png to static/
+```
+
 Preview the **real production build** under the GitHub Pages base path (`/vamp/`):
 
 ```sh

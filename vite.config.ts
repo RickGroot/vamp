@@ -43,7 +43,7 @@ export default defineConfig(({ command }) => {
 					name: 'Vamp — Chord Sketchpad',
 					short_name: 'Vamp',
 					description:
-						'Sketch chord progressions and loop backing tracks. Local-first, works offline.',
+						'Sketch chord progressions and loop backing tracks to improvise over. Local-first, installable, works offline.',
 					start_url: `${BASE_PATH}/`,
 					scope: `${BASE_PATH}/`,
 					display: 'standalone',
@@ -51,13 +51,17 @@ export default defineConfig(({ command }) => {
 					background_color: '#ffffff',
 					theme_color: '#1c1a1f',
 					icons: [
-						{ src: 'vamp-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-						{ src: 'vamp-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
+						{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+						{ src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+						// The mark sits inside the central safe zone, so it doubles as maskable.
+						{ src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+						// Scalable source for browsers that prefer SVG app icons.
+						{ src: 'vamp-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
 					]
 				},
 				workbox: {
-					// Precache the app shell. Samples are runtime-cached below.
-					globPatterns: ['**/*.{js,css,html,svg,ico,webmanifest}'],
+					// Precache the app shell (incl. PNG icons). Samples are runtime-cached below.
+					globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
 					// SPA fallback for offline deep links.
 					navigateFallback: `${BASE_PATH}/`,
 					runtimeCaching: [
