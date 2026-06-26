@@ -36,11 +36,9 @@ jobs:
       # SPA deep-link fallback for GitHub Pages (serves 404.html for unknown paths).
       - run: cp build/200.html build/404.html
 
-      # enablement:true auto-creates the Pages site (source: GitHub Actions) on
-      # the first run, so no manual Settings → Pages toggle is needed.
+      # Pages is enabled on the repo (Settings → Pages → Source: GitHub Actions),
+      # so this just reads the existing config — no create/admin token scope needed.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
