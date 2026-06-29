@@ -200,18 +200,19 @@
 
 	.head__mark {
 		font-size: 1.25rem;
-		background: var(--grad-play);
+		background: var(--grad-flow);
+		background-size: 230% 100%;
+		background-position: 0% 0;
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
-		transition: color var(--motion-standard) var(--motion-ease-out);
+		-webkit-text-fill-color: transparent;
+		transition: background-position var(--motion-grad) var(--motion-ease-out);
 	}
 
-	/* While playing, match the play button's teal so the brand "pulses" with playback. */
+	/* While playing, the wordmark sweeps to the same cool colours as the play button. */
 	.head__mark--playing {
-		background: none;
-		color: var(--c-major);
-		-webkit-text-fill-color: var(--c-major);
+		background-position: 100% 0;
 	}
 
 	.head__tag {

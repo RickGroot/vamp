@@ -154,20 +154,24 @@
 		height: 56px;
 		border: 0;
 		border-radius: var(--radius-pill);
-		background: var(--grad-play);
+		background: var(--grad-flow);
+		background-size: 230% 100%;
+		background-position: 0% 0;
 		color: var(--color-white);
 		flex: 0 0 auto;
 		transition:
+			background-position var(--motion-grad) var(--motion-ease-out),
 			filter var(--motion-fast) var(--motion-ease-out),
-			box-shadow var(--motion-fast) var(--motion-ease-out);
+			box-shadow var(--motion-standard) var(--motion-ease-out);
 		box-shadow: 0 4px 14px color-mix(in srgb, var(--c-augmented) 35%, transparent);
 
 		&:hover {
 			filter: brightness(1.08);
 		}
 
+		/* Playing → sweep to the cool end of the gradient. */
 		&--on {
-			background: var(--c-major);
+			background-position: 100% 0;
 			box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-major) 30%, transparent);
 		}
 

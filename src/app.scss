@@ -31,6 +31,11 @@
 
 	/* Energetic gradient for the primary play action. */
 	--grad-play: linear-gradient(135deg, #ff7b00 0%, #e255a1 60%, #7b61ff 100%);
+	/* Wide warm→cool gradient that animates by sliding background-position: the
+	   left (0%) reads as the "play" colours, the right (100%) as the cool "playing"
+	   colours. Shared by the play button, the wordmark and the section chips so a
+	   single state change sweeps the same colours everywhere. */
+	--grad-flow: linear-gradient(135deg, #ff7b00 0%, #e255a1 16%, #7b61ff 36%, #1fb6a6 68%, #2e9bf0 100%);
 
 	/* ---- Semantic ---- */
 	--color-bg: var(--color-white);
@@ -63,6 +68,7 @@
 	/* ---- Motion ---- */
 	--motion-fast: 120ms;
 	--motion-standard: 180ms;
+	--motion-grad: 650ms;
 	--motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -160,8 +166,16 @@ button {
 	border-radius: 7px;
 	display: grid;
 	place-items: center;
-	background: var(--ic, var(--c-other));
 	color: var(--color-white);
+	background: var(--grad-flow);
+	background-size: 230% 100%;
+	background-position: 0% 0;
+	transition: background-position var(--motion-grad) var(--motion-ease-out);
+}
+
+/* Open section → sweep the chip to the cool "playing" colours. */
+.sec-icon--open {
+	background-position: 100% 0;
 }
 
 /* Shared dropdown menu (File, Share/export). */

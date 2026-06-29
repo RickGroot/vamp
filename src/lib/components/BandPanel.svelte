@@ -41,7 +41,7 @@
 <section class="band" aria-label="Backing band">
 	<button class="band__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
-		<span class="sec-icon" style="--ic: var(--c-major)" aria-hidden="true">
+		<span class="sec-icon" class:sec-icon--open={open} aria-hidden="true">
 			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
 				<path d="M6 4v16M12 4v16M18 4v16" />
 				<circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
