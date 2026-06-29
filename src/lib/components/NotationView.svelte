@@ -12,6 +12,13 @@
 	<div class="notation__head">
 		<button class="notation__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 			<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
+			<span class="sec-icon" style="--ic: var(--c-minor)" aria-hidden="true">
+				<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+					<path d="M9 17V5l9-2v12" />
+					<circle cx="6.5" cy="17" r="2.6" fill="currentColor" stroke="none" />
+					<circle cx="15.5" cy="15" r="2.6" fill="currentColor" stroke="none" />
+				</svg>
+			</span>
 			<span class="wordmark notation__title">Notation</span>
 			<span class="label notation__hint">{showNotes ? 'Chord tones on the staff' : 'Chord chart'}</span>
 		</button>

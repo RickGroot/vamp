@@ -150,6 +150,20 @@ button {
 	}
 }
 
+/* Small colour chip on a section header (Band, Notation, Practice) — a light,
+   consistent "app-like" accent. Colour via `--ic` (defaults to neutral grey). */
+.sec-icon {
+	flex: 0 0 auto;
+	align-self: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 7px;
+	display: grid;
+	place-items: center;
+	background: var(--ic, var(--c-other));
+	color: var(--color-white);
+}
+
 /* Shared dropdown menu (File, Share/export). */
 .vmenu {
 	position: absolute;

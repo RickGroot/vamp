@@ -17,6 +17,11 @@
 <section class="practice" aria-label="Practice tools">
 	<button class="practice__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
+		<span class="sec-icon" style="--ic: var(--c-augmented)" aria-hidden="true">
+			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" />
+			</svg>
+		</span>
 		<span class="wordmark practice__title">Practice</span>
 		<span class="label practice__hint">Drills · Drone · MIDI · Record</span>
 	</button>
