@@ -387,10 +387,12 @@ button {
 .frame.art .add-bar:hover,
 .frame.art .inspire:hover {
 	background-image: var(--grad-flow);
-	background-size: 250% 100%;
+	background-size: 300% 100%;
+	background-repeat: no-repeat;
 	border-color: transparent;
 	color: var(--color-white);
-	animation: art-sweep 2.4s linear infinite;
+	/* ping-pong within the gradient (no tiling seam) for a soft drift */
+	animation: art-sweep 5s ease-in-out infinite alternate;
 }
 .frame.art .bar-btn:active:not(:disabled),
 .frame.art .add-bar:active,
@@ -467,7 +469,7 @@ button {
 		background-position: 0% 0;
 	}
 	to {
-		background-position: 250% 0;
+		background-position: 100% 0;
 	}
 }
 @keyframes art-pulse {
