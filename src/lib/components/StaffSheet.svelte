@@ -42,10 +42,15 @@
 	// measure each one's true content extent.
 	const PROV_TOP = 200;
 	const PROV_H = 360;
-	const ROW_GAP = 16; // gap between a row's lowest note and the next row's chord names
+	const ROW_GAP = 16; // gap between one row's lowest content and the next row's top
 	const PAD = 8;
-	const LABEL_GAP = 10; // gap between a chord name and the content below it
-	const LABEL_ASCENT = CHORD_FONT_SIZE + 3; // vertical room a chord name occupies
+	const LABEL_GAP = 8; // gap between a chord name and the notes/staff below it
+	const LABEL_ASCENT = CHORD_FONT_SIZE; // vertical room a chord name occupies
+	// Treble-clef overhang past the staff lines (constant) — reserved so the clef is
+	// never clipped, and notehead slack around VexFlow's note bounding box.
+	const CLEF_ABOVE = 12;
+	const CLEF_BELOW = 16;
+	const HEAD_PAD = 6;
 
 	interface Placement {
 		bar: Bar;
@@ -135,8 +140,13 @@
 				return { note, vi };
 			});
 
-		// Draw a bar's stave + notes at baseline y; return each note's x + slot for labels.
-		const drawPlacement = (ctx: RenderContext, p: Placement, y: number): Label[] => {
+		const boxY = (bb: { getY?: () => number; y?: number }) => bb.getY?.() ?? bb.y ?? 0;
+		const boxH = (bb: { getH?: () => number; h?: number }) => bb.getH?.() ?? bb.h ?? 0;
+
+		// Draw a bar's stave + notes at baseline y. Returns the chord labels, the stave's
+		// true top/bottom line Y, and the notes' vertical extent — all from VexFlow's own
+		// geometry (DOM getBBox is unreliable for the font-glyph noteheads/clef).
+		const drawPlacement = (ctx: RenderContext, p: Placement, y: number) => {
 			const stave = new Stave(p.x, y, p.w);
 			if (p.firstInRow) stave.addClef('treble');
 			if (p.index === 0) stave.addTimeSignature(`${ts.numerator}/${ts.denominator}`);
@@ -152,51 +162,74 @@
 			new Formatter().joinVoices([voice]).format([voice], p.w - reserved);
 			voice.draw(ctx, stave);
 
-			return built.map((b) => ({
+			let minY = Infinity;
+			let maxY = -Infinity;
+			for (const b of built) {
+				try {
+					const bb = b.note.getBoundingBox?.();
+					if (bb) {
+						minY = Math.min(minY, boxY(bb));
+						maxY = Math.max(maxY, boxY(bb) + boxH(bb));
+					}
+				} catch {
+					/* ignore unmeasurable note */
+				}
+			}
+			const labels: Label[] = built.map((b) => ({
 				x: b.note.getAbsoluteX(),
 				row: p.row,
 				slot: b.vi,
 				symbol: written[b.vi]
 			}));
+			return { labels, topLine: stave.getYForLine(0), bottomLine: stave.getYForLine(4), minY, maxY };
 		};
 
-		// Pass 1 — draw spaced out and measure each row's note extent above/below the staff.
+		// Pass 1 — draw spaced out and gather, per row, the staff lines + note extent.
 		const r1 = new Renderer(el, Renderer.Backends.SVG);
 		r1.resize(available, PROV_TOP + rowCount * PROV_H);
 		const c1 = r1.getContext();
-		for (const p of placements) drawPlacement(c1, p, PROV_TOP + p.row * PROV_H);
-
-		const svg1 = el.querySelector('svg');
-		const staveH = (() => {
-			const s = svg1?.querySelector('.vf-stave') as SVGGraphicsElement | null;
-			try {
-				return s ? s.getBBox().height : 40;
-			} catch {
-				return 40;
-			}
-		})();
-		const noteAbove = Array.from({ length: rowCount }, () => 0);
-		const below = Array.from({ length: rowCount }, () => 4);
-		svg1?.querySelectorAll('.vf-stavenote').forEach((node) => {
-			try {
-				const b = (node as SVGGraphicsElement).getBBox();
-				const r = Math.round((b.y + b.height / 2 - PROV_TOP) / PROV_H);
-				if (r < 0 || r >= rowCount) return;
-				const staveY = PROV_TOP + r * PROV_H;
-				noteAbove[r] = Math.max(noteAbove[r], staveY - b.y);
-				below[r] = Math.max(below[r], b.y + b.height - (staveY + staveH));
-			} catch {
-				/* skip un-measurable node */
-			}
-		});
-
-		// Reserve room above each row for its highest note plus the chord-name band.
-		const above = noteAbove.map((n) => Math.max(0, n) + LABEL_GAP + LABEL_ASCENT);
-		const rowY: number[] = [PAD + above[0]];
-		for (let r = 1; r < rowCount; r++) {
-			rowY[r] = rowY[r - 1] + staveH + Math.max(0, below[r - 1]) + ROW_GAP + above[r];
+		const topLine1 = Array.from({ length: rowCount }, () => 0);
+		const bottomLine1 = Array.from({ length: rowCount }, () => 40);
+		const rowMinY = Array.from({ length: rowCount }, () => Infinity);
+		const rowMaxY = Array.from({ length: rowCount }, () => -Infinity);
+		const hasName = Array.from({ length: rowCount }, () => false);
+		for (const p of placements) {
+			const res = drawPlacement(c1, p, PROV_TOP + p.row * PROV_H);
+			topLine1[p.row] = res.topLine;
+			bottomLine1[p.row] = res.bottomLine;
+			if (res.minY < rowMinY[p.row]) rowMinY[p.row] = res.minY;
+			if (res.maxY > rowMaxY[p.row]) rowMaxY[p.row] = res.maxY;
+			if (res.labels.some((l) => l.symbol.trim())) hasName[p.row] = true;
 		}
-		const total = Math.ceil(rowY[rowCount - 1] + staveH + Math.max(0, below[rowCount - 1]) + PAD);
+
+		const lineSpan = bottomLine1[0] - topLine1[0];
+		const staveTopPad = topLine1[0] - PROV_TOP;
+		const clamp0 = (n: number) => Math.max(0, n);
+
+		// How far notes poke above the top line / below the bottom line (0 if within).
+		const noteAbove = Array.from({ length: rowCount }, (_, r) =>
+			rowMinY[r] === Infinity ? 0 : clamp0(topLine1[r] - rowMinY[r] + HEAD_PAD)
+		);
+		const noteBelow = Array.from({ length: rowCount }, (_, r) =>
+			rowMaxY[r] === -Infinity ? 0 : clamp0(rowMaxY[r] - bottomLine1[r] + HEAD_PAD)
+		);
+
+		// Reserve, per row: above the top line — the chord-name band over the highest note,
+		// or the clef ascent; below — the lowest note or the clef descent.
+		const aboveReserve = Array.from({ length: rowCount }, (_, r) =>
+			Math.max(CLEF_ABOVE, noteAbove[r] + (hasName[r] ? LABEL_GAP + LABEL_ASCENT : 0))
+		);
+		const belowReserve = Array.from({ length: rowCount }, (_, r) =>
+			Math.max(CLEF_BELOW, noteBelow[r])
+		);
+
+		// Pack rows, tracking each row's top staff line.
+		const topLine = Array.from({ length: rowCount }, () => 0);
+		topLine[0] = PAD + aboveReserve[0];
+		for (let r = 1; r < rowCount; r++) {
+			topLine[r] = topLine[r - 1] + lineSpan + belowReserve[r - 1] + ROW_GAP + aboveReserve[r];
+		}
+		const total = Math.ceil(topLine[rowCount - 1] + lineSpan + belowReserve[rowCount - 1] + PAD);
 
 		// Pass 2 — final render at packed positions.
 		el.innerHTML = '';
@@ -204,14 +237,14 @@
 		r2.resize(available, total);
 		const c2 = r2.getContext();
 		const labels: Label[] = [];
-		for (const p of placements) labels.push(...drawPlacement(c2, p, rowY[p.row]));
+		for (const p of placements) labels.push(...drawPlacement(c2, p, topLine[p.row] - staveTopPad).labels);
 
-		// Chord names: our own SVG text, a fixed gap above each row's highest content.
+		// Chord names: our own SVG text, a fixed gap above each row's highest note / top line.
 		const svg2 = el.querySelector('svg');
 		const NS = 'http://www.w3.org/2000/svg';
 		for (const lab of labels) {
 			if (!lab.symbol.trim() || !svg2) continue;
-			const baseline = rowY[lab.row] - Math.max(0, noteAbove[lab.row]) - LABEL_GAP;
+			const baseline = topLine[lab.row] - clamp0(noteAbove[lab.row]) - LABEL_GAP;
 			const t = document.createElementNS(NS, 'text');
 			t.setAttribute('x', String(Math.round(lab.x)));
 			t.setAttribute('y', String(Math.round(baseline)));
