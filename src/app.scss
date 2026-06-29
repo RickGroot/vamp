@@ -176,13 +176,20 @@ button {
 	content: '';
 	position: absolute;
 	inset: 0;
+	z-index: 0;
 	border-radius: inherit;
 	background: linear-gradient(135deg, var(--c-major), var(--c-suspended));
 	opacity: 0;
 	transition: opacity var(--motion-grad) var(--motion-ease-out);
 }
 
-/* Open section → fade in the cool gradient. (The glyph paints above ::before.) */
+/* Keep the glyph above the cross-fading ::before overlay. */
+.sec-icon > svg {
+	position: relative;
+	z-index: 1;
+}
+
+/* Open section → fade in the cool gradient. */
 .sec-icon--open::before {
 	opacity: 1;
 }
