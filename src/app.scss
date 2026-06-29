@@ -286,14 +286,28 @@ button {
 	inset: -12%;
 	z-index: 0;
 	pointer-events: none;
-	opacity: 0.18;
+	opacity: 0.2;
 	filter: blur(34px);
 	background:
 		radial-gradient(38% 38% at 22% 26%, color-mix(in srgb, var(--c-dominant) 70%, transparent), transparent 70%),
 		radial-gradient(42% 42% at 80% 22%, color-mix(in srgb, var(--c-augmented) 65%, transparent), transparent 70%),
 		radial-gradient(48% 48% at 66% 84%, color-mix(in srgb, var(--c-minor) 65%, transparent), transparent 70%),
 		radial-gradient(44% 44% at 24% 80%, color-mix(in srgb, var(--c-suspended) 60%, transparent), transparent 70%);
-	animation: art-drift 28s ease-in-out infinite alternate;
+	/* cursor parallax (JS sets --art-px/--art-py), layered over the drift + hue animations */
+	translate: var(--art-px, 0) var(--art-py, 0);
+	transition: translate 400ms var(--motion-ease-out);
+	animation:
+		art-drift 28s ease-in-out infinite alternate,
+		art-hue 64s linear infinite;
+}
+.art-bg::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(40% 40% at 70% 32%, color-mix(in srgb, var(--c-augmented) 55%, transparent), transparent 70%),
+		radial-gradient(46% 46% at 30% 62%, color-mix(in srgb, var(--c-major) 50%, transparent), transparent 70%);
+	animation: art-drift2 36s ease-in-out infinite alternate;
 }
 
 /* App content sits above the aurora. */
@@ -359,14 +373,57 @@ button {
 	animation: art-wash 22s ease-in-out infinite alternate;
 }
 
-/* Gradient hovers on the main buttons. */
+/* Gradient hovers + a continuous sweep on the main buttons. */
+.frame.art .bar-btn,
+.frame.art .add-bar,
+.frame.art .inspire,
+.frame.art .play {
+	transition:
+		transform var(--motion-fast) var(--motion-ease-out),
+		box-shadow var(--motion-standard) var(--motion-ease-out),
+		background-position var(--motion-grad) var(--motion-ease-out);
+}
 .frame.art .bar-btn:hover:not(:disabled),
-.frame.art .add-bar:hover {
+.frame.art .add-bar:hover,
+.frame.art .inspire:hover {
 	background-image: var(--grad-flow);
-	background-size: 200% 100%;
-	background-position: 50% 0;
+	background-size: 250% 100%;
 	border-color: transparent;
 	color: var(--color-white);
+	animation: art-sweep 2.4s linear infinite;
+}
+.frame.art .bar-btn:active:not(:disabled),
+.frame.art .add-bar:active,
+.frame.art .inspire:active,
+.frame.art .play:active {
+	transform: scale(0.95);
+}
+
+/* Bar cards lift + glow on hover. */
+.frame.art .bar {
+	transition:
+		transform 200ms var(--motion-ease-out),
+		box-shadow 250ms var(--motion-ease-out);
+}
+.frame.art .bar:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 12px 28px color-mix(in srgb, var(--c-augmented) 24%, transparent);
+	z-index: 2;
+}
+
+/* Glowing animated outline on the focused chord slot (in its quality colour). */
+.frame.art .slot:focus-within {
+	box-shadow:
+		0 0 0 2px color-mix(in srgb, var(--q, var(--c-major)) 55%, transparent),
+		0 0 20px color-mix(in srgb, var(--q, var(--c-major)) 35%, transparent);
+}
+
+/* Playing: a breathing aura on the play button + flowing wordmark. */
+.frame.art .play--on {
+	animation: art-pulse 1.7s ease-in-out infinite;
+}
+.frame.art .head__mark--playing {
+	animation: art-wordflow 4.5s linear infinite;
 }
 
 @keyframes art-drift {
@@ -387,6 +444,75 @@ button {
 		background-position:
 			100% 50%,
 			0 0;
+	}
+}
+@keyframes art-hue {
+	0% {
+		filter: blur(34px) hue-rotate(0deg);
+	}
+	100% {
+		filter: blur(34px) hue-rotate(52deg);
+	}
+}
+@keyframes art-drift2 {
+	0% {
+		transform: translate3d(2%, 1%, 0) scale(1.1) rotate(0deg);
+	}
+	100% {
+		transform: translate3d(-2%, -1.5%, 0) scale(1.04) rotate(-5deg);
+	}
+}
+@keyframes art-sweep {
+	from {
+		background-position: 0% 0;
+	}
+	to {
+		background-position: 250% 0;
+	}
+}
+@keyframes art-pulse {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, var(--c-major) 28%, transparent),
+			0 6px 26px color-mix(in srgb, var(--c-suspended) 12%, transparent);
+	}
+	50% {
+		box-shadow:
+			0 0 0 9px color-mix(in srgb, var(--c-major) 16%, transparent),
+			0 8px 36px color-mix(in srgb, var(--c-suspended) 48%, transparent);
+	}
+}
+@keyframes art-wordflow {
+	from {
+		background-position: 55% 0;
+	}
+	to {
+		background-position: 255% 0;
+	}
+}
+
+/* Click ripple (spawned by JS only while art mode is on). */
+.art-ripple {
+	position: fixed;
+	z-index: 9999;
+	width: 16px;
+	height: 16px;
+	margin: -8px 0 0 -8px;
+	border-radius: 50%;
+	pointer-events: none;
+	background: var(--grad-flow);
+	background-size: 200% 100%;
+	animation: art-ripple-pop 600ms var(--motion-ease-out) forwards;
+}
+@keyframes art-ripple-pop {
+	0% {
+		transform: scale(0.35);
+		opacity: 0.5;
+	}
+	100% {
+		transform: scale(11);
+		opacity: 0;
 	}
 }
 

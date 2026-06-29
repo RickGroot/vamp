@@ -55,6 +55,50 @@
 		if (shared) progression.load(shared);
 	});
 
+	// Art mode: cursor-parallax aurora + click ripples. Only attached while art
+	// mode is on, and skipped entirely for reduced-motion users.
+	$effect(() => {
+		if (!view.artMode || typeof window === 'undefined') return;
+		if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+		const root = document.documentElement;
+		let raf = 0;
+		let mx = 0.5,
+			my = 0.5,
+			tx = 0.5,
+			ty = 0.5;
+		const tick = () => {
+			raf = 0;
+			mx += (tx - mx) * 0.12;
+			my += (ty - my) * 0.12;
+			root.style.setProperty('--art-px', `${((mx - 0.5) * 30).toFixed(1)}px`);
+			root.style.setProperty('--art-py', `${((my - 0.5) * 30).toFixed(1)}px`);
+			if (Math.abs(tx - mx) > 0.001 || Math.abs(ty - my) > 0.001) raf = requestAnimationFrame(tick);
+		};
+		const onMove = (e: PointerEvent) => {
+			tx = e.clientX / window.innerWidth;
+			ty = e.clientY / window.innerHeight;
+			if (!raf) raf = requestAnimationFrame(tick);
+		};
+		const onDown = (e: PointerEvent) => {
+			const ripple = document.createElement('div');
+			ripple.className = 'art-ripple';
+			ripple.style.left = `${e.clientX}px`;
+			ripple.style.top = `${e.clientY}px`;
+			document.body.appendChild(ripple);
+			ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+		};
+		window.addEventListener('pointermove', onMove, { passive: true });
+		window.addEventListener('pointerdown', onDown, { passive: true });
+		return () => {
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerdown', onDown);
+			cancelAnimationFrame(raf);
+			root.style.removeProperty('--art-px');
+			root.style.removeProperty('--art-py');
+		};
+	});
+
 	function onKeydown(event: KeyboardEvent) {
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
