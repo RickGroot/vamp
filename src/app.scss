@@ -159,6 +159,7 @@ button {
 /* Small colour chip on a section header (Band, Notation, Practice) — a light,
    consistent "app-like" accent. Colour via `--ic` (defaults to neutral grey). */
 .sec-icon {
+	position: relative;
 	flex: 0 0 auto;
 	align-self: center;
 	width: 26px;
@@ -167,15 +168,23 @@ button {
 	display: grid;
 	place-items: center;
 	color: var(--color-white);
-	background: var(--grad-flow);
-	background-size: 230% 100%;
-	background-position: 0% 0;
-	transition: background-position var(--motion-grad) var(--motion-ease-out);
+	/* Smooth two-colour warm gradient (closed); the cool one cross-fades on top. */
+	background: linear-gradient(135deg, var(--c-dominant), var(--c-augmented));
 }
 
-/* Open section → sweep the chip to the cool "playing" colours. */
-.sec-icon--open {
-	background-position: 100% 0;
+.sec-icon::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(135deg, var(--c-major), var(--c-suspended));
+	opacity: 0;
+	transition: opacity var(--motion-grad) var(--motion-ease-out);
+}
+
+/* Open section → fade in the cool gradient. (The glyph paints above ::before.) */
+.sec-icon--open::before {
+	opacity: 1;
 }
 
 /* Shared dropdown menu (File, Share/export). */
