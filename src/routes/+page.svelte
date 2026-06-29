@@ -16,6 +16,7 @@
 	import ShareMenu from '$lib/components/ShareMenu.svelte';
 	import BandPanel from '$lib/components/BandPanel.svelte';
 	import PracticePanel from '$lib/components/PracticePanel.svelte';
+	import ScalesSection from '$lib/components/ScalesSection.svelte';
 
 	// Global index of each bar's first slot, for active-slot matching.
 	const baseIndices = $derived.by(() => {
@@ -185,6 +186,8 @@
 		</section>
 
 		<NotationView />
+
+		<ScalesSection />
 
 		<BandPanel />
 

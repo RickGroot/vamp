@@ -5,6 +5,7 @@
 	import { romanNumeral, type KeyInfo } from '$lib/model/key';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view } from '$lib/stores/view.svelte';
+	import { scales } from '$lib/stores/scales.svelte';
 
 	interface Props {
 		barIndex: number;
@@ -141,6 +142,22 @@
 		onkeydown={onKeydown}
 	/>
 
+	{#if family}
+		<button
+			class="slot__scale"
+			type="button"
+			title={`Scales for ${displayValue}`}
+			aria-label={`Show scales for ${displayValue}`}
+			onclick={() => scales.showForChord(chord)}
+		>
+			<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
+				<rect x="1" y="9" width="3" height="5" rx="1" />
+				<rect x="6.5" y="6" width="3" height="8" rx="1" />
+				<rect x="12" y="3" width="3" height="11" rx="1" />
+			</svg>
+		</button>
+	{/if}
+
 	{#if roman}<span class="slot__roman">{roman}</span>{/if}
 
 	{#if canRemove}
@@ -234,6 +251,27 @@
 		color: var(--color-text-faint);
 		padding: 0 0 var(--space-2);
 		margin-top: -6px;
+	}
+
+	.slot__scale {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 22px;
+		height: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 0;
+		background: transparent;
+		color: var(--q, var(--color-grey-400));
+		opacity: 0.6;
+		cursor: pointer;
+		transition: opacity var(--motion-fast) var(--motion-ease-out);
+
+		&:hover {
+			opacity: 1;
+		}
 	}
 
 	.slot__remove {
