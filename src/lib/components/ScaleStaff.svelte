@@ -13,6 +13,11 @@
 
 	const signature = $derived(notes.join(','));
 
+	const PAD = 8;
+	const CLEF_ABOVE = 12;
+	const CLEF_BELOW = 16;
+	const PROV_Y = 150;
+
 	function draw(VF: typeof import('vexflow')) {
 		const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = VF;
 		const el = container;
@@ -24,26 +29,63 @@
 
 		const width = Math.max(320, (el.clientWidth || 480) - 4);
 		lastWidth = el.clientWidth || 0;
-		const height = 132;
+		const fmtWidth = width - 16 - 48;
 
-		const renderer = new Renderer(el, Renderer.Backends.SVG);
-		renderer.resize(width, height);
-		const ctx = renderer.getContext();
+		const makeNotes = () =>
+			keys.map((k) => {
+				const note = new StaveNote({ keys: [k.key], duration: 'q', stemDirection: -1 });
+				if (k.accidental) note.addModifier(new Accidental(k.accidental), 0);
+				return note;
+			});
+		const buildVoice = (ns: InstanceType<typeof StaveNote>[]) => {
+			const v = new Voice({ numBeats: keys.length, beatValue: 4 }).setMode(Voice.Mode.SOFT);
+			v.addTickables(ns);
+			return v;
+		};
+		const boxY = (bb: { getY?: () => number; y?: number }) => bb.getY?.() ?? bb.y ?? 0;
+		const boxH = (bb: { getH?: () => number; h?: number }) => bb.getH?.() ?? bb.h ?? 0;
 
-		const stave = new Stave(8, 34, width - 16);
-		stave.addClef('treble');
-		stave.setContext(ctx).draw();
+		const render = (y: number, height: number) => {
+			const r = new Renderer(el, Renderer.Backends.SVG);
+			r.resize(width, height);
+			const ctx = r.getContext();
+			const stave = new Stave(8, y, width - 16);
+			stave.addClef('treble');
+			stave.setContext(ctx).draw();
+			const ns = makeNotes();
+			const voice = buildVoice(ns);
+			new Formatter().joinVoices([voice]).format([voice], fmtWidth);
+			voice.draw(ctx, stave);
+			return { stave, notes: ns };
+		};
 
-		const staveNotes = keys.map((k) => {
-			const note = new StaveNote({ keys: [k.key], duration: 'q', stemDirection: -1 });
-			if (k.accidental) note.addModifier(new Accidental(k.accidental), 0);
-			return note;
-		});
+		// Pass 1 — measure the note extent above/below the staff lines.
+		const { stave, notes: ns } = render(PROV_Y, PROV_Y * 2);
+		const topLine = stave.getYForLine(0);
+		const bottomLine = stave.getYForLine(4);
+		let minTop = Infinity;
+		let maxBot = -Infinity;
+		for (const n of ns) {
+			try {
+				const bb = n.getBoundingBox?.();
+				if (bb) {
+					minTop = Math.min(minTop, boxY(bb));
+					maxBot = Math.max(maxBot, boxY(bb) + boxH(bb));
+				}
+			} catch {
+				/* ignore */
+			}
+		}
+		const aboveLine = minTop === Infinity ? 0 : Math.max(0, topLine - minTop);
+		const belowLine = maxBot === -Infinity ? 0 : Math.max(0, maxBot - bottomLine);
+		const staveTopPad = topLine - PROV_Y;
+		const lineSpan = bottomLine - topLine;
+		const finalTopLine = PAD + Math.max(aboveLine, CLEF_ABOVE);
+		const total = Math.ceil(finalTopLine + lineSpan + Math.max(belowLine, CLEF_BELOW) + PAD);
 
-		const voice = new Voice({ numBeats: keys.length, beatValue: 4 }).setMode(Voice.Mode.SOFT);
-		voice.addTickables(staveNotes);
-		new Formatter().joinVoices([voice]).format([voice], width - 16 - 48);
-		voice.draw(ctx, stave);
+		// Pass 2 — render at a position that fits all the notes.
+		el.innerHTML = '';
+		render(finalTopLine - staveTopPad, total);
 	}
 
 	async function render() {
@@ -74,7 +116,7 @@
 	.scale-staff {
 		width: 100%;
 		max-width: 560px;
-		min-height: 132px;
+		min-height: 80px;
 		background: var(--color-white);
 		border: 1px solid var(--color-border);
 	}
