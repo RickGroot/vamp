@@ -14,6 +14,7 @@
 	import SuggestMenu from '$lib/components/SuggestMenu.svelte';
 	import FileMenu from '$lib/components/FileMenu.svelte';
 	import ShareMenu from '$lib/components/ShareMenu.svelte';
+	import BandPanel from '$lib/components/BandPanel.svelte';
 	import PracticePanel from '$lib/components/PracticePanel.svelte';
 
 	// Global index of each bar's first slot, for active-slot matching.
@@ -170,6 +171,8 @@
 		</section>
 
 		<NotationView />
+
+		<BandPanel />
 
 		<PracticePanel defaultRoot={keyInfo.tonic} />
 	</main>

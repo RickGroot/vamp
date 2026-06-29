@@ -1,11 +1,8 @@
 <script lang="ts">
-	import { INSTRUMENT_LABELS, INSTRUMENT_ORDER } from '$lib/audio/instruments';
 	import { progression, TEMPO_MIN, TEMPO_MAX } from '$lib/stores/progression.svelte';
 	import { bpmFromTaps, registerTap } from '$lib/audio/tapTempo';
 	import { view } from '$lib/stores/view.svelte';
 	import LoopControl from './LoopControl.svelte';
-	import GrooveControl from './GrooveControl.svelte';
-	import type { InstrumentId } from '$lib/model/types';
 
 	const TIME_SIGNATURES = [
 		{ label: '4/4', numerator: 4, denominator: 4 },
@@ -41,10 +38,6 @@
 		const label = (event.target as HTMLSelectElement).value;
 		const match = TIME_SIGNATURES.find((t) => t.label === label);
 		if (match) progression.setTimeSignature({ numerator: match.numerator, denominator: match.denominator });
-	}
-
-	function onInstrument(event: Event) {
-		progression.setInstrument((event.target as HTMLSelectElement).value as InstrumentId);
 	}
 </script>
 
@@ -107,22 +100,8 @@
 		<LoopControl />
 	</div>
 
-	<!-- Arrange: how it sounds / reads. -->
+	<!-- Arrange: track-wide settings. (Instrument / groove / mix live in the Band panel.) -->
 	<div class="transport__row">
-		<div class="field">
-			<label class="label" for="instrument">Instrument</label>
-			<select
-				id="instrument"
-				class="field__select"
-				value={progression.current.instrument}
-				onchange={onInstrument}
-			>
-				{#each INSTRUMENT_ORDER as id (id)}
-					<option value={id}>{INSTRUMENT_LABELS[id]}</option>
-				{/each}
-			</select>
-		</div>
-
 		<div class="field">
 			<label class="label" for="timesig">Time</label>
 			<select id="timesig" class="field__select" value={currentTs} onchange={onTimeSignature}>
@@ -149,8 +128,6 @@
 				>
 			</div>
 		</div>
-
-		<GrooveControl />
 	</div>
 </div>
 

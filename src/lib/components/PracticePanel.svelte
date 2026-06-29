@@ -1,5 +1,4 @@
 <script lang="ts">
-	import MixerControl from './MixerControl.svelte';
 	import DroneControl from './DroneControl.svelte';
 	import Recorder from './Recorder.svelte';
 
@@ -15,21 +14,19 @@
 
 <section class="practice" aria-label="Practice tools">
 	<button class="practice__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-		<span class="practice__chevron" class:practice__chevron--open={open} aria-hidden="true">▸</span>
+		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
 		<span class="wordmark practice__title">Practice</span>
-		<span class="label practice__hint">Mixer · Trade solos · Drone · Record</span>
+		<span class="label practice__hint">Play along — drone &amp; record</span>
 	</button>
 
 	{#if open}
 		<div class="practice__grid">
-			<div class="card card--wide">
-				<MixerControl />
-			</div>
 			<div class="card">
 				<span class="label card__title">Drone</span>
+				<span class="card__sub">A held root to solo over — pick scales/modes against it.</span>
 				<DroneControl {defaultRoot} />
 			</div>
-			<div class="card card--wide">
+			<div class="card">
 				<Recorder />
 			</div>
 		</div>
@@ -38,7 +35,7 @@
 
 <style lang="scss">
 	.practice {
-		margin-top: var(--space-12);
+		margin-top: var(--space-8);
 		border-top: 1px solid var(--color-border);
 		padding-top: var(--space-6);
 	}
@@ -55,22 +52,22 @@
 		color: var(--color-text);
 	}
 
-	.practice__chevron {
+	.chev {
 		font-size: 0.8rem;
 		color: var(--color-text-faint);
 		transition: transform var(--motion-fast) var(--motion-ease-out);
 	}
-
-	.practice__chevron--open {
+	.chev--open {
 		transform: rotate(90deg);
 	}
 
 	.practice__title {
 		font-size: 1.1rem;
 	}
-
 	.practice__hint {
 		color: var(--color-text-faint);
+		text-transform: none;
+		letter-spacing: 0;
 	}
 
 	.practice__grid {
@@ -86,12 +83,15 @@
 		padding: var(--space-4);
 	}
 
-	.card--wide {
-		grid-column: 1 / -1;
-	}
-
 	.card__title {
 		display: block;
+		margin-bottom: var(--space-1);
+	}
+
+	.card__sub {
+		display: block;
+		font-size: 0.78rem;
+		color: var(--color-text-faint);
 		margin-bottom: var(--space-3);
 	}
 
