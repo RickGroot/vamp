@@ -4,8 +4,11 @@
 	import { parseChord } from '$lib/audio/chord';
 	import { displayChord } from '$lib/audio/transpose';
 	import { midiToVexKey, beatsToVexDuration, notationVoicing } from '$lib/notation/vex';
+	import { ensureJazzFont, JAZZ_FONT } from '$lib/notation/font';
 	import type { Bar, TimeSignature } from '$lib/model/types';
 	import type { RenderContext } from 'vexflow';
+
+	const CHORD_FONT_SIZE = 16;
 
 	interface Props {
 		/** When true, render the chord tones as notes; otherwise a chords-only chart. */
@@ -37,10 +40,12 @@
 	const TIME_W = 28;
 	// Provisional pass spacing — wide enough that rows can't overlap while we
 	// measure each one's true content extent.
-	const PROV_TOP = 160;
-	const PROV_H = 320;
-	const ROW_GAP = 14; // gap between a row's lowest note and the next row's content
+	const PROV_TOP = 200;
+	const PROV_H = 360;
+	const ROW_GAP = 16; // gap between a row's lowest note and the next row's chord names
 	const PAD = 8;
+	const LABEL_GAP = 10; // gap between a chord name and the content below it
+	const LABEL_ASCENT = CHORD_FONT_SIZE + 3; // vertical room a chord name occupies
 
 	interface Placement {
 		bar: Bar;
@@ -51,6 +56,14 @@
 		firstInRow: boolean;
 		/** Global slot index of this bar's first slot (into `written`/`voicings`). */
 		slotStart: number;
+	}
+
+	/** A chord name to draw above the staff. */
+	interface Label {
+		x: number;
+		row: number;
+		slot: number;
+		symbol: string;
 	}
 
 	/** Assign each bar an x position, width and row (wrapping to fit `available`). */
@@ -82,7 +95,7 @@
 	}
 
 	function draw(VF: typeof import('vexflow')) {
-		const { Renderer, Stave, StaveNote, Voice, Formatter, Annotation, Accidental } = VF;
+		const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = VF;
 		const el = container;
 		if (!el) return;
 		el.innerHTML = '';
@@ -102,46 +115,35 @@
 		lastWidth = el.clientWidth || 0;
 		const { placements, rowCount } = computeColumns(bars, available);
 
-		const label = (note: InstanceType<typeof StaveNote>, symbol: string) => {
-			if (symbol.trim()) {
-				note.addModifier(
-					new Annotation(symbol.trim()).setVerticalJustification(Annotation.VerticalJustify.TOP),
-					0
-				);
-			}
-			return note;
-		};
+		// Build a bar's notes (no chord labels — those are drawn separately, always
+		// above the staff, so they can never collide with the staff lines).
+		const buildNotes = (p: Placement) =>
+			p.bar.slots.map((slot, i) => {
+				const vi = p.slotStart + i;
+				const dur = beatsToVexDuration(slot.beats, ts);
+				const midi = voicings[vi];
+				if (!showNotes) return { note: new StaveNote({ keys: ['b/4'], duration: dur }), vi };
+				if (!midi || midi.length === 0) {
+					return { note: new StaveNote({ keys: ['b/4'], duration: `${dur}r` }), vi };
+				}
+				const keys = midi.map(midiToVexKey);
+				// Stems down so the (above-staff) chord names always sit clear of the notes.
+				const note = new StaveNote({ keys: keys.map((k) => k.key), duration: dur, stemDirection: -1 });
+				keys.forEach((k, idx) => {
+					if (k.accidental) note.addModifier(new Accidental(k.accidental), idx);
+				});
+				return { note, vi };
+			});
 
-		// Draw one bar's stave + notes/labels at a given baseline y.
-		const drawPlacement = (ctx: RenderContext, p: Placement, y: number) => {
+		// Draw a bar's stave + notes at baseline y; return each note's x + slot for labels.
+		const drawPlacement = (ctx: RenderContext, p: Placement, y: number): Label[] => {
 			const stave = new Stave(p.x, y, p.w);
 			if (p.firstInRow) stave.addClef('treble');
 			if (p.index === 0) stave.addTimeSignature(`${ts.numerator}/${ts.denominator}`);
 			stave.setContext(ctx).draw();
 
-			const notes = p.bar.slots.map((slot, i) => {
-				const vi = p.slotStart + i;
-				const dur = beatsToVexDuration(slot.beats, ts);
-				const midi = voicings[vi];
-				const symbol = written[vi];
-
-				// Chords-only chart: a single placeholder note carrying the chord label;
-				// its notehead + stem are hidden via CSS (see the `.chart` rules below).
-				if (!showNotes) return label(new StaveNote({ keys: ['b/4'], duration: dur }), symbol);
-
-				// Helper-notes: render the chord tones (empty slot = rest).
-				if (!midi || midi.length === 0) {
-					return new StaveNote({ keys: ['b/4'], duration: `${dur}r` });
-				}
-				const keys = midi.map(midiToVexKey);
-				// Stems down so the chord name always sits clear above the noteheads.
-				const note = new StaveNote({ keys: keys.map((k) => k.key), duration: dur, stemDirection: -1 });
-				keys.forEach((k, idx) => {
-					if (k.accidental) note.addModifier(new Accidental(k.accidental), idx);
-				});
-				return label(note, symbol);
-			});
-
+			const built = buildNotes(p);
+			const notes = built.map((b) => b.note);
 			const voice = new Voice({ numBeats: ts.numerator, beatValue: ts.denominator }).setMode(
 				Voice.Mode.SOFT
 			);
@@ -149,10 +151,16 @@
 			const reserved = (p.firstInRow ? CLEF_W : 0) + (p.index === 0 ? TIME_W : 0) + 20;
 			new Formatter().joinVoices([voice]).format([voice], p.w - reserved);
 			voice.draw(ctx, stave);
+
+			return built.map((b) => ({
+				x: b.note.getAbsoluteX(),
+				row: p.row,
+				slot: b.vi,
+				symbol: written[b.vi]
+			}));
 		};
 
-		// Pass 1 — draw spaced out and measure each row's true content extent
-		// (chord names + ledger lines), so rows can be packed without overlap/clip.
+		// Pass 1 — draw spaced out and measure each row's note extent above/below the staff.
 		const r1 = new Renderer(el, Renderer.Backends.SVG);
 		r1.resize(available, PROV_TOP + rowCount * PROV_H);
 		const c1 = r1.getContext();
@@ -167,29 +175,26 @@
 				return 40;
 			}
 		})();
-		const above = Array.from({ length: rowCount }, () => 12);
+		const noteAbove = Array.from({ length: rowCount }, () => 0);
 		const below = Array.from({ length: rowCount }, () => 4);
-		const scan = (sel: string) => {
-			svg1?.querySelectorAll(sel).forEach((node) => {
-				try {
-					const b = (node as SVGGraphicsElement).getBBox();
-					const r = Math.round((b.y + b.height / 2 - PROV_TOP) / PROV_H);
-					if (r < 0 || r >= rowCount) return;
-					const staveY = PROV_TOP + r * PROV_H;
-					above[r] = Math.max(above[r], staveY - b.y);
-					below[r] = Math.max(below[r], b.y + b.height - (staveY + staveH));
-				} catch {
-					/* skip un-measurable node */
-				}
-			});
-		};
-		scan('.vf-stavenote');
-		scan('.vf-annotation');
+		svg1?.querySelectorAll('.vf-stavenote').forEach((node) => {
+			try {
+				const b = (node as SVGGraphicsElement).getBBox();
+				const r = Math.round((b.y + b.height / 2 - PROV_TOP) / PROV_H);
+				if (r < 0 || r >= rowCount) return;
+				const staveY = PROV_TOP + r * PROV_H;
+				noteAbove[r] = Math.max(noteAbove[r], staveY - b.y);
+				below[r] = Math.max(below[r], b.y + b.height - (staveY + staveH));
+			} catch {
+				/* skip un-measurable node */
+			}
+		});
 
-		// Pack rows by their measured heights.
-		const rowY: number[] = [PAD + Math.max(0, above[0])];
+		// Reserve room above each row for its highest note plus the chord-name band.
+		const above = noteAbove.map((n) => Math.max(0, n) + LABEL_GAP + LABEL_ASCENT);
+		const rowY: number[] = [PAD + above[0]];
 		for (let r = 1; r < rowCount; r++) {
-			rowY[r] = rowY[r - 1] + staveH + Math.max(0, below[r - 1]) + ROW_GAP + Math.max(0, above[r]);
+			rowY[r] = rowY[r - 1] + staveH + Math.max(0, below[r - 1]) + ROW_GAP + above[r];
 		}
 		const total = Math.ceil(rowY[rowCount - 1] + staveH + Math.max(0, below[rowCount - 1]) + PAD);
 
@@ -198,7 +203,26 @@
 		const r2 = new Renderer(el, Renderer.Backends.SVG);
 		r2.resize(available, total);
 		const c2 = r2.getContext();
-		for (const p of placements) drawPlacement(c2, p, rowY[p.row]);
+		const labels: Label[] = [];
+		for (const p of placements) labels.push(...drawPlacement(c2, p, rowY[p.row]));
+
+		// Chord names: our own SVG text, a fixed gap above each row's highest content.
+		const svg2 = el.querySelector('svg');
+		const NS = 'http://www.w3.org/2000/svg';
+		for (const lab of labels) {
+			if (!lab.symbol.trim() || !svg2) continue;
+			const baseline = rowY[lab.row] - Math.max(0, noteAbove[lab.row]) - LABEL_GAP;
+			const t = document.createElementNS(NS, 'text');
+			t.setAttribute('x', String(Math.round(lab.x)));
+			t.setAttribute('y', String(Math.round(baseline)));
+			t.setAttribute('text-anchor', 'middle');
+			t.setAttribute('font-family', JAZZ_FONT);
+			t.setAttribute('font-size', String(CHORD_FONT_SIZE));
+			t.setAttribute('class', 'chord-name');
+			t.setAttribute('data-slot', String(lab.slot));
+			t.textContent = lab.symbol.trim();
+			svg2.appendChild(t);
+		}
 
 		// Note groups in render order (= global slot index) for highlighting.
 		noteEls = [...el.querySelectorAll('.vf-stavenote')];
@@ -208,6 +232,15 @@
 		if (!container) return;
 		try {
 			if (!vf) vf = await import('vexflow');
+			// Load the jazz font before measuring/drawing so layout uses its real metrics.
+			await ensureJazzFont();
+			if (typeof document !== 'undefined') {
+				try {
+					await document.fonts.load(`${CHORD_FONT_SIZE}px '${JAZZ_FONT}'`);
+				} catch {
+					/* measurement falls back to default metrics */
+				}
+			}
 			draw(vf);
 			error = null;
 		} catch (e) {
@@ -220,10 +253,13 @@
 		void render();
 	});
 
-	// Highlight the currently-playing chord without a full re-render.
+	// Highlight the currently-playing chord (noteheads + its chord name) without a re-render.
 	$effect(() => {
 		const active = progression.activeSlot;
 		noteEls.forEach((g, i) => g.classList.toggle('vf-active', i === active));
+		container
+			?.querySelectorAll('.chord-name')
+			.forEach((t) => t.classList.toggle('chord-active', Number(t.getAttribute('data-slot')) === active));
 	});
 
 	// Re-flow when the container *width* changes (responsive multi-line layout).
@@ -268,23 +304,25 @@
 		display: block;
 	}
 
-	/* Chord-chart mode: hide notehead glyphs + stems, keep the chord labels.
-	   (The chord annotation is nested in .vf-annotation, not a direct text child.) */
+	/* Jazz chord names (our own text, above each staff). */
+	.staff :global(.chord-name) {
+		fill: var(--color-text);
+	}
+	.staff :global(.chord-active) {
+		fill: var(--c-major);
+	}
+
+	/* Chord-chart mode: hide the placeholder noteheads + stems, keep the chord names. */
 	.staff.chart :global(.vf-notehead > text) {
 		display: none;
 	}
-
 	.staff.chart :global(.vf-stavenote > path) {
 		display: none;
 	}
 
-	/* Active (playing) chord highlight — colours noteheads and the chord label. */
+	/* Active (playing) chord highlight — colours the chord tones in helper-notes mode. */
 	.staff :global(.vf-active path) {
 		fill: var(--c-major);
 		stroke: var(--c-major);
-	}
-
-	.staff :global(.vf-active text) {
-		fill: var(--c-major);
 	}
 </style>

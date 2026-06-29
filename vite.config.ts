@@ -77,8 +77,9 @@ export default defineConfig(({ command }) => {
 					]
 				},
 				workbox: {
-					// Precache the app shell (incl. PNG icons). Samples are runtime-cached below.
-					globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+					// Precache the app shell (incl. PNG icons + the jazz chord font).
+					// Samples are runtime-cached below.
+					globPatterns: ['**/*.{js,css,html,svg,png,woff2,ico,webmanifest}'],
 					// The share image + install screenshots are only fetched online by
 					// scrapers / the install dialog — no need to bloat the offline precache.
 					globIgnores: ['**/og-image.png', '**/screenshot-*.png'],
