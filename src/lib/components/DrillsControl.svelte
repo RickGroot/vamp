@@ -29,7 +29,7 @@
 
 	<!-- Tempo step-up -->
 	<div class="row">
-		<label class="label" for="step">Tempo step-up</label>
+		<label class="label" for="step">Step-up</label>
 		<select
 			id="step"
 			class="sel"
@@ -114,7 +114,8 @@
 	}
 
 	.row > .label:first-child {
-		flex: 0 0 5.5rem;
+		flex: 0 0 4.5rem;
+		white-space: nowrap;
 	}
 
 	.sub {

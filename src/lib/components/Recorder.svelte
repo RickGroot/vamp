@@ -14,12 +14,11 @@
 </script>
 
 <div class="rec">
-	<div class="rec__head">
-		<span class="label">Record your solo</span>
-		{#if recorder.takes.length > 0}
+	{#if recorder.takes.length > 0}
+		<div class="rec__head">
 			<button class="reset" type="button" onclick={() => recorder.clear()}>Clear all</button>
-		{/if}
-	</div>
+		</div>
+	{/if}
 
 	{#if !recorder.supported}
 		<p class="rec__note">Recording isn't supported in this browser.</p>
@@ -70,10 +69,7 @@
 			</ul>
 		{/if}
 
-		<p class="rec__note">
-			Plays nothing back through the app — record yourself over the loop, then listen. Audio stays on
-			your device; nothing is uploaded.
-		</p>
+		<p class="rec__note">Stays on your device — nothing is uploaded.</p>
 	{/if}
 </div>
 
@@ -87,8 +83,7 @@
 	.rec__head {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
+		justify-content: flex-end;
 	}
 
 	.reset {
