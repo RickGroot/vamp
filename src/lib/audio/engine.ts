@@ -12,6 +12,7 @@ import { barBeats, beatsToQuarters } from '$lib/model/time';
 import { buildScheduledEvents } from './schedule';
 import { type CompKind } from './comp';
 import { isComping, type MixLevels } from './mix';
+import { type ClickFeel } from './drills';
 import {
 	getInstrument,
 	getDrumMachine,
@@ -42,6 +43,7 @@ interface ScheduledEvent {
 
 type StateListener = (state: EngineState) => void;
 type SlotListener = (index: number | null) => void;
+type LoopListener = () => void;
 
 class PlaybackEngine {
 	private part: Tone.Part | null = null;
@@ -49,8 +51,10 @@ class PlaybackEngine {
 	private drums: LoadedDrums | null = null;
 	private click: Tone.Synth | null = null;
 	private _state: EngineState = 'stopped';
+	private loopEventId: number | null = null;
 	private readonly stateListeners = new Set<StateListener>();
 	private readonly slotListeners = new Set<SlotListener>();
+	private readonly loopListeners = new Set<LoopListener>();
 
 	// Practice mix, read live by the Part callback so changes apply without a restart.
 	private mix: MixLevels = { chords: 1, bass: 1, drums: 1 };
@@ -85,6 +89,12 @@ class PlaybackEngine {
 		return () => this.slotListeners.delete(fn);
 	}
 
+	/** Fires once each time the loop wraps back to the start (for practice drills). */
+	onLoop(fn: LoopListener): () => void {
+		this.loopListeners.add(fn);
+		return () => this.loopListeners.delete(fn);
+	}
+
 	private setState(state: EngineState): void {
 		this._state = state;
 		for (const fn of this.stateListeners) fn(state);
@@ -106,7 +116,10 @@ class PlaybackEngine {
 	}
 
 	/** Start (or restart) looping playback of a progression. */
-	async play(progression: Progression, opts: { countIn?: boolean } = {}): Promise<void> {
+	async play(
+		progression: Progression,
+		opts: { countIn?: boolean; clickFeel?: ClickFeel } = {}
+	): Promise<void> {
 		await unlockAudio();
 		this.setState('loading');
 		try {
@@ -114,7 +127,7 @@ class PlaybackEngine {
 			this.instrument = await getInstrument(progression.instrument);
 			this.drums = progression.groove.drums !== 'none' ? await getDrumMachine() : null;
 
-			const { events, totalTicks } = buildEvents(progression);
+			const { events, totalTicks } = buildEvents(progression, opts.clickFeel);
 			this.teardownPart();
 
 			if (events.length === 0 || totalTicks <= 0) {
@@ -173,6 +186,7 @@ class PlaybackEngine {
 			this.part.loopStart = 0;
 			this.part.loopEnd = `${totalTicks}i`;
 
+			let loopStartTicks = 0;
 			if (opts.countIn) {
 				// One-bar metronome pre-roll (one-shot), then start the loop a bar in.
 				const ppq = transport.PPQ || 192;
@@ -183,9 +197,21 @@ class PlaybackEngine {
 						this.ensureClick().triggerAttackRelease(beat === 0 ? 'C6' : 'G5', 0.03, t, beat === 0 ? 0.9 : 0.6);
 					}, `${Math.round(beat * beatTicks)}i`);
 				}
-				this.part.start(`${Math.round(ts.numerator * beatTicks)}i`);
+				loopStartTicks = Math.round(ts.numerator * beatTicks);
+				this.part.start(`${loopStartTicks}i`);
 			} else {
 				this.part.start(0);
+			}
+
+			// Fire onLoop listeners at each loop boundary (drives practice drills).
+			if (this.loopListeners.size > 0) {
+				this.loopEventId = transport.scheduleRepeat(
+					() => {
+						for (const fn of this.loopListeners) fn();
+					},
+					`${totalTicks}i`,
+					`${loopStartTicks + totalTicks}i`
+				);
 			}
 
 			transport.start();
@@ -213,6 +239,10 @@ class PlaybackEngine {
 	}
 
 	private teardownPart(): void {
+		if (this.loopEventId !== null) {
+			Tone.getTransport().clear(this.loopEventId);
+			this.loopEventId = null;
+		}
 		if (this.part) {
 			this.part.stop();
 			this.part.dispose();
@@ -221,9 +251,12 @@ class PlaybackEngine {
 	}
 }
 
-function buildEvents(progression: Progression): { events: ScheduledEvent[]; totalTicks: number } {
+function buildEvents(
+	progression: Progression,
+	clickFeel?: ClickFeel
+): { events: ScheduledEvent[]; totalTicks: number } {
 	const ppq = Tone.getTransport().PPQ || 192;
-	const { events, totalQuarters } = buildScheduledEvents(progression);
+	const { events, totalQuarters } = buildScheduledEvents(progression, { clickFeel });
 	const scheduled: ScheduledEvent[] = events.map((e) => ({
 		time: `${Math.round(e.atQuarters * ppq)}i`,
 		atQuarters: e.atQuarters,

@@ -9,6 +9,7 @@ import { flattenSlots } from '$lib/model/slots';
 import { voiceSequence, nearestMidi } from './voicing';
 import { parseChord } from './chord';
 import { buildCompEvents, type CompEvent, type CompSlot } from './comp';
+import type { ClickFeel } from './drills';
 
 const BASS_TARGET = 40; // ~E2 register for the bass note
 
@@ -26,7 +27,7 @@ export const BASE_OCTAVE: Record<InstrumentId, number> = {
  */
 export function buildScheduledEvents(
 	progression: Progression,
-	opts: { whole?: boolean } = {}
+	opts: { whole?: boolean; clickFeel?: ClickFeel } = {}
 ): { events: CompEvent[]; totalQuarters: number } {
 	const ts = progression.timeSignature;
 	const baseOctave = BASE_OCTAVE[progression.instrument];
@@ -66,7 +67,7 @@ export function buildScheduledEvents(
 	});
 
 	return {
-		events: buildCompEvents(compSlots, cumulativeQuarters, ts, progression.groove),
+		events: buildCompEvents(compSlots, cumulativeQuarters, ts, progression.groove, opts.clickFeel),
 		totalQuarters: cumulativeQuarters
 	};
 }

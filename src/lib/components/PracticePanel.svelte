@@ -1,6 +1,8 @@
 <script lang="ts">
+	import DrillsControl from './DrillsControl.svelte';
 	import DroneControl from './DroneControl.svelte';
 	import Recorder from './Recorder.svelte';
+	import MidiControl from './MidiControl.svelte';
 
 	interface Props {
 		/** Inferred key tonic, used as the drone's default root. */
@@ -16,17 +18,28 @@
 	<button class="practice__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
 		<span class="wordmark practice__title">Practice</span>
-		<span class="label practice__hint">Play along — drone &amp; record</span>
+		<span class="label practice__hint">Drills · Drone · Record · MIDI</span>
 	</button>
 
 	{#if open}
 		<div class="practice__grid">
 			<div class="card">
+				<span class="label card__title">Drills</span>
+				<span class="card__sub">Push your time, speed and key fluency while the loop runs.</span>
+				<DrillsControl />
+			</div>
+			<div class="card">
 				<span class="label card__title">Drone</span>
-				<span class="card__sub">A held root to solo over — pick scales/modes against it.</span>
+				<span class="card__sub">A held root to solo over — practise scales/modes against it.</span>
 				<DroneControl {defaultRoot} />
 			</div>
 			<div class="card">
+				<span class="label card__title">MIDI input</span>
+				<span class="card__sub">Play chords in from a hardware keyboard.</span>
+				<MidiControl />
+			</div>
+			<div class="card">
+				<span class="label card__title">Record</span>
 				<Recorder />
 			</div>
 		</div>
@@ -75,6 +88,7 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: var(--space-6);
 		margin-top: var(--space-6);
+		align-items: start;
 	}
 
 	.card {

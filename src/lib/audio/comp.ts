@@ -4,6 +4,7 @@
 // quarter-note positions to transport ticks and wires up the sounds.
 
 import { barBeats, beatsToQuarters } from '$lib/model/time';
+import { clickAtBeat, type ClickFeel } from './drills';
 import type { DrumStyle, Groove, TimeSignature } from '$lib/model/types';
 
 export type CompKind = 'chord' | 'bass' | 'click' | 'drum';
@@ -98,13 +99,15 @@ function compSlot(slot: CompSlot, ts: TimeSignature, groove: Groove): CompEvent[
 	return events;
 }
 
-/** Metronome clicks on each notated beat across the loop. */
-function metronomeEvents(totalQuarters: number, ts: TimeSignature): CompEvent[] {
+/** Metronome clicks on each notated beat across the loop (filtered by feel). */
+function metronomeEvents(totalQuarters: number, ts: TimeSignature, feel: ClickFeel): CompEvent[] {
 	const events: CompEvent[] = [];
 	const beatStep = 4 / ts.denominator;
 	const barQ = beatsToQuarters(barBeats(ts), ts);
 	for (let q = 0; q < totalQuarters - 1e-6; q += beatStep) {
-		const accent = Math.abs(q % barQ) < 1e-6;
+		const beatInBar = Math.round((((q % barQ) + barQ) % barQ) / beatStep);
+		if (!clickAtBeat(beatInBar, feel)) continue;
+		const accent = beatInBar === 0;
 		events.push({ atQuarters: q, durQuarters: 0.1, midi: [], kind: 'click', slotIndex: null, accent });
 	}
 	return events;
@@ -183,10 +186,11 @@ export function buildCompEvents(
 	slots: CompSlot[],
 	totalQuarters: number,
 	ts: TimeSignature,
-	groove: Groove
+	groove: Groove,
+	clickFeel: ClickFeel = 'all'
 ): CompEvent[] {
 	const events = slots.flatMap((slot) => compSlot(slot, ts, groove));
-	if (groove.metronome) events.push(...metronomeEvents(totalQuarters, ts));
+	if (groove.metronome) events.push(...metronomeEvents(totalQuarters, ts, clickFeel));
 	if (groove.drums !== 'none') events.push(...drumEvents(totalQuarters, ts, groove.drums));
 	return events;
 }

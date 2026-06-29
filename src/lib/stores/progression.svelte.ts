@@ -8,7 +8,9 @@ import { buildPresetChords, type Preset } from '$lib/model/presets';
 import { buildExample, type Example } from '$lib/model/examples';
 import { randomProgression } from '$lib/model/inspire';
 import { transposeChordSymbol } from '$lib/audio/transpose';
+import { keyCycleInterval, nextStepTempo } from '$lib/audio/drills';
 import { view } from './view.svelte';
+import { drills } from './drills.svelte';
 import type {
 	CompPattern,
 	DrumStyle,
@@ -37,9 +39,18 @@ class ProgressionStore {
 	private lastTag = '';
 	private lastTagTime = 0;
 
+	// Practice-drill session state (transient — never enters undo history).
+	private drillOrigin: { chords: string[]; tempo: number } | null = null;
+	private tempoLoops = 0;
+	private keyLoops = 0;
+
 	constructor() {
 		engine.onActiveSlot((i) => (this.activeSlot = i));
-		engine.onState((s) => (this.engineState = s));
+		engine.onState((s) => {
+			this.engineState = s;
+			if (s === 'stopped') this.endDrillSession();
+		});
+		engine.onLoop(() => this.onDrillLoop());
 	}
 
 	get isPlaying(): boolean {
@@ -216,6 +227,24 @@ class ProgressionStore {
 		this.touch();
 	}
 
+	/** Enter a chord (e.g. from MIDI): fill the first empty slot, else append a bar. */
+	inputChord(chord: string): void {
+		this.checkpoint();
+		for (const bar of this.current.bars) {
+			for (const slot of bar.slots) {
+				if (!slot.chord.trim()) {
+					slot.chord = chord;
+					this.touch();
+					return;
+				}
+			}
+		}
+		const bar = createBar(this.current.timeSignature);
+		bar.slots[0].chord = chord;
+		this.current.bars.push(bar);
+		this.touch();
+	}
+
 	/** Append a bar pre-filled with a chord (used by next-chord suggestions). */
 	appendChordBar(chord: string): void {
 		this.checkpoint();
@@ -348,7 +377,7 @@ class ProgressionStore {
 
 	async play(): Promise<void> {
 		try {
-			await engine.play(this.current, { countIn: view.countIn });
+			await engine.play(this.current, { countIn: view.countIn, clickFeel: drills.clickFeel });
 		} catch (err) {
 			// Surface to the console; the UI falls back to 'stopped' via engine state.
 			console.error('Vamp playback failed:', err);
@@ -357,6 +386,66 @@ class ProgressionStore {
 
 	stop(): void {
 		engine.stop();
+	}
+
+	// ---- practice drills (transient: tempo step-up + all-keys cycle) ----
+
+	/** Fired by the engine at each loop boundary while playing. */
+	private onDrillLoop(): void {
+		if ((drills.steppingTempo || drills.cyclingKey) && !this.drillOrigin) {
+			// Snapshot the original key + tempo before the drill changes anything.
+			this.drillOrigin = { chords: this.captureChords(), tempo: this.current.tempo };
+		}
+
+		if (drills.steppingTempo && ++this.tempoLoops >= drills.tempoEvery) {
+			this.tempoLoops = 0;
+			const next = nextStepTempo(this.current.tempo, drills.tempoStep, Math.min(TEMPO_MAX, drills.tempoMax));
+			if (next !== this.current.tempo) {
+				this.current.tempo = next;
+				engine.setTempo(next);
+			}
+		}
+
+		if (drills.cyclingKey && ++this.keyLoops >= drills.keyEvery) {
+			this.keyLoops = 0;
+			const semis = keyCycleInterval(drills.keyMode);
+			// Defer out of the audio callback before rebuilding the loop in the new key.
+			if (semis) setTimeout(() => this.cycleKey(semis), 0);
+		}
+	}
+
+	/** Transpose to the next key and restart the loop — transient, no undo entry. */
+	private cycleKey(semitones: number): void {
+		if (!this.isPlaying) return;
+		for (const bar of this.current.bars)
+			for (const slot of bar.slots)
+				if (slot.chord.trim()) slot.chord = transposeChordSymbol(slot.chord, semitones);
+		void this.play();
+	}
+
+	private endDrillSession(): void {
+		this.tempoLoops = 0;
+		this.keyLoops = 0;
+		if (!this.drillOrigin) return;
+		this.restoreChords(this.drillOrigin.chords);
+		this.current.tempo = this.drillOrigin.tempo;
+		engine.setTempo(this.drillOrigin.tempo);
+		this.drillOrigin = null;
+	}
+
+	private captureChords(): string[] {
+		const out: string[] = [];
+		for (const bar of this.current.bars) for (const slot of bar.slots) out.push(slot.chord);
+		return out;
+	}
+
+	private restoreChords(chords: string[]): void {
+		let i = 0;
+		for (const bar of this.current.bars)
+			for (const slot of bar.slots) {
+				if (i < chords.length) slot.chord = chords[i];
+				i++;
+			}
 	}
 
 	async toggle(): Promise<void> {
