@@ -33,6 +33,7 @@ const COUNT_IN_KEY = 'vamp:countIn';
 const ROMAN_KEY = 'vamp:roman';
 const MIX_KEY = 'vamp:mix';
 const TRADE_KEY = 'vamp:trade';
+const ART_KEY = 'vamp:art';
 
 /** "Trade fours" block lengths offered in the UI (0 = off). */
 export const TRADE_OPTIONS = [0, 2, 4, 8];
@@ -47,6 +48,8 @@ class ViewStore {
 	mix = $state<MixState>(defaultMix());
 	/** "Trade fours" block length in bars (0 = off). */
 	tradeBars = $state(0);
+	/** Generative "art mode" — animated colour flourishes across the app. */
+	artMode = $state(false);
 
 	constructor() {
 		if (browser) {
@@ -54,6 +57,7 @@ class ViewStore {
 			if (saved && TRANSPOSE_OPTIONS.some((o) => o.id === saved)) this.transposeId = saved;
 			this.countIn = localStorage.getItem(COUNT_IN_KEY) === '1';
 			this.showRoman = localStorage.getItem(ROMAN_KEY) === '1';
+			this.artMode = localStorage.getItem(ART_KEY) === '1';
 			this.mix = readMix();
 			this.tradeBars = readTrade();
 			// Push the restored mix to the engine so the first play already respects it.
@@ -115,6 +119,11 @@ class ViewStore {
 	setShowRoman(on: boolean): void {
 		this.showRoman = on;
 		if (browser) localStorage.setItem(ROMAN_KEY, on ? '1' : '0');
+	}
+
+	setArtMode(on: boolean): void {
+		this.artMode = on;
+		if (browser) localStorage.setItem(ART_KEY, on ? '1' : '0');
 	}
 }
 

@@ -35,6 +35,14 @@
 
 	const canAddSlot = $derived(bar.slots.length < MAX_SLOTS_PER_BAR);
 
+	// Stable per-bar animation phase (art mode) — seeded from the bar id so each
+	// bar's colour wash drifts a little differently (generative feel).
+	const artDelay = $derived.by(() => {
+		let h = 0;
+		for (let i = 0; i < bar.id.length; i++) h = (h * 31 + bar.id.charCodeAt(i)) >>> 0;
+		return (((h % 1000) / 1000) * 9).toFixed(2);
+	});
+
 	let dragOver = $state(false);
 
 	function onDragStart(event: DragEvent) {
@@ -59,6 +67,7 @@
 	class:bar--out-loop={loopActive && !inLoop}
 	class:bar--playing={playing}
 	class:bar--dragover={dragOver}
+	style="--art-delay: {artDelay}s"
 	ondragover={onDragOver}
 	ondragleave={() => (dragOver = false)}
 	ondrop={onDrop}

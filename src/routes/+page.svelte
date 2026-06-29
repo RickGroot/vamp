@@ -85,13 +85,27 @@
 	<title>{pageTitle}</title>
 </svelte:head>
 
-<div class="frame">
+<div class="frame" class:art={view.artMode}>
+	{#if view.artMode}
+		<div class="art-bg" aria-hidden="true"></div>
+	{/if}
 	<header class="head">
 		<div class="head__left">
 			<span class="wordmark head__mark" class:head__mark--playing={progression.isPlaying}>Vamp</span>
 			<span class="label head__tag">Chord sketchpad</span>
 		</div>
 		<div class="head__right">
+			<button
+				class="art-toggle"
+				class:art-toggle--on={view.artMode}
+				type="button"
+				aria-pressed={view.artMode}
+				title="Generative art mode"
+				onclick={() => view.setArtMode(!view.artMode)}
+			>
+				<span class="art-toggle__dot" aria-hidden="true"></span>
+				Art
+			</button>
 			<label class="label" for="pitch">Pitch</label>
 			<select
 				id="pitch"
@@ -222,7 +236,51 @@
 	.head__right {
 		display: flex;
 		align-items: baseline;
-		gap: var(--space-2);
+		gap: var(--space-3);
+	}
+
+	.art-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		align-self: center;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		padding: var(--space-1) var(--space-2);
+		font-family: inherit;
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-text-muted);
+		transition:
+			color var(--motion-fast) var(--motion-ease-out),
+			border-color var(--motion-fast) var(--motion-ease-out);
+
+		&:hover {
+			border-color: var(--color-black);
+			color: var(--color-black);
+		}
+
+		&--on {
+			border-color: transparent;
+			color: var(--color-white);
+			background: var(--grad-flow);
+			background-size: 200% 100%;
+			background-position: 55% 0;
+		}
+	}
+
+	.art-toggle__dot {
+		width: 8px;
+		height: 8px;
+		border-radius: var(--radius-pill);
+		background: var(--grad-flow);
+		background-size: 200%;
+	}
+
+	.art-toggle--on .art-toggle__dot {
+		background: var(--color-white);
 	}
 
 	.head__pitch {
