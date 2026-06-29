@@ -1,8 +1,16 @@
 <script lang="ts">
-	import { scales } from '$lib/stores/scales.svelte';
+	import { scales, type ScaleView } from '$lib/stores/scales.svelte';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { SCALE_TYPES, SCALE_ROOTS } from '$lib/model/scales';
 	import { scaleMidis, playScale } from '$lib/audio/scalePlayer';
+	import ScaleStaff from './ScaleStaff.svelte';
+	import ScaleFretboard from './ScaleFretboard.svelte';
+
+	const VIEWS: { id: ScaleView; label: string }[] = [
+		{ id: 'keyboard', label: 'Keyboard' },
+		{ id: 'staff', label: 'Staff' },
+		{ id: 'fretboard', label: 'Guitar' }
+	];
 
 	const info = $derived(scales.info);
 	const typeLabel = $derived(SCALE_TYPES.find((t) => t.id === scales.type)?.label ?? scales.type);
@@ -118,25 +126,45 @@
 				{/each}
 			</div>
 
-			<svg class="kbd" viewBox="0 0 {N_WHITE * W} {H}" role="img" aria-label="{info.name} on a keyboard">
-				{#each whiteKeys as k (k.x)}
-					<rect class="wkey" x={k.x + 0.5} y="0" width={W - 1} height={H} rx="3" />
-					{#if k.inScale}
-						<circle cx={k.x + W / 2} cy={H - 13} r="5.5" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
-					{/if}
+			<div class="viewtoggle" role="group" aria-label="Scale view">
+				{#each VIEWS as v (v.id)}
+					<button
+						class="vt"
+						class:vt--on={scales.display === v.id}
+						type="button"
+						aria-pressed={scales.display === v.id}
+						onclick={() => scales.setDisplay(v.id)}>{v.label}</button
+					>
 				{/each}
-				{#each blackKeys as k (k.x)}
-					<rect class="bkey" x={k.x} y="0" width={BW} height={BH} rx="2.5" />
-					{#if k.inScale}
-						<circle cx={k.x + BW / 2} cy={BH - 9} r="4" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
-					{/if}
-				{/each}
-			</svg>
+			</div>
 
-			<p class="legend label">
-				<span class="legend__dot legend__dot--root"></span> root
-				<span class="legend__dot legend__dot--scale"></span> scale tone
-			</p>
+			{#if scales.display === 'staff'}
+				<ScaleStaff notes={info.notes} />
+			{:else if scales.display === 'fretboard'}
+				<ScaleFretboard pcs={info.pcs} rootPc={info.rootPc} />
+			{:else}
+				<svg class="kbd" viewBox="0 0 {N_WHITE * W} {H}" role="img" aria-label="{info.name} on a keyboard">
+					{#each whiteKeys as k (k.x)}
+						<rect class="wkey" x={k.x + 0.5} y="0" width={W - 1} height={H} rx="3" />
+						{#if k.inScale}
+							<circle cx={k.x + W / 2} cy={H - 13} r="5.5" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
+						{/if}
+					{/each}
+					{#each blackKeys as k (k.x)}
+						<rect class="bkey" x={k.x} y="0" width={BW} height={BH} rx="2.5" />
+						{#if k.inScale}
+							<circle cx={k.x + BW / 2} cy={BH - 9} r="4" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
+						{/if}
+					{/each}
+				</svg>
+			{/if}
+
+			{#if scales.display !== 'staff'}
+				<p class="legend label">
+					<span class="legend__dot legend__dot--root"></span> root
+					<span class="legend__dot legend__dot--scale"></span> scale tone
+				</p>
+			{/if}
 		</div>
 	{/if}
 </section>
@@ -227,6 +255,35 @@
 
 		&:hover {
 			background: var(--color-black);
+			color: var(--color-white);
+		}
+	}
+
+	.viewtoggle {
+		display: inline-flex;
+		align-self: flex-start;
+		border: 1px solid var(--color-border);
+	}
+	.vt {
+		border: 0;
+		border-right: 1px solid var(--color-border);
+		background: transparent;
+		padding: var(--space-1) var(--space-3);
+		font-family: inherit;
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-text-muted);
+
+		&:last-child {
+			border-right: 0;
+		}
+		&:hover {
+			color: var(--color-black);
+		}
+		&--on {
+			background: var(--c-major);
 			color: var(--color-white);
 		}
 	}

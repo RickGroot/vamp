@@ -6,10 +6,14 @@ import { getScaleInfo, scalesForChord, type ScaleInfo } from '$lib/model/scales'
 
 const KEY = 'vamp:scales';
 
+export type ScaleView = 'keyboard' | 'staff' | 'fretboard';
+
 class ScalesStore {
 	open = $state(true);
 	root = $state('C');
 	type = $state('major');
+	/** Which visualisation is shown. */
+	display = $state<ScaleView>('keyboard');
 	/** Chord symbol the suggestions came from (when opened via a chord), else null. */
 	suggestedFor = $state<string | null>(null);
 	suggestedTypes = $state<string[]>([]);
@@ -22,6 +26,7 @@ class ScalesStore {
 				const p = JSON.parse(localStorage.getItem(KEY) || '{}');
 				if (typeof p.root === 'string') this.root = p.root;
 				if (typeof p.type === 'string') this.type = p.type;
+				if (p.display === 'staff' || p.display === 'fretboard') this.display = p.display;
 			} catch {
 				/* defaults */
 			}
@@ -33,7 +38,16 @@ class ScalesStore {
 	}
 
 	private persist(): void {
-		if (browser) localStorage.setItem(KEY, JSON.stringify({ root: this.root, type: this.type }));
+		if (browser)
+			localStorage.setItem(
+				KEY,
+				JSON.stringify({ root: this.root, type: this.type, display: this.display })
+			);
+	}
+
+	setDisplay(view: ScaleView): void {
+		this.display = view;
+		this.persist();
 	}
 
 	setRoot(root: string): void {

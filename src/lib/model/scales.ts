@@ -64,6 +64,45 @@ export function getScaleInfo(root: string, type: string): ScaleInfo {
 	};
 }
 
+export interface VexNote {
+	/** VexFlow key, e.g. "db/4". */
+	key: string;
+	/** Accidental glyph to render ('#', 'b', …) or null. */
+	accidental: string | null;
+}
+
+const START_OCT = 4;
+
+function toVexNote(name: string, octave: number): VexNote {
+	const m = name.match(/^([A-Ga-g])(#{1,2}|b{1,2})?$/);
+	if (!m) return { key: `c/${octave}`, accidental: null };
+	const acc = m[2] ?? null;
+	return { key: `${m[1].toLowerCase()}${acc ?? ''}/${octave}`, accidental: acc };
+}
+
+/**
+ * Scale notes (ascending, one octave) as VexFlow keys with their spelling
+ * preserved, ending on the octave root. Octaves climb so the line ascends.
+ */
+export function scaleStaffKeys(notes: string[]): VexNote[] {
+	if (notes.length === 0) return [];
+	const out: VexNote[] = [];
+	let oct = START_OCT;
+	let prev = -1;
+	for (const n of notes) {
+		const chroma = Note.chroma(n);
+		if (chroma == null) continue;
+		if (chroma <= prev) oct++;
+		prev = chroma;
+		out.push(toVexNote(n, oct));
+	}
+	out.push(toVexNote(notes[0], START_OCT + 1));
+	return out;
+}
+
+/** Standard guitar tuning, low→high string: E2 A2 D3 G3 B3 E4 (MIDI). */
+export const GUITAR_TUNING = [40, 45, 50, 55, 59, 64];
+
 /** Root + suggested scale types that fit a chord symbol (null if unparseable). */
 export function scalesForChord(symbol: string): { root: string; types: string[] } | null {
 	const chord = Chord.get(symbol);

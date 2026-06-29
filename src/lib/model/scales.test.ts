@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCALE_TYPES, getScaleInfo, scalesForChord } from './scales';
+import { SCALE_TYPES, getScaleInfo, scalesForChord, scaleStaffKeys } from './scales';
 
 describe('getScaleInfo', () => {
 	it('C major', () => {
@@ -51,5 +51,29 @@ describe('scalesForChord', () => {
 	it('returns null for an empty/invalid symbol', () => {
 		expect(scalesForChord('')).toBeNull();
 		expect(scalesForChord('xyz')).toBeNull();
+	});
+});
+
+describe('scaleStaffKeys', () => {
+	it('C major ascends c/4 … b/4, octave root c/5', () => {
+		const keys = scaleStaffKeys(getScaleInfo('C', 'major').notes);
+		expect(keys.map((k) => k.key)).toEqual([
+			'c/4', 'd/4', 'e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5'
+		]);
+		expect(keys.every((k) => k.accidental === null)).toBe(true);
+	});
+
+	it('preserves spelling + climbs octave (E major)', () => {
+		const keys = scaleStaffKeys(getScaleInfo('E', 'major').notes);
+		expect(keys.map((k) => k.key)).toEqual([
+			'e/4', 'f#/4', 'g#/4', 'a/4', 'b/4', 'c#/5', 'd#/5', 'e/5'
+		]);
+		expect(keys[1].accidental).toBe('#');
+	});
+
+	it('uses flats where the scale is spelled flat (Eb major)', () => {
+		const keys = scaleStaffKeys(getScaleInfo('Eb', 'major').notes);
+		expect(keys[0].key).toBe('eb/4');
+		expect(keys.some((k) => k.accidental === 'b')).toBe(true);
 	});
 });
