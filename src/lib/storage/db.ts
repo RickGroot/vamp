@@ -9,6 +9,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import {
 	CURRENT_SCHEMA_VERSION,
 	type Bar,
+	type BassMode,
 	type CompPattern,
 	type DrumStyle,
 	type Groove,
@@ -180,7 +181,14 @@ function coerceGroove(value: unknown): Groove {
 		v.pattern === 'strum' || v.pattern === 'arpeggio' ? v.pattern : 'block';
 	const drumStyles: DrumStyle[] = ['none', 'rock', 'pop', 'swing', 'bossa'];
 	const drums = drumStyles.includes(v.drums as DrumStyle) ? (v.drums as DrumStyle) : 'none';
-	return { pattern, bass: v.bass === true, metronome: v.metronome === true, drums };
+	return { pattern, bass: coerceBass(v.bass), metronome: v.metronome === true, drums };
+}
+
+const BASS_MODES: BassMode[] = ['none', 'root', 'alt', 'walking', 'octaves'];
+function coerceBass(value: unknown): BassMode {
+	if (value === true) return 'root'; // legacy boolean: on → simple root bass
+	if (BASS_MODES.includes(value as BassMode)) return value as BassMode;
+	return 'none';
 }
 
 function coerceBar(value: unknown): Bar {

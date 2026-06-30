@@ -5,7 +5,7 @@ import type { Groove, TimeSignature } from '$lib/model/types';
 const TS: TimeSignature = { numerator: 4, denominator: 4 };
 const groove = (over: Partial<Groove> = {}): Groove => ({
 	pattern: 'block',
-	bass: false,
+	bass: 'none',
 	metronome: false,
 	drums: 'none',
 	...over
@@ -17,6 +17,7 @@ const fullBar = (over: Partial<CompSlot> = {}): CompSlot => ({
 	quarters: 4,
 	midi: [60, 64, 67],
 	bassMidi: 36,
+	bassPcs: [0, 4, 7], // C major triad
 	...over
 });
 
@@ -49,12 +50,39 @@ describe('buildCompEvents', () => {
 		expect(ev.every((e) => e.midi.length === 1)).toBe(true);
 	});
 
-	it('bass: adds low notes on strong beats', () => {
-		const ev = buildCompEvents([fullBar()], 4, TS, groove({ bass: true }));
+	it('root bass: low notes on strong beats', () => {
+		const ev = buildCompEvents([fullBar()], 4, TS, groove({ bass: 'root' }));
 		const bass = ev.filter((e) => e.kind === 'bass');
 		expect(bass).toHaveLength(2); // beat 1 and bar midpoint
 		expect(bass.map((e) => e.atQuarters)).toEqual([0, 2]);
 		expect(bass.every((e) => e.midi[0] === 36)).toBe(true);
+	});
+
+	it('alternating bass: root / fifth on every beat', () => {
+		const ev = buildCompEvents([fullBar()], 4, TS, groove({ bass: 'alt' }));
+		const bass = ev.filter((e) => e.kind === 'bass');
+		expect(bass.map((e) => e.atQuarters)).toEqual([0, 1, 2, 3]);
+		expect(bass.map((e) => e.midi[0])).toEqual([36, 43, 36, 43]); // root, fifth, ...
+	});
+
+	it('octave bass: root / upper octave on every beat', () => {
+		const ev = buildCompEvents([fullBar()], 4, TS, groove({ bass: 'octaves' }));
+		const bass = ev.filter((e) => e.kind === 'bass');
+		expect(bass.map((e) => e.midi[0])).toEqual([36, 48, 36, 48]);
+	});
+
+	it('walking bass: a note per beat, root on 1, chromatic approach on the last beat', () => {
+		// Two bars (C → G) so the line leads into a real next root.
+		const c = fullBar();
+		const g = fullBar({ slotIndex: 1, startQuarters: 4, bassMidi: 43, bassPcs: [7, 11, 2] });
+		const ev = buildCompEvents([c, g], 8, TS, groove({ bass: 'walking' }));
+		const bass = ev.filter((e) => e.kind === 'bass');
+		expect(bass).toHaveLength(8); // 4 beats per bar
+		expect(bass.map((e) => e.atQuarters)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+		expect(bass[0].midi[0]).toBe(36); // bar 1 starts on the root C
+		expect(bass[4].midi[0]).toBe(43); // bar 2 starts on the root G
+		// Last beat of bar 1 leads chromatically into G (43): a half step away.
+		expect(Math.abs(bass[3].midi[0] - 43)).toBe(1);
 	});
 
 	it('metronome: a click per beat, accent on the downbeat', () => {
@@ -77,7 +105,7 @@ describe('buildCompEvents', () => {
 	});
 
 	it('rest: still emits a highlight event with no notes and no bass', () => {
-		const ev = buildCompEvents([fullBar({ midi: [], bassMidi: null })], 4, TS, groove({ bass: true }));
+		const ev = buildCompEvents([fullBar({ midi: [], bassMidi: null })], 4, TS, groove({ bass: 'root' }));
 		expect(ev).toHaveLength(1);
 		expect(ev[0].midi).toEqual([]);
 		expect(ev[0].slotIndex).toBe(0);

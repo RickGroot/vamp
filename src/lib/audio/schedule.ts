@@ -50,18 +50,21 @@ export function buildScheduledEvents(
 		const quarters = beatsToQuarters(flat.slot.beats, ts);
 		const midi = voicings[i] ?? [];
 		let bassMidi: number | null = null;
+		let bassPcs: number[] = [];
 		if (midi.length) {
 			const parsed = parseChord(flat.slot.chord);
 			const bassPc = parsed.bass ?? parsed.notes[0];
 			const chroma = bassPc ? Note.chroma(bassPc) : undefined;
 			if (chroma !== undefined) bassMidi = nearestMidi(chroma, BASS_TARGET);
+			bassPcs = parsed.notes.map((n) => Note.chroma(n)).filter((c) => Number.isFinite(c));
 		}
 		compSlots.push({
 			slotIndex: flat.globalIndex,
 			startQuarters: cumulativeQuarters,
 			quarters,
 			midi,
-			bassMidi
+			bassMidi,
+			bassPcs
 		});
 		cumulativeQuarters += quarters;
 	});

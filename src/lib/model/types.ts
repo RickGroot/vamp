@@ -17,11 +17,21 @@ export type CompPattern = 'block' | 'strum' | 'arpeggio';
 
 export type DrumStyle = 'none' | 'rock' | 'pop' | 'swing' | 'bossa';
 
+/**
+ * Bass accompaniment style:
+ * - `none`    — no bass
+ * - `root`    — root note on strong beats (simple)
+ * - `alt`     — alternating root / fifth (boom-chuck)
+ * - `walking` — quarter-note line stepping through chord tones into the next root
+ * - `octaves` — root jumping octaves on every beat
+ */
+export type BassMode = 'none' | 'root' | 'alt' | 'walking' | 'octaves';
+
 /** How chords are rhythmically realised during playback. */
 export interface Groove {
 	pattern: CompPattern;
-	/** Add a low root/bass note on strong beats. */
-	bass: boolean;
+	/** Bass accompaniment style ('none' = no bass). */
+	bass: BassMode;
 	/** Click on each beat (accented downbeat). */
 	metronome: boolean;
 	/** A real drum-kit pattern (or 'none'). */

@@ -5,7 +5,7 @@
 
 import { barBeats, beatsToQuarters } from '$lib/model/time';
 import { clickAtBeat, type ClickFeel } from './drills';
-import type { DrumStyle, Groove, TimeSignature } from '$lib/model/types';
+import type { BassMode, DrumStyle, Groove, TimeSignature } from '$lib/model/types';
 
 export type CompKind = 'chord' | 'bass' | 'click' | 'drum';
 
@@ -35,6 +35,8 @@ export interface CompSlot {
 	midi: number[];
 	/** Low bass/root note, or null. */
 	bassMidi: number | null;
+	/** Chord-tone pitch classes (0–11) for building walking/alternating bass lines. */
+	bassPcs: number[];
 }
 
 const GAP = 0.95; // leave a small gap so re-triggered notes don't blur together
@@ -80,21 +82,83 @@ function compSlot(slot: CompSlot, ts: TimeSignature, groove: Groove): CompEvent[
 		events.push({ atQuarters: startQuarters, durQuarters: quarters, midi, kind: 'chord', slotIndex });
 	}
 
-	// Bass on strong beats: beat 1, plus the bar midpoint for full/longer slots.
-	if (groove.bass && slot.bassMidi !== null) {
-		const barQ = beatsToQuarters(barBeats(ts), ts);
-		const strongBeats = quarters >= barQ ? [0, barQ / 2] : [0];
-		for (const offset of strongBeats) {
-			if (offset >= quarters) continue;
-			events.push({
-				atQuarters: startQuarters + offset,
-				durQuarters: Math.min(beatStep * 2, quarters - offset) * GAP,
-				midi: [slot.bassMidi],
-				kind: 'bass',
-				slotIndex: null
-			});
-		}
+	return events;
+}
+
+const BASS_GAP = 0.92; // bass notes are a touch detached, like a plucked upright
+
+/** Root midi of the next sounding slot (wraps to the loop start), for walking targets. */
+function nextBassRoot(slots: CompSlot[], from: number): number | null {
+	for (let step = 1; step <= slots.length; step++) {
+		const next = slots[(from + step) % slots.length];
+		if (next.bassMidi !== null) return next.bassMidi;
 	}
+	return null;
+}
+
+/** Chord tones as midis from `root` upward within one octave (root first, ascending). */
+function bassToneLadder(root: number, pcs: number[]): number[] {
+	const rootPc = ((root % 12) + 12) % 12;
+	const offsets = Array.from(new Set(pcs.map((pc) => (((pc - rootPc) % 12) + 12) % 12)));
+	if (!offsets.includes(0)) offsets.push(0);
+	offsets.sort((a, b) => a - b);
+	return offsets.map((o) => root + o);
+}
+
+/**
+ * Bass line across the whole loop, per mode. Walking looks ahead to the next chord's
+ * root so it can lead into it with a chromatic approach note on the last beat.
+ */
+function bassEvents(slots: CompSlot[], ts: TimeSignature, mode: BassMode): CompEvent[] {
+	const events: CompEvent[] = [];
+	const beatStep = 4 / ts.denominator; // one notated beat, in quarter notes
+	const barQ = beatsToQuarters(barBeats(ts), ts);
+
+	const push = (at: number, dur: number, m: number) =>
+		events.push({ atQuarters: at, durQuarters: dur, midi: [m], kind: 'bass', slotIndex: null });
+
+	slots.forEach((slot, i) => {
+		const root = slot.bassMidi;
+		if (root === null || slot.midi.length === 0) return; // rests carry no bass
+		const beats = Math.max(1, Math.round(slot.quarters / beatStep));
+
+		if (mode === 'root') {
+			// Root on strong beats: beat 1, plus the bar midpoint for full/longer slots.
+			const strong = slot.quarters >= barQ ? [0, barQ / 2] : [0];
+			for (const off of strong) {
+				if (off >= slot.quarters) continue;
+				push(slot.startQuarters + off, Math.min(beatStep * 2, slot.quarters - off) * GAP, root);
+			}
+			return;
+		}
+
+		if (mode === 'alt' || mode === 'octaves') {
+			// Root on the strong beats, fifth / upper octave on the weak ones.
+			const upper = mode === 'alt' ? root + 7 : root + 12;
+			for (let b = 0; b < beats; b++) {
+				push(slot.startQuarters + b * beatStep, beatStep * BASS_GAP, b % 2 === 0 ? root : upper);
+			}
+			return;
+		}
+
+		// walking: a quarter-note line. Root on 1, chord tones through the middle, and a
+		// chromatic approach into the next chord's root on the last beat.
+		const ladder = bassToneLadder(root, slot.bassPcs);
+		const target = nextBassRoot(slots, i);
+		let prev = root;
+		for (let b = 0; b < beats; b++) {
+			let note: number;
+			if (b === 0) {
+				note = root;
+			} else if (b === beats - 1 && target !== null) {
+				note = prev <= target ? target - 1 : target + 1; // lead in by a half step
+			} else {
+				note = ladder[b % ladder.length];
+			}
+			push(slot.startQuarters + b * beatStep, beatStep * BASS_GAP, note);
+			prev = note;
+		}
+	});
 
 	return events;
 }
@@ -190,6 +254,7 @@ export function buildCompEvents(
 	clickFeel: ClickFeel = 'all'
 ): CompEvent[] {
 	const events = slots.flatMap((slot) => compSlot(slot, ts, groove));
+	if (groove.bass !== 'none') events.push(...bassEvents(slots, ts, groove.bass));
 	if (groove.metronome) events.push(...metronomeEvents(totalQuarters, ts, clickFeel));
 	if (groove.drums !== 'none') events.push(...drumEvents(totalQuarters, ts, groove.drums));
 	return events;

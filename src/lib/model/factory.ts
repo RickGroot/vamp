@@ -14,7 +14,7 @@ export const DEFAULT_TIME_SIGNATURE: TimeSignature = { numerator: 4, denominator
 export const DEFAULT_TEMPO = 100;
 export const DEFAULT_GROOVE: Groove = {
 	pattern: 'block',
-	bass: false,
+	bass: 'none',
 	metronome: false,
 	drums: 'none'
 };

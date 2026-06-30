@@ -2,13 +2,20 @@
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRADE_OPTIONS } from '$lib/stores/view.svelte';
 	import { INSTRUMENT_LABELS, INSTRUMENT_ORDER } from '$lib/audio/instruments';
-	import type { CompPattern, DrumStyle, InstrumentId } from '$lib/model/types';
+	import type { BassMode, CompPattern, DrumStyle, InstrumentId } from '$lib/model/types';
 	import type { MixLane } from '$lib/audio/mix';
 
 	const PATTERNS: { id: CompPattern; label: string }[] = [
 		{ id: 'block', label: 'Block' },
 		{ id: 'strum', label: 'Strum' },
 		{ id: 'arpeggio', label: 'Arp' }
+	];
+	const BASS_MODES: { id: BassMode; label: string }[] = [
+		{ id: 'none', label: 'No bass' },
+		{ id: 'root', label: 'Root' },
+		{ id: 'alt', label: 'Alternating' },
+		{ id: 'walking', label: 'Walking' },
+		{ id: 'octaves', label: 'Octaves' }
 	];
 	const DRUMS: { id: DrumStyle; label: string }[] = [
 		{ id: 'none', label: 'No drums' },
@@ -27,7 +34,7 @@
 	// Plain-language summary of the backing, shown when collapsed.
 	const summary = $derived.by(() => {
 		const parts = [INSTRUMENT_LABELS[progression.current.instrument]];
-		if (groove.bass) parts.push('bass');
+		if (groove.bass !== 'none') parts.push(`${BASS_MODES.find((b) => b.id === groove.bass)?.label.toLowerCase()} bass`);
 		if (groove.drums !== 'none') parts.push(`${groove.drums} drums`);
 		if (groove.metronome) parts.push('click');
 		return parts.join(' · ');
@@ -84,18 +91,21 @@
 			</div>
 
 			<!-- Bass -->
-			<div class="ch ch--bass" class:ch--off={!groove.bass}>
+			<div class="ch ch--bass" class:ch--off={groove.bass === 'none'}>
 				<span class="ch__name">Bass</span>
 				<div class="ch__src">
-					<button
-						class="toggle"
-						class:toggle--on={groove.bass}
-						type="button"
-						aria-pressed={groove.bass}
-						onclick={() => progression.toggleBass()}>{groove.bass ? 'On' : 'Off'}</button
+					<select
+						class="sel"
+						aria-label="Bass style"
+						value={groove.bass}
+						onchange={(e) => progression.setBassMode((e.target as HTMLSelectElement).value as BassMode)}
 					>
+						{#each BASS_MODES as b (b.id)}
+							<option value={b.id}>{b.label}</option>
+						{/each}
+					</select>
 				</div>
-				{@render level('bass', groove.bass)}
+				{@render level('bass', groove.bass !== 'none')}
 			</div>
 
 			<!-- Drums -->
