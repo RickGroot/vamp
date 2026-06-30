@@ -310,7 +310,20 @@ button {
 	animation: art-drift2 36s ease-in-out infinite alternate;
 }
 
-/* App content sits above the aurora. */
+/* Generative geometric lattice (canvas): a grid of small squares that tilt in a
+   slow parametric field and turn around in order from the cursor. Crisp layer
+   painted over the blurred aurora, both behind content. Motion is all in JS. */
+.art-lattice {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	width: 100vw;
+	height: 100vh;
+	pointer-events: none;
+	opacity: 0.2;
+}
+
+/* App content sits above the aurora + lattice. */
 .frame.art > .head,
 .frame.art > .editor {
 	position: relative;

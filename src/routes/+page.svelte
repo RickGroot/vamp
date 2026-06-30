@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRANSPOSE_OPTIONS } from '$lib/stores/view.svelte';
+	import { cursor } from '$lib/stores/cursor.svelte';
+	import { createLattice } from '$lib/art/lattice';
 	import { resolveLoopRange } from '$lib/model/time';
 	import { flattenSlots } from '$lib/model/slots';
 	import { inferKey } from '$lib/model/key';
@@ -73,14 +75,24 @@
 			my += (ty - my) * 0.12;
 			root.style.setProperty('--art-px', `${((mx - 0.5) * 30).toFixed(1)}px`);
 			root.style.setProperty('--art-py', `${((my - 0.5) * 30).toFixed(1)}px`);
+			// Feed the smoothed cursor to the generative lattice.
+			cursor.mx = mx;
+			cursor.my = my;
 			if (Math.abs(tx - mx) > 0.001 || Math.abs(ty - my) > 0.001) raf = requestAnimationFrame(tick);
 		};
 		const onMove = (e: PointerEvent) => {
 			tx = e.clientX / window.innerWidth;
 			ty = e.clientY / window.innerHeight;
+			// Freshness backstop: tick() self-cancels once the lerp settles, so write
+			// the raw target here too — the lattice always reads a current value.
+			cursor.mx = tx;
+			cursor.my = ty;
 			if (!raf) raf = requestAnimationFrame(tick);
 		};
 		const onDown = (e: PointerEvent) => {
+			cursor.pingX = e.clientX;
+			cursor.pingY = e.clientY;
+			cursor.pingT = performance.now();
 			const ripple = document.createElement('div');
 			ripple.className = 'art-ripple';
 			ripple.style.left = `${e.clientX}px`;
@@ -96,6 +108,29 @@
 			cancelAnimationFrame(raf);
 			root.style.removeProperty('--art-px');
 			root.style.removeProperty('--art-py');
+		};
+	});
+
+	// Generative geometric lattice (canvas). Owns its own rAF, so it keeps
+	// breathing after the aurora's settling loop stops. Reads the shared cursor
+	// channel each frame; renders a single static frame for reduced-motion users.
+	let latticeEl = $state<HTMLCanvasElement | null>(null);
+	$effect(() => {
+		if (!view.artMode || typeof window === 'undefined' || !latticeEl) return;
+		const lattice = createLattice(latticeEl, () => cursor);
+		if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+			lattice.drawStatic();
+			return;
+		}
+		lattice.start();
+		const onResize = () => lattice.resize();
+		const onVisibility = () => (document.hidden ? lattice.stop() : lattice.start());
+		window.addEventListener('resize', onResize, { passive: true });
+		document.addEventListener('visibilitychange', onVisibility);
+		return () => {
+			lattice.stop();
+			window.removeEventListener('resize', onResize);
+			document.removeEventListener('visibilitychange', onVisibility);
 		};
 	});
 
@@ -133,6 +168,7 @@
 <div class="frame" class:art={view.artMode}>
 	{#if view.artMode}
 		<div class="art-bg" aria-hidden="true"></div>
+		<canvas class="art-lattice" bind:this={latticeEl} aria-hidden="true"></canvas>
 	{/if}
 	<header class="head">
 		<div class="head__left">
