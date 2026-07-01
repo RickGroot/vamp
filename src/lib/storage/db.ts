@@ -21,6 +21,7 @@ import {
 } from '$lib/model/types';
 import { createBar, newId, DEFAULT_TEMPO, DEFAULT_TIME_SIGNATURE } from '$lib/model/factory';
 import { INSTRUMENT_ORDER } from '$lib/audio/instruments';
+import { parseProgressionInput } from './import';
 
 const DB_NAME = 'vamp';
 const DB_VERSION = 1;
@@ -107,31 +108,19 @@ export async function exportBackup(): Promise<VampBackup> {
 	};
 }
 
-/** Validate, migrate and store a backup file's contents. Returns the count imported. */
-export async function importBackup(json: string): Promise<number> {
-	let data: unknown;
-	try {
-		data = JSON.parse(json);
-	} catch {
-		throw new Error('That file is not valid JSON.');
-	}
-	if (!isBackup(data)) throw new Error('That is not a Vamp backup file.');
-
-	const migrated = data.progressions.map(migrateProgression);
+/**
+ * Parse, migrate and store pasted / uploaded progression JSON. Forgiving about
+ * shape (a Vamp backup, a bare progression, an array, or fenced/prose-wrapped
+ * text — see parseProgressionInput). Returns the migrated progressions stored.
+ * Throws a human-readable Error the UI surfaces on failure.
+ */
+export async function importProgressions(text: string): Promise<Progression[]> {
+	const migrated = parseProgressionInput(text).map(migrateProgression);
 	const db = await getDb();
 	const tx = db.transaction(STORE, 'readwrite');
 	await Promise.all(migrated.map((p) => tx.store.put(p)));
 	await tx.done;
-	return migrated.length;
-}
-
-function isBackup(data: unknown): data is VampBackup {
-	return (
-		typeof data === 'object' &&
-		data !== null &&
-		(data as { app?: unknown }).app === 'vamp' &&
-		Array.isArray((data as { progressions?: unknown }).progressions)
-	);
+	return migrated;
 }
 
 // ---- defensive migration / coercion ----

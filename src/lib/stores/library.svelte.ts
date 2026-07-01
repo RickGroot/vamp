@@ -3,7 +3,7 @@
 
 import {
 	deleteProgression,
-	importBackup,
+	importProgressions,
 	listProgressions,
 	saveProgression
 } from '$lib/storage/db';
@@ -28,10 +28,11 @@ class LibraryStore {
 		await this.refresh();
 	}
 
-	async import(json: string): Promise<number> {
-		const count = await importBackup(json);
+	/** Import pasted or uploaded JSON; returns the progressions added. */
+	async import(text: string): Promise<Progression[]> {
+		const imported = await importProgressions(text);
 		await this.refresh();
-		return count;
+		return imported;
 	}
 }
 
