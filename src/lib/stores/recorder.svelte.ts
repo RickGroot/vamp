@@ -84,8 +84,13 @@ class RecorderStore {
 		this.takes = [];
 	}
 
-	fileName(take: Take, index: number): string {
-		return `vamp-take-${this.takes.length - index}.${extensionForType(take.type)}`;
+	fileName(take: Take): string {
+		// Derived from the take's timestamp so names are stable across deletions
+		// (a list-position number changed after deletes and could collide).
+		const d = new Date(take.createdAt);
+		const pad = (n: number) => String(n).padStart(2, '0');
+		const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+		return `vamp-take-${stamp}.${extensionForType(take.type)}`;
 	}
 }
 

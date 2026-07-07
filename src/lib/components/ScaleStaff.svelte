@@ -8,6 +8,7 @@
 	let { notes }: Props = $props();
 
 	let container = $state<HTMLDivElement>();
+	let error = $state<string | null>(null);
 	let lastWidth = 0;
 	let vf: typeof import('vexflow') | null = null;
 
@@ -101,10 +102,19 @@
 		render(finalTopLine - staveTopPad, total);
 	}
 
+	// The lazy VexFlow chunk can fail to load (flaky network before the service
+	// worker has it cached) and draw() can throw — surface it instead of leaving
+	// a silently blank box + an unhandled rejection. vf stays null after a failed
+	// import, so a later render() retries and clears the message on success.
 	async function render() {
 		if (!container) return;
-		if (!vf) vf = await import('vexflow');
-		draw(vf);
+		try {
+			if (!vf) vf = await import('vexflow');
+			draw(vf);
+			error = null;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not render notation.';
+		}
 	}
 
 	$effect(() => {
@@ -123,9 +133,15 @@
 	});
 </script>
 
+{#if error}<p class="staff-error label">{error}</p>{/if}
 <div class="scale-staff" bind:this={container}></div>
 
 <style lang="scss">
+	.staff-error {
+		color: var(--c-diminished);
+		padding: var(--space-2) 0;
+	}
+
 	.scale-staff {
 		width: 100%;
 		max-width: 560px;

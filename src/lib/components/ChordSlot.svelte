@@ -131,6 +131,7 @@
 		aria-expanded={open}
 		aria-controls={listId}
 		aria-autocomplete="list"
+		aria-activedescendant={open && highlighted >= 0 ? `${listId}-opt-${highlighted}` : undefined}
 		autocomplete="off"
 		autocapitalize="off"
 		spellcheck="false"
@@ -173,11 +174,12 @@
 	{#if open && suggestions.length > 0}
 		<ul class="menu" id={listId} role="listbox" bind:this={menuEl}>
 			{#each suggestions as suggestion, i (suggestion.display)}
-				<li>
+				<li role="presentation">
 					<button
 						type="button"
 						class="opt"
 						class:opt--hl={i === highlighted}
+						id={`${listId}-opt-${i}`}
 						role="option"
 						aria-selected={i === highlighted}
 						data-i={i}

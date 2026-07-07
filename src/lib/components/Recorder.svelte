@@ -49,12 +49,12 @@
 
 		{#if recorder.takes.length > 0}
 			<ul class="takes">
-				{#each recorder.takes as take, i (take.id)}
+				{#each recorder.takes as take (take.id)}
 					<li class="take">
 						<span class="take__meta label">{fmtTime(take.createdAt)} · {fmt(take.durationMs)}</span>
 						<!-- svelte-ignore a11y_media_has_caption -->
 						<audio class="take__audio" controls src={take.url}></audio>
-						<a class="take__act" href={take.url} download={recorder.fileName(take, i)} title="Download take"
+						<a class="take__act" href={take.url} download={recorder.fileName(take)} title="Download take"
 							>↓</a
 						>
 						<button

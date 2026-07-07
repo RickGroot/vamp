@@ -46,8 +46,16 @@ export function createDrums(ctx: BaseAudioContext): LoadedDrums {
 /** Lazily create + load the shared (live) drum machine. */
 export async function getDrumMachine(): Promise<LoadedDrums> {
 	if (!drumMachine) drumMachine = createDrums(getRawContext());
-	await drumMachine.load;
-	return drumMachine;
+	const dm = drumMachine;
+	try {
+		await dm.load;
+	} catch (err) {
+		// Evict on failure (network down mid-download) so a retry can re-fetch —
+		// a cached rejected load would break drums for the whole session.
+		if (drumMachine === dm) drumMachine = null;
+		throw err;
+	}
+	return dm;
 }
 
 export const INSTRUMENT_LABELS: Record<InstrumentId, string> = {
@@ -91,11 +99,14 @@ export async function getInstrument(id: InstrumentId): Promise<LoadedInstrument>
 		inst = createInstrument(id, getRawContext());
 		cache.set(id, inst);
 	}
-	await inst.load;
+	try {
+		await inst.load;
+	} catch (err) {
+		// Evict on failure so the next play() re-creates and re-fetches — otherwise
+		// one offline first-load permanently breaks the instrument this session.
+		// Guarded by identity so a concurrent re-create is never clobbered.
+		if (cache.get(id) === inst) cache.delete(id);
+		throw err;
+	}
 	return inst;
-}
-
-/** Whether an instrument has been created and loaded already. */
-export function isInstrumentReady(id: InstrumentId): boolean {
-	return cache.has(id);
 }

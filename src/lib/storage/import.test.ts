@@ -116,3 +116,42 @@ describe('parse → migrate produces a valid, playable progression', () => {
 		expect(p.groove.bass).toBe('none');
 	});
 });
+
+describe('migrateProgression — hostile/legacy values are made safe', () => {
+	const migrate = (partial: Record<string, unknown>) => migrateProgression({ name: 'X', ...partial });
+
+	it('clamps tempo: zero/negative fall back, out-of-range clamps', () => {
+		expect(migrate({ tempo: 0 }).tempo).toBe(100);
+		expect(migrate({ tempo: -100 }).tempo).toBe(100);
+		expect(migrate({ tempo: 1e9 }).tempo).toBe(300);
+		expect(migrate({ tempo: 5 }).tempo).toBe(20);
+		expect(migrate({ tempo: 140 }).tempo).toBe(140);
+	});
+
+	it('keeps odd-but-real meters, rejects garbage numerator/denominator', () => {
+		expect(migrate({ timeSignature: { numerator: 7, denominator: 8 } }).timeSignature).toEqual({
+			numerator: 7,
+			denominator: 8
+		});
+		expect(migrate({ timeSignature: { numerator: 1e9, denominator: 4 } }).timeSignature.numerator).toBe(4);
+		expect(migrate({ timeSignature: { numerator: 0.5, denominator: 4 } }).timeSignature.numerator).toBe(1); // integerised
+		expect(migrate({ timeSignature: { numerator: 4, denominator: 5 } }).timeSignature.denominator).toBe(4);
+		expect(migrate({ timeSignature: { numerator: -3, denominator: 0 } }).timeSignature).toEqual({
+			numerator: 4,
+			denominator: 4
+		});
+	});
+
+	it('bounds slot beats: zero/negative/huge fall back to 4', () => {
+		const bars = (beats: number) => [{ slots: [{ chord: 'C', beats }] }];
+		expect(migrate({ bars: bars(-4) }).bars[0].slots[0].beats).toBe(4);
+		expect(migrate({ bars: bars(0) }).bars[0].slots[0].beats).toBe(4);
+		expect(migrate({ bars: bars(1e12) }).bars[0].slots[0].beats).toBe(4);
+		expect(migrate({ bars: bars(1.5) }).bars[0].slots[0].beats).toBe(1.5); // fractional is legit
+	});
+
+	it('migrates the legacy boolean groove.bass (pre-bass-modes saves)', () => {
+		expect(migrate({ groove: { bass: true } }).groove.bass).toBe('root');
+		expect(migrate({ groove: { bass: false } }).groove.bass).toBe('none');
+	});
+});

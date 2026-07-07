@@ -19,7 +19,14 @@ import {
 	type TimeSignature,
 	type VampBackup
 } from '$lib/model/types';
-import { createBar, newId, DEFAULT_TEMPO, DEFAULT_TIME_SIGNATURE } from '$lib/model/factory';
+import {
+	createBar,
+	newId,
+	DEFAULT_TEMPO,
+	DEFAULT_TIME_SIGNATURE,
+	TEMPO_MIN,
+	TEMPO_MAX
+} from '$lib/model/factory';
 import { INSTRUMENT_ORDER } from '$lib/audio/instruments';
 import { parseProgressionInput } from './import';
 
@@ -49,10 +56,17 @@ function getDb(): Promise<IDBPDatabase<VampDB>> {
 				if (oldVersion < 1) {
 					const store = db.createObjectStore(STORE, { keyPath: 'id' });
 					store.createIndex('updatedAt', 'updatedAt');
+					// Reserved for future key/value needs (created at v1 so adding them
+					// later needs no version bump). Intentionally unused for now.
 					db.createObjectStore('meta', { keyPath: 'key' });
 				}
 				// if (oldVersion < 2) { ...future structural changes... }
 			}
+		});
+		// A failed open (private browsing, quota) must not poison every later
+		// call — clear the cache so the next operation can retry.
+		dbPromise.catch(() => {
+			dbPromise = null;
 		});
 	}
 	return dbPromise;
@@ -79,16 +93,19 @@ export async function saveProgression(progression: Progression): Promise<void> {
 	await db.put(STORE, { ...progression, updatedAt: Date.now() });
 }
 
-/** All saved progressions, newest-updated first. */
+/** All saved progressions, newest-updated first, migrated to the current shape. */
 export async function listProgressions(): Promise<Progression[]> {
 	const db = await getDb();
 	const all = await db.getAllFromIndex(STORE, 'updatedAt');
-	return all.reverse();
+	// Records may predate schema changes (e.g. Groove.bass was once a boolean) —
+	// every read goes through the same migration as imports.
+	return all.reverse().map(migrateProgression);
 }
 
 export async function loadProgression(id: string): Promise<Progression | undefined> {
 	const db = await getDb();
-	return db.get(STORE, id);
+	const raw = await db.get(STORE, id);
+	return raw === undefined ? undefined : migrateProgression(raw);
 }
 
 export async function deleteProgression(id: string): Promise<void> {
@@ -136,7 +153,7 @@ export function migrateProgression(raw: unknown): Progression {
 		name: typeof r.name === 'string' ? r.name : 'Untitled progression',
 		createdAt: toNumber(r.createdAt, now),
 		updatedAt: toNumber(r.updatedAt, now),
-		tempo: toNumber(r.tempo, DEFAULT_TEMPO),
+		tempo: coerceTempo(r.tempo),
 		timeSignature: coerceTimeSignature(r.timeSignature),
 		instrument: coerceInstrument(r.instrument),
 		groove: coerceGroove(r.groove),
@@ -150,13 +167,27 @@ function toNumber(value: unknown, fallback: number): number {
 	return Number.isFinite(n) ? n : fallback;
 }
 
+/** Positive tempo clamped to the valid range; anything else → the default. */
+function coerceTempo(value: unknown): number {
+	const t = toNumber(value, DEFAULT_TEMPO);
+	if (t <= 0) return DEFAULT_TEMPO;
+	return Math.max(TEMPO_MIN, Math.min(TEMPO_MAX, Math.round(t)));
+}
+
+/**
+ * Integer meter within sane bounds. Odd meters (7/8, 5/4) are valid and kept;
+ * garbage (0.5, 1e9, negatives) falls back so a hostile import/share hash can't
+ * freeze scheduling loops.
+ */
 function coerceTimeSignature(value: unknown): TimeSignature {
 	const v = (value ?? {}) as Record<string, unknown>;
-	const numerator = toNumber(v.numerator, DEFAULT_TIME_SIGNATURE.numerator);
-	const denominator = toNumber(v.denominator, DEFAULT_TIME_SIGNATURE.denominator);
+	const numerator = Math.round(toNumber(v.numerator, DEFAULT_TIME_SIGNATURE.numerator));
+	const denominator = Math.round(toNumber(v.denominator, DEFAULT_TIME_SIGNATURE.denominator));
 	return {
-		numerator: numerator > 0 ? numerator : DEFAULT_TIME_SIGNATURE.numerator,
-		denominator: denominator > 0 ? denominator : DEFAULT_TIME_SIGNATURE.denominator
+		numerator: numerator >= 1 && numerator <= 16 ? numerator : DEFAULT_TIME_SIGNATURE.numerator,
+		denominator: [2, 4, 8, 16].includes(denominator)
+			? denominator
+			: DEFAULT_TIME_SIGNATURE.denominator
 	};
 }
 
@@ -188,10 +219,13 @@ function coerceBar(value: unknown): Bar {
 
 function coerceSlot(value: unknown): Slot {
 	const v = (value ?? {}) as Record<string, unknown>;
+	// Beats must be positive and bounded: zero/negative values corrupt MIDI
+	// export tick math, and huge values freeze per-beat scheduling loops.
+	const b = toNumber(v.beats, 4);
 	return {
 		id: typeof v.id === 'string' ? v.id : newId(),
 		chord: typeof v.chord === 'string' ? v.chord : '',
-		beats: toNumber(v.beats, 4)
+		beats: b > 0 && b <= 64 ? b : 4
 	};
 }
 

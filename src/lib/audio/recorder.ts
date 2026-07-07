@@ -66,13 +66,27 @@ export class MicRecorder {
 				reject(new Error('Not recording.'));
 				return;
 			}
-			recorder.onstop = () => {
+			const finalize = () => {
 				const type = this.chunks[0]?.type || recorder.mimeType || 'audio/webm';
 				const blob = new Blob(this.chunks, { type });
 				this.cleanup();
 				resolve({ blob, type });
 			};
-			recorder.stop();
+			// The recorder auto-stops if the mic track ends externally (device
+			// unplugged, permission revoked). Calling stop() then throws and would
+			// wedge this.recorder non-null forever — finalize the partial take from
+			// the chunks already flushed instead.
+			if (recorder.state === 'inactive') {
+				finalize();
+				return;
+			}
+			recorder.onstop = finalize;
+			try {
+				recorder.stop();
+			} catch (err) {
+				this.cleanup();
+				reject(err);
+			}
 		});
 	}
 

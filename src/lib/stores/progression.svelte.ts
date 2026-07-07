@@ -3,7 +3,7 @@
 
 import { engine, type EngineState } from '$lib/audio/engine';
 import { barBeats } from '$lib/model/time';
-import { createBar, createProgression, createSlot } from '$lib/model/factory';
+import { createBar, createProgression, createSlot, TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
 import { buildPresetChords, type Preset } from '$lib/model/presets';
 import { buildExample, type Example } from '$lib/model/examples';
 import { randomProgression } from '$lib/model/inspire';
@@ -17,13 +17,14 @@ import type {
 	DrumStyle,
 	InstrumentId,
 	Progression,
+	Slot,
 	TimeSignature
 } from '$lib/model/types';
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-export const TEMPO_MIN = 20;
-export const TEMPO_MAX = 300;
+// Canonical bounds live in the model layer (shared with import coercion).
+export { TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
 /** How many chords a single bar may be split into (1 = full, 2 = half-bars, …). */
 export const MAX_SLOTS_PER_BAR = 4;
 
@@ -42,6 +43,10 @@ class ProgressionStore {
 
 	// Practice-drill session state (transient — never enters undo history).
 	private drillOrigin: { chords: string[]; tempo: number } | null = null;
+	/** Accumulated key-cycle transposition (semitones, mod 12) this drill session. */
+	private drillSemis = 0;
+	/** Last tempo the step-up drill set — restore only if still current on stop. */
+	private lastDrillTempo: number | null = null;
 	private tempoLoops = 0;
 	private keyLoops = 0;
 
@@ -72,7 +77,10 @@ class ProgressionStore {
 
 	/** Replace the edited progression (e.g. after load / new). Stops playback + clears history. */
 	load(progression: Progression): void {
-		if (engine.isPlaying || engine.state === 'loading') engine.stop();
+		// Unconditional: also invalidates an in-flight play() that hasn't flipped
+		// the state to 'loading' yet (it awaits unlockAudio first) — otherwise the
+		// just-replaced song could start playing over the newly loaded one.
+		engine.stop();
 		this.current = progression;
 		this.past = [];
 		this.future = [];
@@ -107,6 +115,9 @@ class ProgressionStore {
 
 	undo(): void {
 		if (this.past.length === 0) return;
+		// Finalize any active drill first: its transposed chords/tempo must not be
+		// restored into (or captured against) an unrelated historical snapshot.
+		this.endDrillSession();
 		const wasPlaying = this.isPlaying;
 		this.future.push($state.snapshot(this.current));
 		this.current = this.past.pop()!;
@@ -117,6 +128,7 @@ class ProgressionStore {
 
 	redo(): void {
 		if (this.future.length === 0) return;
+		this.endDrillSession();
 		const wasPlaying = this.isPlaying;
 		this.past.push($state.snapshot(this.current));
 		this.current = this.future.pop()!;
@@ -161,6 +173,7 @@ class ProgressionStore {
 			for (const slot of bar.slots) slot.beats = each;
 		}
 		this.touch();
+		if (this.isPlaying) void this.play(); // rebuild the schedule in the new meter
 	}
 
 	// ---- groove ----
@@ -260,8 +273,20 @@ class ProgressionStore {
 		if (this.current.bars.length <= 1) return;
 		this.checkpoint();
 		this.current.bars.splice(barIndex, 1);
+		// Shift the loop range so it keeps covering the same bars, not the same
+		// indices (deleting bar 1 must not slide a later loop onto other bars).
+		const lr = this.current.loopRange;
+		if (lr) {
+			if (barIndex < lr.startBar) {
+				this.current.loopRange = { startBar: lr.startBar - 1, endBar: lr.endBar - 1 };
+			} else if (barIndex <= lr.endBar) {
+				this.current.loopRange =
+					lr.startBar === lr.endBar ? null : { startBar: lr.startBar, endBar: lr.endBar - 1 };
+			}
+		}
 		this.clampLoopRange();
 		this.touch();
+		if (this.isPlaying) void this.play(); // drop the removed bar from the live schedule
 	}
 
 	/** Reorder a bar from one index to another (drag-and-drop). */
@@ -271,8 +296,23 @@ class ProgressionStore {
 		this.checkpoint();
 		const [bar] = this.current.bars.splice(from, 1);
 		this.current.bars.splice(to, 0, bar);
+		// Remap the loop bounds through the move (remove-at-from + insert-at-to)
+		// so the range follows the bars it covered.
+		const lr = this.current.loopRange;
+		if (lr) {
+			const remap = (i: number): number => {
+				if (i === from) return to;
+				let j = i > from ? i - 1 : i;
+				if (j >= to) j += 1;
+				return j;
+			};
+			const a = remap(lr.startBar);
+			const b = remap(lr.endBar);
+			this.current.loopRange = { startBar: Math.min(a, b), endBar: Math.max(a, b) };
+		}
 		this.clampLoopRange();
 		this.touch();
+		if (this.isPlaying) void this.play(); // resync audio + playhead with the new order
 	}
 
 	/**
@@ -322,6 +362,10 @@ class ProgressionStore {
 		bar.slots.push(createSlot('', 0));
 		this.redistribute(barIndex);
 		this.touch();
+		// Slot changes shift every later slot's global index — restart so the
+		// audio and the playhead highlight stay in sync. (Appending a whole bar
+		// is deliberately exempt: it preserves existing indices.)
+		if (this.isPlaying) void this.play();
 	}
 
 	removeSlot(barIndex: number, slotIndex: number): void {
@@ -331,6 +375,7 @@ class ProgressionStore {
 		bar.slots.splice(slotIndex, 1);
 		this.redistribute(barIndex);
 		this.touch();
+		if (this.isPlaying) void this.play();
 	}
 
 	private redistribute(barIndex: number): void {
@@ -401,10 +446,16 @@ class ProgressionStore {
 
 		if (drills.steppingTempo && ++this.tempoLoops >= drills.tempoEvery) {
 			this.tempoLoops = 0;
-			const next = nextStepTempo(this.current.tempo, drills.tempoStep, Math.min(TEMPO_MAX, drills.tempoMax));
-			if (next !== this.current.tempo) {
-				this.current.tempo = next;
-				engine.setTempo(next);
+			// Only step UP toward a sane max — nextStepTempo is min(max, current+step),
+			// so an unvalidated/low tempoMax must never drag a faster song down.
+			const max = clamp(drills.tempoMax, TEMPO_MIN, TEMPO_MAX);
+			if (this.current.tempo < max) {
+				const next = nextStepTempo(this.current.tempo, drills.tempoStep, max);
+				if (next !== this.current.tempo) {
+					this.current.tempo = next;
+					engine.setTempo(next);
+					this.lastDrillTempo = next;
+				}
 			}
 		}
 
@@ -419,35 +470,60 @@ class ProgressionStore {
 	/** Transpose to the next key and restart the loop — transient, no undo entry. */
 	private cycleKey(semitones: number): void {
 		if (!this.isPlaying) return;
+		this.drillSemis = (((this.drillSemis + semitones) % 12) + 12) % 12;
 		for (const bar of this.current.bars)
 			for (const slot of bar.slots)
 				if (slot.chord.trim()) slot.chord = transposeChordSymbol(slot.chord, semitones);
 		void this.play();
 	}
 
+	/**
+	 * Undo the drill's transient changes without clobbering the user's:
+	 * - a slot still equal to its transposed original restores the original
+	 *   spelling verbatim (no enharmonic drift);
+	 * - a slot edited mid-drill is transposed back by the accumulated interval;
+	 * - if the structure changed (bars/slots added/removed), everything is
+	 *   transposed back positionlessly instead of written by stale position;
+	 * - tempo restores only if the step-up drill was the last to set it.
+	 */
 	private endDrillSession(): void {
 		this.tempoLoops = 0;
 		this.keyLoops = 0;
 		if (!this.drillOrigin) return;
-		this.restoreChords(this.drillOrigin.chords);
-		this.current.tempo = this.drillOrigin.tempo;
-		engine.setTempo(this.drillOrigin.tempo);
+		const { chords, tempo } = this.drillOrigin;
+		const semis = this.drillSemis;
+		const slots = this.flatSlots();
+
+		if (slots.length === chords.length) {
+			slots.forEach((slot, i) => {
+				const expected =
+					semis && chords[i].trim() ? transposeChordSymbol(chords[i], semis) : chords[i];
+				if (slot.chord === expected) slot.chord = chords[i];
+				else if (semis && slot.chord.trim())
+					slot.chord = transposeChordSymbol(slot.chord, -semis);
+			});
+		} else if (semis) {
+			for (const slot of slots)
+				if (slot.chord.trim()) slot.chord = transposeChordSymbol(slot.chord, -semis);
+		}
+
+		if (this.lastDrillTempo !== null && this.current.tempo === this.lastDrillTempo) {
+			this.current.tempo = tempo;
+			engine.setTempo(tempo);
+		}
 		this.drillOrigin = null;
+		this.drillSemis = 0;
+		this.lastDrillTempo = null;
 	}
 
 	private captureChords(): string[] {
-		const out: string[] = [];
-		for (const bar of this.current.bars) for (const slot of bar.slots) out.push(slot.chord);
-		return out;
+		return this.flatSlots().map((slot) => slot.chord);
 	}
 
-	private restoreChords(chords: string[]): void {
-		let i = 0;
-		for (const bar of this.current.bars)
-			for (const slot of bar.slots) {
-				if (i < chords.length) slot.chord = chords[i];
-				i++;
-			}
+	private flatSlots(): Slot[] {
+		const out: Slot[] = [];
+		for (const bar of this.current.bars) for (const slot of bar.slots) out.push(slot);
+		return out;
 	}
 
 	async toggle(): Promise<void> {

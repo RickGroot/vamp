@@ -12,6 +12,15 @@ describe('nearestMidi', () => {
 		expect(nearestMidi(7, 64)).toBe(67); // G
 		expect(nearestMidi(4, 64)).toBe(64); // E exact
 	});
+
+	it('folds by octaves at the range edges instead of changing the pitch class', () => {
+		// Bass register (target 40 = BASS_TARGET): Bb/B used to clamp to C2 (36).
+		expect(nearestMidi(10, 40)).toBe(46); // Bb2, not C2
+		expect(nearestMidi(11, 40)).toBe(47); // B2, not C2
+		expect(nearestMidi(10, 30)).toBe(46); // below-floor target folds up, chroma kept
+		expect(nearestMidi(0, 100)).toBe(84); // above-ceiling folds down to a C
+		expect(chromaOf(nearestMidi(10, 40))).toBe(10);
+	});
 });
 
 describe('voiceKeyboard', () => {

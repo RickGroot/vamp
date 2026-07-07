@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRANSPOSE_OPTIONS } from '$lib/stores/view.svelte';
+	import { droneState } from '$lib/stores/drone.svelte';
 	import { cursor } from '$lib/stores/cursor.svelte';
 	import { createLattice } from '$lib/art/lattice';
 	import { resolveLoopRange } from '$lib/model/time';
@@ -57,11 +59,23 @@
 		if (shared) progression.load(shared);
 	});
 
+	// Keep a sounding "follow the key" drone in tune when the inferred key
+	// changes (edits, or the key-cycle drill transposing every loop). Lives here
+	// — always mounted — because the Practice panel can be collapsed while the
+	// drone keeps sounding.
+	$effect(() => {
+		droneState.syncKey(keyInfo.tonic);
+	});
+
+	// Reactive so both art effects re-run when the OS setting flips mid-session
+	// (a one-shot matchMedia read left the wrong mode running until re-toggle).
+	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
+
 	// Art mode: cursor-parallax aurora + click ripples. Only attached while art
 	// mode is on, and skipped entirely for reduced-motion users.
 	$effect(() => {
 		if (!view.artMode || typeof window === 'undefined') return;
-		if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+		if (reducedMotion.current) return;
 
 		const root = document.documentElement;
 		let raf = 0;
@@ -118,9 +132,13 @@
 	$effect(() => {
 		if (!view.artMode || typeof window === 'undefined' || !latticeEl) return;
 		const lattice = createLattice(latticeEl, () => cursor);
-		if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+		if (reducedMotion.current) {
+			// Static frame, no rAF — but it must still track the viewport, or a
+			// resize stretches the stale bitmap into blurry non-square cells.
 			lattice.drawStatic();
-			return;
+			const onStaticResize = () => lattice.drawStatic();
+			window.addEventListener('resize', onStaticResize, { passive: true });
+			return () => window.removeEventListener('resize', onStaticResize);
 		}
 		lattice.start();
 		const onResize = () => lattice.resize();
@@ -138,8 +156,13 @@
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
-		// Spacebar toggles play/stop (unless typing in a field).
+		// Spacebar toggles play/stop — but never steal Space from a focused
+		// interactive element (buttons activate with Space; hijacking it makes
+		// every button in the app toggle playback for keyboard users).
 		if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !inField) {
+			const el = event.target;
+			if (el instanceof Element && el.closest('button, a, select, input, textarea, [contenteditable]'))
+				return;
 			event.preventDefault();
 			void progression.toggle();
 			return;
@@ -233,7 +256,7 @@
 		<div class="compose-bar">
 			<PresetMenu />
 			<ExampleMenu />
-			<SuggestMenu />
+			<SuggestMenu {keyInfo} />
 			<button class="inspire" type="button" onclick={() => progression.inspire()}>Inspire me</button>
 			<span class="compose-bar__spacer"></span>
 			<button

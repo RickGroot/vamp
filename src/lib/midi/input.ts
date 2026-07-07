@@ -52,7 +52,17 @@ export class MidiInput {
 			return { ok: false, error: (e as Error)?.message || 'MIDI access was denied.' };
 		}
 		this.attach();
-		this.access.onstatechange = () => this.attach();
+		this.access.onstatechange = (e) => {
+			// A device unplugged while notes are held never sends its note-offs, so
+			// `held` would stay non-empty forever and no gesture could ever complete
+			// again. Reset the gesture state on any input disconnect.
+			const port = (e as MIDIConnectionEvent).port;
+			if (port?.type === 'input' && port.state === 'disconnected') {
+				this.held.clear();
+				this.peak.clear();
+			}
+			this.attach();
+		};
 		const names = [...this.access.inputs.values()].map((i) => i.name).filter(Boolean);
 		return { ok: true, device: (names[0] as string) || undefined };
 	}

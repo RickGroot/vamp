@@ -15,9 +15,23 @@
 	const currentTs = $derived(
 		`${progression.current.timeSignature.numerator}/${progression.current.timeSignature.denominator}`
 	);
+	// Imported/shared songs may carry a meter outside the fixed list (e.g. 7/8) —
+	// surface it as an extra option so the select never renders blank.
+	const customTs = $derived(TIME_SIGNATURES.some((t) => t.label === currentTs) ? null : currentTs);
 
-	function onTempo(event: Event) {
-		progression.setTempo(Number((event.target as HTMLInputElement).value));
+	// Live-apply only values that are already valid; committing the clamp on every
+	// keystroke would rewrite the field mid-typing (typing "90" became 200).
+	function onTempoInput(event: Event) {
+		const n = Number((event.target as HTMLInputElement).value);
+		if (Number.isFinite(n) && n >= TEMPO_MIN && n <= TEMPO_MAX) progression.setTempo(n);
+	}
+
+	// Commit + clamp on change (blur/Enter/spinners) and resync the display.
+	function onTempoChange(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const n = Number(input.value);
+		progression.setTempo(Number.isFinite(n) && n > 0 ? n : progression.current.tempo);
+		input.value = String(progression.current.tempo);
 	}
 
 	let taps = $state<number[]>([]);
@@ -76,7 +90,8 @@
 					max={TEMPO_MAX}
 					step="1"
 					value={progression.current.tempo}
-					oninput={onTempo}
+					oninput={onTempoInput}
+					onchange={onTempoChange}
 				/>
 				<span class="field__unit label">bpm</span>
 				<button
@@ -105,6 +120,9 @@
 		<div class="field">
 			<label class="label" for="timesig">Time</label>
 			<select id="timesig" class="field__select" value={currentTs} onchange={onTimeSignature}>
+				{#if customTs}
+					<option value={customTs}>{customTs} (custom)</option>
+				{/if}
 				{#each TIME_SIGNATURES as ts (ts.label)}
 					<option value={ts.label}>{ts.label}</option>
 				{/each}

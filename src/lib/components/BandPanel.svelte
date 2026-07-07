@@ -181,11 +181,13 @@
 			aria-label={`${lane} volume`}
 			oninput={(e) => view.setLaneVolume(lane, Number((e.target as HTMLInputElement).value))}
 		/>
+		<!-- M/S stay enabled even when the lane's source is off: a persisted solo
+		     on a disabled lane silences everything, so the way out must stay
+		     clickable. Only the fader is gated on the source. -->
 		<button
 			class="msbtn"
 			class:msbtn--mute={state.mute}
 			type="button"
-			disabled={!enabled}
 			aria-pressed={state.mute}
 			title="Mute"
 			onclick={() => view.toggleLaneMute(lane)}>M</button
@@ -194,7 +196,6 @@
 			class="msbtn"
 			class:msbtn--solo={state.solo}
 			type="button"
-			disabled={!enabled}
 			aria-pressed={state.solo}
 			title="Solo"
 			onclick={() => view.toggleLaneSolo(lane)}>S</button

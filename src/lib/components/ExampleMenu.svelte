@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { progression } from '$lib/stores/progression.svelte';
 	import { EXAMPLES, type Example } from '$lib/model/examples';
+	import { dismissable } from '$lib/actions/dismissable';
 
 	let open = $state(false);
 	let query = $state('');
@@ -23,13 +24,14 @@
 	}
 </script>
 
-<div class="examples" onfocusout={onFocusOut}>
+<div class="examples" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
 	<button class="examples__btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		Examples
 	</button>
 
 	{#if open}
-		<div class="menu" role="menu">
+		<!-- Disclosure popover, not an ARIA menu (contains a search input + list). -->
+		<div class="menu">
 			<input
 				class="menu__search"
 				type="text"
@@ -40,7 +42,7 @@
 			<ul class="menu__list">
 				{#each filtered as example (example.id)}
 					<li>
-						<button class="item" type="button" role="menuitem" onclick={() => load(example)}>
+						<button class="item" type="button" onclick={() => load(example)}>
 							<span class="item__title">{example.title}</span>
 							<span class="item__origin label">{example.origin}</span>
 						</button>

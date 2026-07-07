@@ -61,7 +61,7 @@
 				step="5"
 				aria-label="Max tempo"
 				value={drills.tempoMax}
-				oninput={(e) => drills.setTempoMax(Number((e.target as HTMLInputElement).value))}
+				onchange={(e) => drills.setTempoMax(Number((e.target as HTMLInputElement).value))}
 			/>
 			<span class="sub label">bpm</span>
 		{/if}

@@ -52,6 +52,10 @@ class PlaybackEngine {
 	private click: Tone.Synth | null = null;
 	private _state: EngineState = 'stopped';
 	private loopEventId: number | null = null;
+	// Cancellation token: play() awaits sample loads for seconds on first use, and
+	// a stop()/newer play() during those awaits must invalidate the stale run —
+	// otherwise playback starts against an explicit stop (or plays a replaced song).
+	private playGen = 0;
 	private readonly stateListeners = new Set<StateListener>();
 	private readonly slotListeners = new Set<SlotListener>();
 	private readonly loopListeners = new Set<LoopListener>();
@@ -120,12 +124,15 @@ class PlaybackEngine {
 		progression: Progression,
 		opts: { countIn?: boolean; clickFeel?: ClickFeel } = {}
 	): Promise<void> {
+		const gen = ++this.playGen;
 		await unlockAudio();
+		if (gen !== this.playGen) return; // stopped/superseded while unlocking
 		this.setState('loading');
 		try {
 			this.quartersPerBar = beatsToQuarters(barBeats(progression.timeSignature), progression.timeSignature);
 			this.instrument = await getInstrument(progression.instrument);
 			this.drums = progression.groove.drums !== 'none' ? await getDrumMachine() : null;
+			if (gen !== this.playGen) return; // stopped/superseded while samples loaded
 
 			const { events, totalTicks } = buildEvents(progression, opts.clickFeel);
 			this.teardownPart();
@@ -178,7 +185,12 @@ class PlaybackEngine {
 				// see the chord you're soloing over during your trade-fours turn.
 				if (ev.slotIndex !== null) {
 					const slot = ev.slotIndex;
-					Tone.getDraw().schedule(() => this.setActiveSlot(slot), time);
+					// Draw callbacks queue ~lookAhead ahead of audio time and outlive
+					// transport.cancel() — guard so a stop just before a chord change
+					// doesn't leave the next slot highlighted while stopped.
+					Tone.getDraw().schedule(() => {
+						if (this._state === 'playing') this.setActiveSlot(slot);
+					}, time);
 				}
 			}, events);
 
@@ -217,12 +229,15 @@ class PlaybackEngine {
 			transport.start();
 			this.setState('playing');
 		} catch (err) {
-			this.setState('stopped');
+			// Only reset state if this run is still current — a stale rejection must
+			// not clobber a newer play()'s 'loading'/'playing'.
+			if (gen === this.playGen) this.setState('stopped');
 			throw err;
 		}
 	}
 
 	stop(): void {
+		this.playGen++; // invalidate any in-flight play()
 		const transport = Tone.getTransport();
 		transport.stop();
 		transport.cancel();

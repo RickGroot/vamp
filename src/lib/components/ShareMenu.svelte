@@ -4,13 +4,20 @@
 	import { downloadMidi } from '$lib/export/midi';
 	import { exportWav } from '$lib/export/audio';
 	import { downloadBackup } from '$lib/storage/backup';
+	import { dismissable } from '$lib/actions/dismissable';
 
 	let open = $state(false);
 	let status = $state('');
+	let rendering = $state(false);
+	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	function flash(message: string) {
+	// Single status setter that always clears the previous timer — overlapping
+	// flashes used to wipe newer messages when a stale timeout fired.
+	function setStatus(message: string, autoClear = true) {
+		clearTimeout(timer);
+		timer = undefined;
 		status = message;
-		setTimeout(() => (status = ''), 2500);
+		if (autoClear) timer = setTimeout(() => (status = ''), 2500);
 	}
 
 	function onFocusOut(event: FocusEvent) {
@@ -21,45 +28,57 @@
 	async function onLink() {
 		try {
 			await navigator.clipboard.writeText(buildShareUrl($state.snapshot(progression.current)));
-			flash('Link copied');
+			setStatus('Link copied');
 		} catch {
-			flash('Copy failed');
+			setStatus('Copy failed');
 		}
 	}
 
 	function onMidi() {
 		downloadMidi($state.snapshot(progression.current));
-		flash('MIDI saved');
+		setStatus('MIDI saved');
 	}
 
 	async function onWav() {
-		flash('Rendering…');
+		if (rendering) return;
+		rendering = true;
+		setStatus('Rendering…', false); // sticky until the render settles
 		try {
 			await exportWav($state.snapshot(progression.current));
-			flash('WAV saved');
+			setStatus('WAV saved');
 		} catch {
-			flash('Render failed');
+			setStatus('Render failed');
+		} finally {
+			rendering = false;
 		}
 	}
 
 	async function onJson() {
-		await downloadBackup();
-		flash('Backup saved');
+		try {
+			await downloadBackup();
+			setStatus('Backup saved');
+		} catch {
+			setStatus('Backup failed');
+		}
 	}
+
+	$effect(() => () => clearTimeout(timer));
 </script>
 
-<div class="host" onfocusout={onFocusOut}>
+<div class="host" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
 	<button class="bar-btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		Share / export
 	</button>
 
 	{#if open}
-		<div class="vmenu" role="menu">
+		<div class="vmenu">
 			<button class="vmenu__row" type="button" onclick={onLink}>Copy share link</button>
 			<button class="vmenu__row" type="button" onclick={onMidi}>Export MIDI</button>
-			<button class="vmenu__row" type="button" onclick={onWav}>Render WAV</button>
+			<button class="vmenu__row" type="button" disabled={rendering} onclick={onWav}>
+				{rendering ? 'Rendering…' : 'Render WAV'}
+			</button>
 			<button class="vmenu__row" type="button" onclick={onJson}>Export JSON backup</button>
-			{#if status}<p class="status label">{status}</p>{/if}
+			{#if status}<p class="status label" role="status">{status}</p>{/if}
 		</div>
 	{/if}
 </div>

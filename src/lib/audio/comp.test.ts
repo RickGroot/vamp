@@ -43,6 +43,29 @@ describe('buildCompEvents', () => {
 		expect(ev).toHaveLength(2);
 	});
 
+	it('no event rings past its slot boundary on fractional-beat slots', () => {
+		// A 3/4 bar split in two 1.5-beat slots — hit counts round up, so the last
+		// hit's duration must be clamped to the boundary instead of spilling over.
+		const slots = [
+			fullBar({ quarters: 1.5 }),
+			fullBar({ slotIndex: 1, startQuarters: 1.5, quarters: 1.5, midi: [65, 69, 72], bassMidi: 41 })
+		];
+		for (const pattern of ['strum', 'arpeggio'] as const) {
+			const ev = buildCompEvents(slots, 3, { numerator: 3, denominator: 4 }, groove({ pattern }));
+			for (const e of ev) {
+				const slotEnd = e.atQuarters < 1.5 ? 1.5 : 3;
+				expect(e.atQuarters + e.durQuarters).toBeLessThanOrEqual(slotEnd + 1e-9);
+			}
+		}
+		for (const bass of ['alt', 'octaves', 'walking'] as const) {
+			const ev = buildCompEvents(slots, 3, { numerator: 3, denominator: 4 }, groove({ bass }));
+			for (const e of ev.filter((e) => e.kind === 'bass')) {
+				const slotEnd = e.atQuarters < 1.5 ? 1.5 : 3;
+				expect(e.atQuarters + e.durQuarters).toBeLessThanOrEqual(slotEnd + 1e-9);
+			}
+		}
+	});
+
 	it('arpeggio: eighth-note steps cycling chord tones', () => {
 		const ev = buildCompEvents([fullBar()], 4, TS, groove({ pattern: 'arpeggio' }));
 		expect(ev).toHaveLength(8);

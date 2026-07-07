@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { progression } from '$lib/stores/progression.svelte';
 	import { PRESETS, PRESET_ROOTS, type Preset } from '$lib/model/presets';
+	import { dismissable } from '$lib/actions/dismissable';
 
 	let open = $state(false);
 	let root = $state('C');
@@ -16,7 +17,7 @@
 	}
 </script>
 
-<div class="presets" onfocusout={onFocusOut}>
+<div class="presets" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
 	<button
 		class="presets__btn"
 		type="button"
@@ -27,7 +28,8 @@
 	</button>
 
 	{#if open}
-		<div class="menu" role="menu">
+		<!-- Disclosure popover, not an ARIA menu (contains a select + list). -->
+		<div class="menu">
 			<div class="menu__root">
 				<label class="label" for="preset-root">Root</label>
 				<select id="preset-root" class="menu__select" bind:value={root}>
@@ -39,7 +41,7 @@
 			<ul class="menu__list">
 				{#each PRESETS as preset (preset.id)}
 					<li>
-						<button class="item" type="button" role="menuitem" onclick={() => apply(preset)}>
+						<button class="item" type="button" onclick={() => apply(preset)}>
 							<span class="item__name">{preset.name}</span>
 							<span class="item__pattern label">{preset.pattern}</span>
 						</button>

@@ -12,6 +12,9 @@ import {
 
 export const DEFAULT_TIME_SIGNATURE: TimeSignature = { numerator: 4, denominator: 4 };
 export const DEFAULT_TEMPO = 100;
+/** Valid tempo range, shared by the UI clamp and the import/load coercion. */
+export const TEMPO_MIN = 20;
+export const TEMPO_MAX = 300;
 export const DEFAULT_GROOVE: Groove = {
 	pattern: 'block',
 	bass: 'none',

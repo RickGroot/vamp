@@ -59,7 +59,10 @@ function compSlot(slot: CompSlot, ts: TimeSignature, groove: Groove): CompEvent[
 		for (let h = 0; h < hits; h++) {
 			events.push({
 				atQuarters: startQuarters + h * beatStep,
-				durQuarters: beatStep * GAP,
+				// Clamp to the slot boundary: fractional-beat slots (e.g. a split 3/4
+				// bar) round the hit count up, and the last hit must not ring into
+				// the next chord's attack.
+				durQuarters: Math.min(beatStep, quarters - h * beatStep) * GAP,
 				midi,
 				kind: 'chord',
 				slotIndex: h === 0 ? slotIndex : null
@@ -71,7 +74,7 @@ function compSlot(slot: CompSlot, ts: TimeSignature, groove: Groove): CompEvent[
 		for (let s = 0; s < steps; s++) {
 			events.push({
 				atQuarters: startQuarters + s * step,
-				durQuarters: step * GAP,
+				durQuarters: Math.min(step, quarters - s * step) * GAP,
 				midi: [midi[s % midi.length]],
 				kind: 'chord',
 				slotIndex: s === 0 ? slotIndex : null
@@ -134,9 +137,12 @@ function bassEvents(slots: CompSlot[], ts: TimeSignature, mode: BassMode): CompE
 
 		if (mode === 'alt' || mode === 'octaves') {
 			// Root on the strong beats, fifth / upper octave on the weak ones.
+			// Durations clamp to the slot boundary so a fractional-beat slot's last
+			// note doesn't ring into the next chord.
 			const upper = mode === 'alt' ? root + 7 : root + 12;
 			for (let b = 0; b < beats; b++) {
-				push(slot.startQuarters + b * beatStep, beatStep * BASS_GAP, b % 2 === 0 ? root : upper);
+				const dur = Math.min(beatStep, slot.quarters - b * beatStep) * BASS_GAP;
+				push(slot.startQuarters + b * beatStep, dur, b % 2 === 0 ? root : upper);
 			}
 			return;
 		}
@@ -155,7 +161,8 @@ function bassEvents(slots: CompSlot[], ts: TimeSignature, mode: BassMode): CompE
 			} else {
 				note = ladder[b % ladder.length];
 			}
-			push(slot.startQuarters + b * beatStep, beatStep * BASS_GAP, note);
+			const dur = Math.min(beatStep, slot.quarters - b * beatStep) * BASS_GAP;
+			push(slot.startQuarters + b * beatStep, dur, note);
 			prev = note;
 		}
 	});

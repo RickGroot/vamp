@@ -531,9 +531,16 @@ button {
 	}
 }
 
+/* Reduced motion: kill duration AND iteration count. Without the count, the
+   `infinite` art animations cycle every 0.01ms — each frame samples a random
+   phase, i.e. strobing, delivered precisely to users who asked for no motion.
+   `*` never matches pseudo-elements, so ::before/::after need naming too. */
 @media (prefers-reduced-motion: reduce) {
-	* {
+	*,
+	::before,
+	::after {
 		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 	}
 }

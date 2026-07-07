@@ -3,6 +3,7 @@
 	import { progression } from '$lib/stores/progression.svelte';
 	import { library } from '$lib/stores/library.svelte';
 	import { readFileAsText } from '$lib/storage/backup';
+	import { dismissable } from '$lib/actions/dismissable';
 
 	let open = $state(false);
 	let fileInput = $state<HTMLInputElement>();
@@ -70,11 +71,13 @@
 	}
 </script>
 
-<div class="host" onfocusout={onFocusOut}>
+<div class="host" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
 	<button class="bar-btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>File</button>
 
 	{#if open}
-		<div class="vmenu" role="menu">
+		<!-- Disclosure popover (no role=menu: rows are plain buttons + a textarea,
+		     not arrow-key menuitems). -->
+		<div class="vmenu">
 			<button class="vmenu__row" type="button" onclick={onNew}>New</button>
 			<button class="vmenu__row" type="button" onclick={onSave}>Save</button>
 			<button class="vmenu__row" type="button" onclick={() => fileInput?.click()}>Import file…</button>
@@ -126,6 +129,9 @@
 
 			{#if status}
 				<p class="status" class:status--err={status.kind === 'err'} role="status">{status.text}</p>
+			{/if}
+			{#if library.error}
+				<p class="status status--err" role="alert">{library.error}</p>
 			{/if}
 
 			{#if library.items.length > 0}

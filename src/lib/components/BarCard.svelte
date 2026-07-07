@@ -45,19 +45,26 @@
 
 	let dragOver = $state(false);
 
+	// Custom MIME type so only bar drags are accepted — a file/text/link dropped
+	// from outside used to parse '' as bar 0 and silently move a bar.
+	const BAR_DRAG_TYPE = 'application/x-vamp-bar';
+	const isBarDrag = (event: DragEvent) => event.dataTransfer?.types.includes(BAR_DRAG_TYPE) ?? false;
+
 	function onDragStart(event: DragEvent) {
-		event.dataTransfer?.setData('text/plain', String(barIndex));
+		event.dataTransfer?.setData(BAR_DRAG_TYPE, String(barIndex));
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 	}
 	function onDragOver(event: DragEvent) {
+		if (!isBarDrag(event)) return; // don't advertise foreign drags as droppable
 		event.preventDefault();
 		dragOver = true;
 	}
 	function onDrop(event: DragEvent) {
+		if (!isBarDrag(event)) return;
 		event.preventDefault();
 		dragOver = false;
-		const from = Number(event.dataTransfer?.getData('text/plain'));
-		if (!Number.isNaN(from)) progression.moveBar(from, barIndex);
+		const from = Number(event.dataTransfer?.getData(BAR_DRAG_TYPE));
+		if (Number.isInteger(from)) progression.moveBar(from, barIndex);
 	}
 </script>
 
@@ -74,15 +81,30 @@
 	role="group"
 >
 	<header class="bar__head">
+		<!-- The grip is mouse/touch-only; keyboard & AT users get the real move
+		     buttons below instead, so it's hidden from the accessibility tree. -->
 		<span
 			class="bar__grip"
 			draggable="true"
 			ondragstart={onDragStart}
-			role="button"
-			tabindex="-1"
-			aria-label={`Drag bar ${barIndex + 1} to reorder`}
+			aria-hidden="true"
 			title="Drag to reorder">⠿</span
 		>
+		<span class="visually-hidden-buttons">
+			<button
+				class="visually-hidden"
+				type="button"
+				disabled={barIndex === 0}
+				onclick={() => progression.moveBar(barIndex, barIndex - 1)}
+				>Move bar {barIndex + 1} left</button
+			>
+			<button
+				class="visually-hidden"
+				type="button"
+				onclick={() => progression.moveBar(barIndex, barIndex + 1)}
+				>Move bar {barIndex + 1} right</button
+			>
+		</span>
 		<span class="label bar__num">{barIndex + 1}</span>
 		<div class="bar__actions">
 			<button
@@ -155,6 +177,37 @@
 		align-items: center;
 		gap: var(--space-2);
 		min-height: 20px;
+	}
+
+	.visually-hidden-buttons {
+		display: contents;
+	}
+
+	/* Off-screen for sighted mouse users; pops in when keyboard-focused. */
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
+
+		&:focus-visible {
+			position: static;
+			width: auto;
+			height: auto;
+			margin: 0;
+			padding: 0 var(--space-1);
+			overflow: visible;
+			clip-path: none;
+			white-space: nowrap;
+			font-size: 0.65rem;
+			background: var(--color-white);
+			border: 1px solid var(--color-accent);
+		}
 	}
 
 	.bar__grip {

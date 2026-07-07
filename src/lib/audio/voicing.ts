@@ -20,7 +20,11 @@ export function nearestMidi(chroma: number, target: number): number {
 	// Largest m <= target with m % 12 === chroma, then pick the closer of m / m+12.
 	let m = target - (((target - chroma) % 12) + 12) % 12;
 	if (Math.abs(m + 12 - target) < Math.abs(m - target)) m += 12;
-	return Math.max(MIDI_MIN, Math.min(MIDI_MAX, m));
+	// Fold by octaves into range — a hard clamp would change the pitch class
+	// (e.g. Bb near the bass floor used to clamp 34 → 36 and play as C).
+	while (m < MIDI_MIN) m += 12;
+	while (m > MIDI_MAX) m -= 12;
+	return m;
 }
 
 const centroid = (midi: number[]): number =>

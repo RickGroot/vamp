@@ -30,6 +30,8 @@ class DroneStore {
 	octave = $state(3);
 	fifth = $state(true);
 	volume = $state(0.5);
+	/** Guards toggle() while an async start is in flight (double-click safety). */
+	private pending = false;
 
 	constructor() {
 		if (browser) {
@@ -60,13 +62,29 @@ class DroneStore {
 	}
 
 	async toggle(fallbackRoot: string): Promise<void> {
+		// start() awaits unlockAudio (slow on the first gesture); without a guard a
+		// rapid second click would start twice and invert the toggle's parity.
+		if (this.pending) return;
 		if (this.on) {
 			drone.stop();
 			this.on = false;
 		} else {
-			await drone.start(this.midiFor(fallbackRoot), { fifth: this.fifth, volume: this.volume });
-			this.on = true;
+			this.pending = true;
+			try {
+				await drone.start(this.midiFor(fallbackRoot), { fifth: this.fifth, volume: this.volume });
+				this.on = true;
+			} finally {
+				this.pending = false;
+			}
 		}
+	}
+
+	/**
+	 * Retune a sounding drone when the inferred key changes while in "follow the
+	 * key" mode (root === null). No persist — prefs didn't change, only the key.
+	 */
+	syncKey(fallbackRoot: string): void {
+		if (this.on && this.root === null) drone.setRoot(this.midiFor(fallbackRoot));
 	}
 
 	setRoot(name: string | null, fallbackRoot: string): void {

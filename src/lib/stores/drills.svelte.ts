@@ -3,6 +3,7 @@
 // engine reads clickFeel when building the metronome.
 
 import { browser } from '$app/environment';
+import { TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
 import type { ClickFeel, KeyCycleMode } from '$lib/audio/drills';
 
 const KEY = 'vamp:drills';
@@ -90,7 +91,10 @@ class DrillsStore {
 		this.persist();
 	}
 	setTempoMax(bpm: number): void {
-		this.tempoMax = bpm;
+		// Clamp hard: an out-of-range max reaches the live transport at the next
+		// loop boundary (bpm 0 freezes playback). The control commits on change,
+		// so mid-typing values never land here.
+		this.tempoMax = clampTempo(bpm);
 		this.persist();
 	}
 	setKeyMode(mode: KeyCycleMode): void {
@@ -101,6 +105,12 @@ class DrillsStore {
 		this.keyEvery = Math.max(1, Math.floor(loops));
 		this.persist();
 	}
+}
+
+function clampTempo(bpm: number): number {
+	const n = Math.round(bpm);
+	if (!Number.isFinite(n) || n <= 0) return DEFAULTS.tempoMax;
+	return Math.max(TEMPO_MIN, Math.min(TEMPO_MAX, n));
 }
 
 function read(): DrillsPrefs | null {
@@ -118,7 +128,7 @@ function read(): DrillsPrefs | null {
 			clickFeel,
 			tempoStep: typeof p.tempoStep === 'number' ? Math.max(0, p.tempoStep) : DEFAULTS.tempoStep,
 			tempoEvery: typeof p.tempoEvery === 'number' ? Math.max(1, p.tempoEvery) : DEFAULTS.tempoEvery,
-			tempoMax: typeof p.tempoMax === 'number' ? p.tempoMax : DEFAULTS.tempoMax,
+			tempoMax: typeof p.tempoMax === 'number' ? clampTempo(p.tempoMax) : DEFAULTS.tempoMax,
 			keyMode,
 			keyEvery: typeof p.keyEvery === 'number' ? Math.max(1, p.keyEvery) : DEFAULTS.keyEvery
 		};

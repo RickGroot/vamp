@@ -142,7 +142,7 @@ export function createLattice(canvas: HTMLCanvasElement, getCursor: () => Cursor
 	const pings: Ping[] = [];
 	let raf = 0;
 	let frame = 0;
-	let lastPingT = 0;
+	let lastPingT = -1; // sentinel: adopt the rune's current pingT on first tick
 	let lastFollow = 0;
 	let lastMoveAt = -Infinity;
 	let prevCellX = -1;
@@ -172,25 +172,47 @@ export function createLattice(canvas: HTMLCanvasElement, getCursor: () => Cursor
 
 	function pushPing(ox: number, oy: number, amp: number, now: number) {
 		pings.push({ ox, oy, t0: now, amp });
-		if (pings.length > MAX_PINGS) pings.shift();
+		if (pings.length > MAX_PINGS) {
+			// Evict the weakest CURRENT contribution, not the oldest — shift()ing a
+			// still-strong click ping snapped its swept cells back in one frame.
+			let weakest = 0;
+			let weakestVal = Infinity;
+			for (let i = 0; i < pings.length; i++) {
+				const v = pings[i].amp * pingDecay((now - pings[i].t0) / 1000);
+				if (v < weakestVal) {
+					weakestVal = v;
+					weakest = i;
+				}
+			}
+			pings.splice(weakest, 1);
+		}
 	}
 
-	// Zero the wave, then add each live ping's contribution. Work is bounded per
-	// ping to a disc of radius (front + ring) via per-row column spans, so an old
-	// (large) ping that has already faded costs nothing — it is spliced first.
+	// Zero the wave, then add each live ping's contribution. Removal is
+	// contribution-based (amp·decay), NOT front-position-based: behind the front
+	// every swept cell still holds amp·decay of rotation, so deleting a ping when
+	// its ring exits the screen visibly snapped the whole field back at once.
 	function computeWave(now: number) {
 		wave.fill(0);
-		const diag = Math.hypot(W, H);
+		const maxSpan = Math.hypot(W, H); // no cell is farther than this from any origin
 		for (let p = pings.length - 1; p >= 0; p--) {
 			const ping = pings[p];
 			const age = (now - ping.t0) / 1000;
 			const decay = pingDecay(age);
-			const front = wavefrontRadius(age);
-			if (decay < 0.02 || front > diag + 3 * WIDTH) {
-				pings.splice(p, 1);
+			if (ping.amp * decay < 0.02) {
+				pings.splice(p, 1); // faded below visibility — safe to drop
 				continue;
 			}
+			const front = wavefrontRadius(age);
 			const ampDecay = ping.amp * decay;
+
+			// Once the ring has swept past every cell, wavefrontPassed is 1
+			// everywhere — a uniform add, no per-cell distance math needed.
+			if (front - 0.6 * WIDTH > maxSpan) {
+				for (let i = 0; i < wave.length; i++) wave[i] += ampDecay;
+				continue;
+			}
+
 			const rOuter = front + 0.6 * WIDTH;
 			const rOuterSq = rOuter * rOuter;
 			for (let r = 0; r < rows; r++) {
@@ -261,14 +283,23 @@ export function createLattice(canvas: HTMLCanvasElement, getCursor: () => Cursor
 	function tick() {
 		raf = 0;
 		const now = performance.now();
+		// measure() resets the backing store (erasing the bitmap), so a consumed
+		// resize must force a redraw this frame even while idle — otherwise the
+		// layer flickers blank between idle heartbeats during window drags.
+		const resized = needsResize;
 		if (needsResize) measure();
 
 		const cur = getCursor();
 		const curX = cur.mx * W;
 		const curY = cur.my * H;
 
-		// strong ping on a fresh pointerdown
-		if (cur.pingT && cur.pingT !== lastPingT) {
+		// The shared cursor rune outlives this lattice (module singleton), so a
+		// pre-existing pingT must not replay as a phantom click on the first tick
+		// after an art-mode toggle / HMR re-run — adopt it silently once.
+		if (lastPingT < 0) {
+			lastPingT = cur.pingT;
+		} else if (cur.pingT && cur.pingT !== lastPingT) {
+			// strong ping on a fresh pointerdown
 			lastPingT = cur.pingT;
 			pushPing(cur.pingX, cur.pingY, CLICK_AMP, now);
 		}
@@ -288,7 +319,7 @@ export function createLattice(canvas: HTMLCanvasElement, getCursor: () => Cursor
 
 		const active = now - lastMoveAt < ACTIVE_MS || pings.length > 0;
 		frame++;
-		if (active || frame % IDLE_SKIP === 0) {
+		if (active || resized || frame % IDLE_SKIP === 0) {
 			computeWave(now);
 			draw(now, curX, curY);
 		}
