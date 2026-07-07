@@ -159,12 +159,10 @@
 				</svg>
 			{/if}
 
-			{#if scales.display !== 'staff'}
-				<p class="legend label">
-					<span class="legend__dot legend__dot--root"></span> root
-					<span class="legend__dot legend__dot--scale"></span> scale tone
-				</p>
-			{/if}
+			<p class="legend label">
+				<span class="legend__dot legend__dot--root"></span> root
+				<span class="legend__dot legend__dot--scale"></span> scale tone
+			</p>
 		</div>
 	{/if}
 </section>

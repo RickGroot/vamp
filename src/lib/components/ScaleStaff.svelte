@@ -31,10 +31,23 @@
 		lastWidth = el.clientWidth || 0;
 		const fmtWidth = width - 16 - 48;
 
+		// Root notes orange, scale tones teal — matching the keyboard/fretboard
+		// dots. VexFlow writes literal SVG attributes, so resolve the CSS vars here.
+		const css = getComputedStyle(document.documentElement);
+		const rootColor = css.getPropertyValue('--c-dominant').trim() || '#ff7b00';
+		const toneColor = css.getPropertyValue('--c-major').trim() || '#1fb6a6';
+
 		const makeNotes = () =>
-			keys.map((k) => {
+			keys.map((k, i) => {
 				const note = new StaveNote({ keys: [k.key], duration: 'q', stemDirection: -1 });
-				if (k.accidental) note.addModifier(new Accidental(k.accidental), 0);
+				// scaleStaffKeys ends on the octave root, so first + last are roots.
+				const color = i === 0 || i === keys.length - 1 ? rootColor : toneColor;
+				note.setStyle({ fillStyle: color, strokeStyle: color });
+				if (k.accidental) {
+					const acc = new Accidental(k.accidental);
+					acc.setStyle({ fillStyle: color, strokeStyle: color });
+					note.addModifier(acc, 0);
+				}
 				return note;
 			});
 		const buildVoice = (ns: InstanceType<typeof StaveNote>[]) => {
