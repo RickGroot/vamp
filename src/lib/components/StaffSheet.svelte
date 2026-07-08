@@ -3,7 +3,7 @@
 	import { view } from '$lib/stores/view.svelte';
 	import { parseChord } from '$lib/audio/chord';
 	import { displayChord } from '$lib/audio/transpose';
-	import { midiToVexKey, beatsToVexDuration, notationVoicing } from '$lib/notation/vex';
+	import { voicedToVexKey, beatsToVexDuration, notationVoicing } from '$lib/notation/vex';
 	import { ensureJazzFont, JAZZ_FONT } from '$lib/notation/font';
 	import type { Bar, TimeSignature } from '$lib/model/types';
 	import type { RenderContext } from 'vexflow';
@@ -126,12 +126,13 @@
 			p.bar.slots.map((slot, i) => {
 				const vi = p.slotStart + i;
 				const dur = beatsToVexDuration(slot.beats, ts);
-				const midi = voicings[vi];
+				const voiced = voicings[vi];
 				if (!showNotes) return { note: new StaveNote({ keys: ['b/4'], duration: dur }), vi };
-				if (!midi || midi.length === 0) {
+				if (!voiced || voiced.length === 0) {
 					return { note: new StaveNote({ keys: ['b/4'], duration: `${dur}r` }), vi };
 				}
-				const keys = midi.map(midiToVexKey);
+				// Keys keep the chord's own spelling (F#m7 shows sharps, Bb7 flats).
+				const keys = voiced.map(voicedToVexKey);
 				// Stems down so the (above-staff) chord names always sit clear of the notes.
 				const note = new StaveNote({ keys: keys.map((k) => k.key), duration: dur, stemDirection: -1 });
 				keys.forEach((k, idx) => {
