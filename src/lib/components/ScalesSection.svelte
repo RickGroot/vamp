@@ -14,6 +14,11 @@
 
 	const info = $derived(scales.info);
 	const typeLabel = $derived(SCALE_TYPES.find((t) => t.id === scales.type)?.label ?? scales.type);
+	// The per-chord shortcut can set a sharp root (e.g. F#m7 → "F#") that isn't in
+	// the flat-spelled SCALE_ROOTS list; surface it as an extra option so the
+	// select reflects it instead of going blank (and the scale keeps its clean
+	// sharp spelling rather than an ugly Gb double-flat respelling).
+	const customRoot = $derived(SCALE_ROOTS.includes(scales.root) ? null : scales.root);
 
 	// ---- keyboard layout (two octaves from C) ----
 	const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
@@ -82,6 +87,7 @@
 						value={scales.root}
 						onchange={(e) => scales.setRoot((e.target as HTMLSelectElement).value)}
 					>
+						{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
 						{#each SCALE_ROOTS as r (r)}<option value={r}>{r}</option>{/each}
 					</select>
 				</div>

@@ -52,6 +52,14 @@ describe('scalesForChord', () => {
 		expect(scalesForChord('')).toBeNull();
 		expect(scalesForChord('xyz')).toBeNull();
 	});
+
+	it("keeps the chord's sharp tonic (ScalesSection surfaces it as a root option)", () => {
+		// A sharp root must stay sharp so the suggested scale spells cleanly
+		// (F# dorian, not Gb dorian with double-flats). getScaleInfo must resolve it.
+		expect(scalesForChord('F#m7')?.root).toBe('F#');
+		expect(getScaleInfo('F#', 'dorian').notes).toEqual(['F#', 'G#', 'A', 'B', 'C#', 'D#', 'E']);
+		expect(getScaleInfo('F#', 'dorian').empty).toBe(false);
+	});
 });
 
 describe('scaleStaffKeys', () => {
