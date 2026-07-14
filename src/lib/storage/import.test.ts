@@ -154,4 +154,11 @@ describe('migrateProgression — hostile/legacy values are made safe', () => {
 		expect(migrate({ groove: { bass: true } }).groove.bass).toBe('root');
 		expect(migrate({ groove: { bass: false } }).groove.bass).toBe('none');
 	});
+
+	it('defaults/validates the bass instrument (added after early saves)', () => {
+		expect(migrate({ groove: { bass: 'root' } }).groove.bassInstrument).toBe('upright'); // missing → default
+		expect(migrate({ groove: { bassInstrument: 'kazoo' } }).groove.bassInstrument).toBe('upright'); // invalid
+		expect(migrate({ groove: { bassInstrument: 'electric' } }).groove.bassInstrument).toBe('electric');
+		expect(migrate({ groove: { bassInstrument: 'keys' } }).groove.bassInstrument).toBe('keys');
+	});
 });

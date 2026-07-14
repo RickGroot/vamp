@@ -12,6 +12,7 @@ import { keyCycleInterval, nextStepTempo } from '$lib/audio/drills';
 import { view } from './view.svelte';
 import { drills } from './drills.svelte';
 import type {
+	BassInstrumentId,
 	BassMode,
 	CompPattern,
 	DrumStyle,
@@ -191,6 +192,14 @@ class ProgressionStore {
 		this.current.groove.bass = mode;
 		this.touch();
 		if (this.isPlaying) void this.play();
+	}
+
+	setBassInstrument(id: BassInstrumentId): void {
+		if (this.current.groove.bassInstrument === id) return;
+		this.checkpoint('groove');
+		this.current.groove.bassInstrument = id;
+		this.touch();
+		if (this.isPlaying) void this.play(); // reload + reroute the bass voice
 	}
 
 	toggleMetronome(): void {

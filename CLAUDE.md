@@ -41,7 +41,7 @@ Single route. Layering: **model → storage / audio(pure) → stores → compone
 | `src/lib/audio/comp.ts` | PURE groove expansion: block/strum/arp, bass modes, drums, metronome → CompEvent[] |
 | `src/lib/audio/voicing.ts` | Keyboard voice-leading + guitar voicer; `nearestMidi` octave-fold |
 | `src/lib/audio/chord.ts` | `parseChord` via tonal; octave assignment; `empty` vs `isRest` |
-| `src/lib/audio/instruments.ts` | smplr instrument/TR-808 loading on Tone's context; cache + evict-on-fail |
+| `src/lib/audio/instruments.ts` | smplr chord instrument + TR-808 + `getBassInstrument` (upright/electric/synth GM) on Tone's context; cache + evict-on-fail |
 | `src/lib/audio/context.ts` | Shared AudioContext owner; `unlockAudio()` gesture; iOS resume lifecycle |
 | `src/lib/audio/mix.ts` | PURE computeMixLevels (solo/mute) + isComping (trade-fours) |
 | `src/lib/audio/drone.ts` | Singleton `DroneEngine`: sustained root(+fifth), click-free ramps |
@@ -59,7 +59,7 @@ Components (`src/lib/components/`): BarCard, ChordSlot, TransportBar (+LoopContr
 
 ## Key data flow
 
-**Playback:** Progression → `schedule.buildScheduledEvents` (flattenSlots → voiceSequence + parseChord → CompSlot[] with bassMidi/bassPcs) → `comp.buildCompEvents` (CompEvent[] positioned in quarter notes) → `engine.buildEvents` (quarters × PPQ → tick strings `"Ni"`) → looped `Tone.Part` on the Transport. Chords/bass = smplr instrument; drums = smplr TR-808; metronome = tiny Tone.Synth. All share ONE AudioContext (`context.getRawContext`). Active-slot highlight dispatched via `Tone.getDraw()` at audio time.
+**Playback:** Progression → `schedule.buildScheduledEvents` (flattenSlots → voiceSequence + parseChord → CompSlot[] with bassMidi/bassPcs) → `comp.buildCompEvents` (CompEvent[] positioned in quarter notes) → `engine.buildEvents` (quarters × PPQ → tick strings `"Ni"`) → looped `Tone.Part` on the Transport. Chords = smplr instrument; bass = its own `groove.bassInstrument` voice (upright/electric/synth), or the chord instrument when `bassInstrument==='keys'`; drums = smplr TR-808; metronome = tiny Tone.Synth. All share ONE AudioContext (`context.getRawContext`). Active-slot highlight dispatched via `Tone.getDraw()` at audio time.
 
 **Chords are stored as the LITERAL symbol string the user typed** and re-parsed with tonal at play/render time — never cache a parsed form. Empty string = rest. Durations are in beats (beat unit = TS denominator).
 

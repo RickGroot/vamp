@@ -258,6 +258,38 @@
 			svg2.appendChild(t);
 		}
 
+		// A translucent "playhead" box per slot, behind the staff, keyed by global
+		// slot index — the clearly-visible active-chord highlight (the chord-name
+		// colour alone is easy to miss, and in chart mode there are no noteheads).
+		if (svg2) {
+			const byRow = new Map<number, Label[]>();
+			for (const lab of labels) {
+				const arr = byRow.get(lab.row);
+				if (arr) arr.push(lab);
+				else byRow.set(lab.row, [lab]);
+			}
+			for (const [row, rowLabels] of byRow) {
+				rowLabels.sort((a, b) => a.x - b.x);
+				const top = Math.round(topLine[row] - Math.max(noteAbove[row], 6) - 2);
+				const bottom = Math.round(topLine[row] + lineSpan + Math.max(noteBelow[row], 6) + 2);
+				rowLabels.forEach((lab, i) => {
+					const prev = rowLabels[i - 1];
+					const next = rowLabels[i + 1];
+					const left = prev ? (prev.x + lab.x) / 2 : lab.x - (next ? (next.x - lab.x) / 2 : 26);
+					const right = next ? (lab.x + next.x) / 2 : lab.x + (prev ? (lab.x - prev.x) / 2 : 26);
+					const rect = document.createElementNS(NS, 'rect');
+					rect.setAttribute('x', String(Math.round(left)));
+					rect.setAttribute('y', String(top));
+					rect.setAttribute('width', String(Math.max(0, Math.round(right - left))));
+					rect.setAttribute('height', String(bottom - top));
+					rect.setAttribute('rx', '3');
+					rect.setAttribute('class', 'slot-hl');
+					rect.setAttribute('data-slot', String(lab.slot));
+					svg2.insertBefore(rect, svg2.firstChild); // behind staff + notes
+				});
+			}
+		}
+
 		// Note groups in render order (= global slot index) for highlighting.
 		noteEls = [...el.querySelectorAll('.vf-stavenote')];
 	}
@@ -287,13 +319,16 @@
 		void render();
 	});
 
-	// Highlight the currently-playing chord (noteheads + its chord name) without a re-render.
+	// Highlight the currently-playing chord (box + noteheads + chord name) without a re-render.
 	$effect(() => {
 		const active = progression.activeSlot;
 		noteEls.forEach((g, i) => g.classList.toggle('vf-active', i === active));
 		container
 			?.querySelectorAll('.chord-name')
 			.forEach((t) => t.classList.toggle('chord-active', Number(t.getAttribute('data-slot')) === active));
+		container
+			?.querySelectorAll('.slot-hl')
+			.forEach((r) => r.classList.toggle('slot-hl--on', Number(r.getAttribute('data-slot')) === active));
 	});
 
 	// Re-flow when the container *width* changes (responsive multi-line layout).
@@ -341,9 +376,21 @@
 	/* Jazz chord names (our own text, above each staff). */
 	.staff :global(.chord-name) {
 		fill: var(--color-text);
+		transition: fill 90ms var(--motion-ease-out);
 	}
 	.staff :global(.chord-active) {
 		fill: var(--c-major);
+		font-weight: 700;
+	}
+
+	/* Playhead box behind the currently-playing slot (both chart + helper modes). */
+	.staff :global(.slot-hl) {
+		fill: transparent;
+		pointer-events: none;
+		transition: fill 90ms var(--motion-ease-out);
+	}
+	.staff :global(.slot-hl--on) {
+		fill: color-mix(in srgb, var(--c-major) 15%, transparent);
 	}
 
 	/* Chord-chart mode: hide the placeholder noteheads + stems, keep the chord names. */

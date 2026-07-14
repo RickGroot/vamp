@@ -9,6 +9,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import {
 	CURRENT_SCHEMA_VERSION,
 	type Bar,
+	type BassInstrumentId,
 	type BassMode,
 	type CompPattern,
 	type DrumStyle,
@@ -201,7 +202,13 @@ function coerceGroove(value: unknown): Groove {
 		v.pattern === 'strum' || v.pattern === 'arpeggio' ? v.pattern : 'block';
 	const drumStyles: DrumStyle[] = ['none', 'rock', 'pop', 'swing', 'bossa'];
 	const drums = drumStyles.includes(v.drums as DrumStyle) ? (v.drums as DrumStyle) : 'none';
-	return { pattern, bass: coerceBass(v.bass), metronome: v.metronome === true, drums };
+	return {
+		pattern,
+		bass: coerceBass(v.bass),
+		bassInstrument: coerceBassInstrument(v.bassInstrument),
+		metronome: v.metronome === true,
+		drums
+	};
 }
 
 const BASS_MODES: BassMode[] = ['none', 'root', 'alt', 'walking', 'octaves'];
@@ -209,6 +216,13 @@ function coerceBass(value: unknown): BassMode {
 	if (value === true) return 'root'; // legacy boolean: on → simple root bass
 	if (BASS_MODES.includes(value as BassMode)) return value as BassMode;
 	return 'none';
+}
+
+const BASS_INSTRUMENTS: BassInstrumentId[] = ['keys', 'upright', 'electric', 'synth'];
+function coerceBassInstrument(value: unknown): BassInstrumentId {
+	// Records saved before this field default to 'upright' (a real bass sound),
+	// not 'keys' — the shared-instrument bass was a limitation, not a preference.
+	return BASS_INSTRUMENTS.includes(value as BassInstrumentId) ? (value as BassInstrumentId) : 'upright';
 }
 
 function coerceBar(value: unknown): Bar {

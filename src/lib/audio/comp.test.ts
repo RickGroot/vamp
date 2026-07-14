@@ -6,6 +6,7 @@ const TS: TimeSignature = { numerator: 4, denominator: 4 };
 const groove = (over: Partial<Groove> = {}): Groove => ({
 	pattern: 'block',
 	bass: 'none',
+	bassInstrument: 'keys',
 	metronome: false,
 	drums: 'none',
 	...over

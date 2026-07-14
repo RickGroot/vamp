@@ -4,7 +4,12 @@
 import { renderOffline } from 'smplr';
 import type { Progression } from '$lib/model/types';
 import { buildScheduledEvents } from '$lib/audio/schedule';
-import { createInstrument, createDrums, drumSampleName } from '$lib/audio/instruments';
+import {
+	createInstrument,
+	createBassInstrument,
+	createDrums,
+	drumSampleName
+} from '$lib/audio/instruments';
 import { safeFileName } from '$lib/storage/backup';
 
 const CHORD_VEL = 95;
@@ -18,8 +23,14 @@ export async function exportWav(progression: Progression): Promise<void> {
 	const result = await renderOffline(
 		async (ctx) => {
 			const instrument = createInstrument(progression.instrument, ctx);
+			const bassId = progression.groove.bassInstrument;
+			const bassInst =
+				progression.groove.bass !== 'none' && bassId !== 'keys'
+					? createBassInstrument(bassId, ctx)
+					: null;
 			const drums = progression.groove.drums !== 'none' ? createDrums(ctx) : null;
 			await instrument.load;
+			if (bassInst) await bassInst.load;
 			if (drums) await drums.load;
 
 			for (const ev of events) {
@@ -30,8 +41,10 @@ export async function exportWav(progression: Progression): Promise<void> {
 					drums?.start({ note: drumSampleName(ev.drum ?? 'kick'), time, velocity: ev.accent ? 110 : 80 });
 					continue;
 				}
-				const velocity = ev.kind === 'bass' ? BASS_VEL : CHORD_VEL;
-				for (const note of ev.midi) instrument.start({ note, time, duration, velocity });
+				const isBass = ev.kind === 'bass';
+				const target = isBass ? (bassInst ?? instrument) : instrument;
+				const velocity = isBass ? BASS_VEL : CHORD_VEL;
+				for (const note of ev.midi) target.start({ note, time, duration, velocity });
 			}
 		},
 		{ duration: totalSeconds + 1.5 } // leave a little release tail

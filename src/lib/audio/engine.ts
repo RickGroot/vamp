@@ -15,6 +15,7 @@ import { isComping, type MixLevels } from './mix';
 import { type ClickFeel } from './drills';
 import {
 	getInstrument,
+	getBassInstrument,
 	getDrumMachine,
 	drumSampleName,
 	type LoadedInstrument,
@@ -48,6 +49,7 @@ type LoopListener = () => void;
 class PlaybackEngine {
 	private part: Tone.Part | null = null;
 	private instrument: LoadedInstrument | null = null;
+	private bassInstrument: LoadedInstrument | null = null;
 	private drums: LoadedDrums | null = null;
 	private click: Tone.Synth | null = null;
 	private _state: EngineState = 'stopped';
@@ -131,6 +133,13 @@ class PlaybackEngine {
 		try {
 			this.quartersPerBar = beatsToQuarters(barBeats(progression.timeSignature), progression.timeSignature);
 			this.instrument = await getInstrument(progression.instrument);
+			// A dedicated bass voice, unless the bass is off or set to play through
+			// the chord instrument ('keys'). Falls back to the chord instrument.
+			const bassId = progression.groove.bassInstrument;
+			this.bassInstrument =
+				progression.groove.bass !== 'none' && bassId !== 'keys'
+					? await getBassInstrument(bassId)
+					: null;
 			this.drums = progression.groove.drums !== 'none' ? await getDrumMachine() : null;
 			if (gen !== this.playGen) return; // stopped/superseded while samples loaded
 
@@ -171,12 +180,14 @@ class PlaybackEngine {
 						});
 					}
 				} else {
-					const inst = this.instrument;
-					const gain = ev.kind === 'bass' ? this.mix.bass : this.mix.chords;
+					const isBass = ev.kind === 'bass';
+					// Bass plays its own instrument when set; otherwise ('keys') the chord one.
+					const inst = isBass ? (this.bassInstrument ?? this.instrument) : this.instrument;
+					const gain = isBass ? this.mix.bass : this.mix.chords;
 					if (comping && inst && gain > 0 && ev.midi.length) {
 						// Seconds-per-quarter from the *current* tempo keeps durations live.
 						const duration = (ev.durQuarters * 60) / Tone.getTransport().bpm.value;
-						const base = ev.kind === 'bass' ? BASS_VELOCITY : VELOCITY;
+						const base = isBass ? BASS_VELOCITY : VELOCITY;
 						const velocity = Math.round(base * gain);
 						for (const note of ev.midi) inst.start({ note, time, duration, velocity });
 					}

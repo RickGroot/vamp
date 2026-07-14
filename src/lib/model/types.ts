@@ -27,11 +27,22 @@ export type DrumStyle = 'none' | 'rock' | 'pop' | 'swing' | 'bossa';
  */
 export type BassMode = 'none' | 'root' | 'alt' | 'walking' | 'octaves';
 
+/**
+ * Which sound the bass line uses:
+ * - `keys`     — the chord instrument (the original shared-instrument behaviour)
+ * - `upright`  — acoustic/double bass (jazz upright)
+ * - `electric` — fingered electric bass
+ * - `synth`    — synth bass
+ */
+export type BassInstrumentId = 'keys' | 'upright' | 'electric' | 'synth';
+
 /** How chords are rhythmically realised during playback. */
 export interface Groove {
 	pattern: CompPattern;
 	/** Bass accompaniment style ('none' = no bass). */
 	bass: BassMode;
+	/** Which sound the bass line plays through. */
+	bassInstrument: BassInstrumentId;
 	/** Click on each beat (accented downbeat). */
 	metronome: boolean;
 	/** A real drum-kit pattern (or 'none'). */

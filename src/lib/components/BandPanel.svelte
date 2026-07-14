@@ -1,8 +1,19 @@
 <script lang="ts">
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRADE_OPTIONS } from '$lib/stores/view.svelte';
-	import { INSTRUMENT_LABELS, INSTRUMENT_ORDER } from '$lib/audio/instruments';
-	import type { BassMode, CompPattern, DrumStyle, InstrumentId } from '$lib/model/types';
+	import {
+		INSTRUMENT_LABELS,
+		INSTRUMENT_ORDER,
+		BASS_INSTRUMENT_LABELS,
+		BASS_INSTRUMENT_ORDER
+	} from '$lib/audio/instruments';
+	import type {
+		BassInstrumentId,
+		BassMode,
+		CompPattern,
+		DrumStyle,
+		InstrumentId
+	} from '$lib/model/types';
 	import type { MixLane } from '$lib/audio/mix';
 
 	const PATTERNS: { id: CompPattern; label: string }[] = [
@@ -104,6 +115,18 @@
 							<option value={b.id}>{b.label}</option>
 						{/each}
 					</select>
+					{#if groove.bass !== 'none'}
+						<select
+							class="sel"
+							aria-label="Bass sound"
+							value={groove.bassInstrument}
+							onchange={(e) => progression.setBassInstrument((e.target as HTMLSelectElement).value as BassInstrumentId)}
+						>
+							{#each BASS_INSTRUMENT_ORDER as id (id)}
+								<option value={id}>{BASS_INSTRUMENT_LABELS[id]}</option>
+							{/each}
+						</select>
+					{/if}
 				</div>
 				{@render level('bass', groove.bass !== 'none')}
 			</div>

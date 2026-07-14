@@ -9,7 +9,7 @@
 // so the sample source can be overridden in one place later.
 
 import { DrumMachine, ElectricPiano, SplendidGrandPiano, Soundfont } from 'smplr';
-import type { InstrumentId } from '$lib/model/types';
+import type { BassInstrumentId, InstrumentId } from '$lib/model/types';
 import { getRawContext } from './context';
 
 /** The subset of the smplr instrument surface the engine relies on. */
@@ -106,6 +106,49 @@ export async function getInstrument(id: InstrumentId): Promise<LoadedInstrument>
 		// one offline first-load permanently breaks the instrument this session.
 		// Guarded by identity so a concurrent re-create is never clobbered.
 		if (cache.get(id) === inst) cache.delete(id);
+		throw err;
+	}
+	return inst;
+}
+
+// ---- bass instruments ----
+// 'keys' is not a distinct instrument — the engine plays the bass through the
+// chord instrument in that mode, so it never reaches getBassInstrument. The rest
+// are General MIDI voices from the same FluidR3_GM soundfont as guitar/pad.
+export const BASS_INSTRUMENT_LABELS: Record<BassInstrumentId, string> = {
+	keys: 'Same as chords',
+	upright: 'Upright bass',
+	electric: 'Electric bass',
+	synth: 'Synth bass'
+};
+
+export const BASS_INSTRUMENT_ORDER: BassInstrumentId[] = ['upright', 'electric', 'synth', 'keys'];
+
+type RealBass = Exclude<BassInstrumentId, 'keys'>;
+const BASS_GM: Record<RealBass, string> = {
+	upright: 'acoustic_bass',
+	electric: 'electric_bass_finger',
+	synth: 'synth_bass_1'
+};
+
+const bassCache = new Map<RealBass, LoadedInstrument>();
+
+/** Create a bass instrument bound to a given context (e.g. offline render). */
+export function createBassInstrument(id: RealBass, ctx: BaseAudioContext): LoadedInstrument {
+	return new Soundfont(ctx, { instrument: BASS_GM[id], kit: 'FluidR3_GM' }) as unknown as LoadedInstrument;
+}
+
+/** Lazily create + load a bass instrument (cache + evict-on-fail, like getInstrument). */
+export async function getBassInstrument(id: RealBass): Promise<LoadedInstrument> {
+	let inst = bassCache.get(id);
+	if (!inst) {
+		inst = createBassInstrument(id, getRawContext());
+		bassCache.set(id, inst);
+	}
+	try {
+		await inst.load;
+	} catch (err) {
+		if (bassCache.get(id) === inst) bassCache.delete(id);
 		throw err;
 	}
 	return inst;

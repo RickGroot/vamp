@@ -18,6 +18,7 @@ export const TEMPO_MAX = 300;
 export const DEFAULT_GROOVE: Groove = {
 	pattern: 'block',
 	bass: 'none',
+	bassInstrument: 'upright',
 	metronome: false,
 	drums: 'none'
 };
