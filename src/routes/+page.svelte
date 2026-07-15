@@ -3,6 +3,7 @@
 	import { MediaQuery } from 'svelte/reactivity';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRANSPOSE_OPTIONS } from '$lib/stores/view.svelte';
+	import { library } from '$lib/stores/library.svelte';
 	import { droneState } from '$lib/stores/drone.svelte';
 	import { cursor } from '$lib/stores/cursor.svelte';
 	import { createLattice } from '$lib/art/lattice';
@@ -152,6 +153,22 @@
 		};
 	});
 
+	// Quick-save the current track to the library (overwrite by id, or create).
+	let saveToast = $state<string | null>(null);
+	let saveToastTimer: ReturnType<typeof setTimeout> | undefined;
+	async function quickSave() {
+		const existed = library.items.some((i) => i.id === progression.current.id);
+		const name = progression.current.name?.trim() || 'Untitled';
+		try {
+			await library.save($state.snapshot(progression.current));
+			saveToast = `${existed ? 'Updated' : 'Saved'} “${name}”`;
+		} catch {
+			saveToast = 'Save failed — storage unavailable';
+		}
+		clearTimeout(saveToastTimer);
+		saveToastTimer = setTimeout(() => (saveToast = null), 1800);
+	}
+
 	function onKeydown(event: KeyboardEvent) {
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -165,6 +182,15 @@
 				return;
 			event.preventDefault();
 			void progression.toggle();
+			return;
+		}
+
+		// Ctrl/Cmd+S — quick-save (overwrite the current track, or create it). Works
+		// everywhere, including while a field is focused, and never opens the browser
+		// save dialog.
+		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+			event.preventDefault();
+			void quickSave();
 			return;
 		}
 
@@ -298,10 +324,42 @@
 	</main>
 </div>
 
+{#if saveToast}
+	<div class="save-toast" role="status" aria-live="polite">{saveToast}</div>
+{/if}
+
 <style lang="scss">
 	.frame {
 		min-height: 100vh;
 		border-top: var(--border-hairline);
+	}
+
+	/* Transient confirmation for Ctrl/Cmd+S quick-save. */
+	.save-toast {
+		position: fixed;
+		left: 50%;
+		bottom: var(--space-6);
+		transform: translateX(-50%);
+		z-index: 100;
+		padding: var(--space-2) var(--space-4);
+		border-radius: var(--radius-pill, 999px);
+		background: var(--color-black);
+		color: var(--color-white);
+		font-size: 0.85rem;
+		box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+		pointer-events: none;
+		animation: save-toast-in 140ms var(--motion-ease-out);
+	}
+	@keyframes save-toast-in {
+		from {
+			opacity: 0;
+			transform: translate(-50%, 6px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.save-toast {
+			animation: none;
+		}
 	}
 
 	.head {

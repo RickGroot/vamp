@@ -3,6 +3,7 @@
 	import { progression } from '$lib/stores/progression.svelte';
 	import { library } from '$lib/stores/library.svelte';
 	import { readFileAsText } from '$lib/storage/backup';
+	import { newId } from '$lib/model/factory';
 	import { dismissable } from '$lib/actions/dismissable';
 
 	let open = $state(false);
@@ -12,6 +13,10 @@
 	let status = $state<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
 	const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' });
+	const currentName = $derived(progression.current.name?.trim() || 'Untitled');
+	// Whether the current progression is a saved library entry — "Save" then
+	// overwrites it (records are keyed by id), so we label it "Update".
+	const isSaved = $derived(library.items.some((i) => i.id === progression.current.id));
 
 	onMount(() => void library.refresh());
 
@@ -25,8 +30,22 @@
 		open = false;
 	}
 
+	// Save/overwrite the current progression by id (creates the entry if new).
 	async function onSave() {
+		const existed = isSaved;
 		await library.save($state.snapshot(progression.current));
+		status = { kind: 'ok', text: `${existed ? 'Updated' : 'Saved'} “${currentName}”.` };
+	}
+
+	// Branch the current progression into a NEW saved entry, then continue on the
+	// copy — tweak a loaded track without overwriting the original.
+	async function onSaveCopy() {
+		const src = $state.snapshot(progression.current);
+		const now = Date.now();
+		const copy = { ...src, id: newId(), name: `${currentName} copy`, createdAt: now, updatedAt: now };
+		await library.save(copy);
+		progression.load(copy);
+		status = { kind: 'ok', text: `Saved a copy “${copy.name}”.` };
 	}
 
 	function onLoad(id: string) {
@@ -79,7 +98,14 @@
 		     not arrow-key menuitems). -->
 		<div class="vmenu">
 			<button class="vmenu__row" type="button" onclick={onNew}>New</button>
-			<button class="vmenu__row" type="button" onclick={onSave}>Save</button>
+			{#if isSaved}
+				<button class="vmenu__row save-row" type="button" onclick={onSave} title={`Overwrite “${currentName}”`}
+					>Update “<span class="save-row__name">{currentName}</span>”</button
+				>
+				<button class="vmenu__row" type="button" onclick={onSaveCopy}>Save as a copy</button>
+			{:else}
+				<button class="vmenu__row" type="button" onclick={onSave}>Save</button>
+			{/if}
 			<button class="vmenu__row" type="button" onclick={() => fileInput?.click()}>Import file…</button>
 			<input
 				bind:this={fileInput}
@@ -166,6 +192,17 @@
 
 	.file {
 		display: none;
+	}
+
+	/* "Update “name”" row: keep it one line, truncating a long song name. */
+	.save-row {
+		display: flex;
+		max-width: 260px;
+		white-space: nowrap;
+	}
+	.save-row__name {
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.paste {
