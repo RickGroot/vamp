@@ -19,6 +19,8 @@
 		keyInfo: KeyInfo;
 		/** Whether playback is currently on this bar (the playhead). */
 		playing: boolean;
+		/** Hovered pattern-insight chip covers this bar (transient highlight). */
+		hinted?: boolean;
 	}
 
 	let {
@@ -30,7 +32,8 @@
 		loopActive,
 		inLoop,
 		keyInfo,
-		playing
+		playing,
+		hinted = false
 	}: Props = $props();
 
 	const canAddSlot = $derived(bar.slots.length < MAX_SLOTS_PER_BAR);
@@ -73,6 +76,7 @@
 	class:bar--in-loop={loopActive && inLoop}
 	class:bar--out-loop={loopActive && !inLoop}
 	class:bar--playing={playing}
+	class:bar--hinted={hinted}
 	class:bar--dragover={dragOver}
 	style="--art-delay: {artDelay}s"
 	ondragover={onDragOver}
@@ -165,6 +169,23 @@
 	/* Playhead: the bar currently sounding. */
 	.bar--playing {
 		box-shadow: 0 0 0 2px var(--c-major);
+	}
+
+	/* Pattern-insight hover: bottom edge (loop uses the TOP edge). box-shadow
+	   does not stack across classes, so the combined rules are required — without
+	   them a chip hover would visually delete the loop edge / playhead ring. */
+	.bar--hinted {
+		box-shadow: inset 0 -3px 0 var(--c-suspended);
+	}
+	.bar--in-loop.bar--hinted {
+		box-shadow:
+			inset 0 3px 0 var(--c-major),
+			inset 0 -3px 0 var(--c-suspended);
+	}
+	.bar--playing.bar--hinted {
+		box-shadow:
+			0 0 0 2px var(--c-major),
+			inset 0 -3px 0 var(--c-suspended);
 	}
 
 	.bar--dragover {

@@ -22,6 +22,8 @@
 	import BandPanel from '$lib/components/BandPanel.svelte';
 	import PracticePanel from '$lib/components/PracticePanel.svelte';
 	import ScalesSection from '$lib/components/ScalesSection.svelte';
+	import PatternInsights from '$lib/components/PatternInsights.svelte';
+	import { detectProgressions } from '$lib/model/analysis';
 
 	// Global index of each bar's first slot, for active-slot matching.
 	const baseIndices = $derived.by(() => {
@@ -38,6 +40,12 @@
 	const keyInfo = $derived(
 		inferKey(flattenSlots(progression.current.bars).map((f) => f.slot.chord))
 	);
+	// Recognised named progressions — pure derived state, recomputed per edit
+	// (a few thousand ops for a 32-bar song; no debounce needed).
+	const detections = $derived(detectProgressions(progression.current.bars, keyInfo));
+	// Bar range covered by a hovered/focused insight chip (transient UI state —
+	// deliberately NOT in a store or undo history).
+	let hint = $state<{ start: number; end: number } | null>(null);
 
 	// Tab title reflects the progression name once it's been named.
 	const pageTitle = $derived.by(() => {
@@ -296,6 +304,8 @@
 			</button>
 		</div>
 
+		<PatternInsights {detections} {keyInfo} onhint={(r) => (hint = r)} />
+
 		<section class="bars" aria-label="Bars">
 			{#each progression.current.bars as bar, barIndex (bar.id)}
 				<BarCard
@@ -304,6 +314,7 @@
 					baseGlobalIndex={baseIndices[barIndex]}
 					activeSlot={progression.activeSlot}
 					canRemoveBar={progression.current.bars.length > 1}
+					hinted={hint !== null && barIndex >= hint.start && barIndex <= hint.end}
 					{loopActive}
 					inLoop={barIndex >= loopRange.start && barIndex <= loopRange.end}
 					{keyInfo}

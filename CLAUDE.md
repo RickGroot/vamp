@@ -31,6 +31,7 @@ Single route. Layering: **model → storage / audio(pure) → stores → compone
 | `src/lib/model/scales.ts` | SCALE_TYPES/ROOTS, getScaleInfo, scaleStaffKeys, scalesForChord, GUITAR_TUNING |
 | `src/lib/model/key.ts` | inferKey / romanNumeral / diatonicChords (chroma-based, transposition-invariant) |
 | `src/lib/model/{presets,examples,inspire}.ts` | PRESETS (degree+quality); public-domain EXAMPLES; randomProgression (injectable rand) |
+| `src/lib/model/analysis.ts` | Progression recognition: chordCore (7 core buckets), collapseChanges (rests = seg boundaries), detectProgressions (self-anchored local tonic; merge repeats BEFORE containment suppression; end-anchored cadences; blues minSlots). PURE + tested |
 | `src/lib/storage/db.ts` | IndexedDB CRUD + `migrateProgression` — THE coercion gate for every read/import/decode |
 | `src/lib/storage/import.ts` | `parseProgressionInput`: forgiving parser (fences/prose/multiple shapes) |
 | `src/lib/storage/share.ts` | base64url encode/decode of a progression into the URL hash |
@@ -55,7 +56,7 @@ Single route. Layering: **model → storage / audio(pure) → stores → compone
 | `src/routes/+layout.svelte` | imports app.scss; manual PWA SW register (dynamic `virtual:pwa-register`, try/catch); update toast |
 | `src/app.scss` | Single token source: `--c-{family}` palette, `--grad-flow`, shared classes, art + reduced-motion CSS |
 
-Components (`src/lib/components/`): BarCard, ChordSlot, TransportBar (+LoopControl), BandPanel, NotationView→StaffSheet, ScalesSection (+ScaleStaff, ScaleFretboard), PracticePanel (+DrillsControl, DroneControl, MidiControl, Recorder), and the menu family (File/Share/Preset/Example/Suggest).
+Components (`src/lib/components/`): BarCard, ChordSlot, TransportBar (+LoopControl), BandPanel, NotationView→StaffSheet, ScalesSection (+ScaleStaff, ScaleFretboard), PracticePanel (+DrillsControl, DroneControl, MidiControl, Recorder), PatternInsights (detection chips + info popovers; detections are a `$derived` in +page — never a store/persisted), and the menu family (File/Share/Preset/Example/Suggest).
 
 ## Key data flow
 
