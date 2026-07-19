@@ -283,6 +283,10 @@
 					rect.setAttribute('width', String(Math.max(0, Math.round(right - left))));
 					rect.setAttribute('height', String(bottom - top));
 					rect.setAttribute('rx', '3');
+					// VexFlow puts stroke="black" on the SVG root and stroke INHERITS in
+					// SVG — without these the "invisible" boxes render as outlined squares.
+					rect.setAttribute('fill', 'transparent');
+					rect.setAttribute('stroke', 'none');
 					rect.setAttribute('class', 'slot-hl');
 					rect.setAttribute('data-slot', String(lab.slot));
 					svg2.insertBefore(rect, svg2.firstChild); // behind staff + notes
@@ -383,9 +387,12 @@
 		font-weight: 700;
 	}
 
-	/* Playhead box behind the currently-playing slot (both chart + helper modes). */
+	/* Playhead box behind the currently-playing slot (both chart + helper modes).
+	   stroke:none matters — VexFlow's SVG root carries stroke="black", which
+	   inherits onto our rects and would outline every slot. */
 	.staff :global(.slot-hl) {
 		fill: transparent;
+		stroke: none;
 		pointer-events: none;
 		transition: fill 90ms var(--motion-ease-out);
 	}
