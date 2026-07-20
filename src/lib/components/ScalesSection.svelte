@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { scales, type ScaleView } from '$lib/stores/scales.svelte';
 	import { progression } from '$lib/stores/progression.svelte';
-	import { SCALE_TYPES, SCALE_ROOTS } from '$lib/model/scales';
+	import { view } from '$lib/stores/view.svelte';
+	import { SCALE_TYPES, SCALE_ROOTS, getScaleInfo } from '$lib/model/scales';
+	import { displayChord, concertFromDisplay } from '$lib/audio/transpose';
 	import { scaleMidis, playScale } from '$lib/audio/scalePlayer';
 	import ScaleStaff from './ScaleStaff.svelte';
 	import ScaleFretboard from './ScaleFretboard.svelte';
@@ -14,11 +16,16 @@
 
 	const info = $derived(scales.info);
 	const typeLabel = $derived(SCALE_TYPES.find((t) => t.id === scales.type)?.label ?? scales.type);
-	// The per-chord shortcut can set a sharp root (e.g. F#m7 → "F#") that isn't in
-	// the flat-spelled SCALE_ROOTS list; surface it as an extra option so the
-	// select reflects it instead of going blank (and the scale keeps its clean
-	// sharp spelling rather than an ugly Gb double-flat respelling).
-	const customRoot = $derived(SCALE_ROOTS.includes(scales.root) ? null : scales.root);
+	// scales.root is CONCERT pitch (the chord shortcut passes the stored concert
+	// symbol, and playback must sound concert like the chords). Everything SHOWN,
+	// though, is transposed to the selected instrument's WRITTEN pitch — exactly
+	// like the chord slots — so pressing a chord you read as "C6" opens the scale
+	// on C, not its concert Bb. Playback below still uses the concert `info`.
+	const displayRoot = $derived(displayChord(scales.root, view.offset));
+	const displayInfo = $derived(view.offset === 0 ? info : getScaleInfo(displayRoot, scales.type));
+	// A written root outside the flat-spelled SCALE_ROOTS list (e.g. F#) gets a
+	// synthetic option so the select reflects it instead of going blank.
+	const customRoot = $derived(SCALE_ROOTS.includes(displayRoot) ? null : displayRoot);
 
 	// ---- keyboard layout (two octaves from C) ----
 	const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
@@ -30,24 +37,25 @@
 	const BH = 60;
 
 	const whiteKeys = $derived.by(() => {
-		const set = new Set(info.pcs);
+		const set = new Set(displayInfo.pcs);
 		return Array.from({ length: N_WHITE }, (_, i) => {
 			const pc = WHITE_PCS[i % 7];
-			return { x: i * W, pc, inScale: set.has(pc), isRoot: pc === info.rootPc };
+			return { x: i * W, pc, inScale: set.has(pc), isRoot: pc === displayInfo.rootPc };
 		});
 	});
 	const blackKeys = $derived.by(() => {
-		const set = new Set(info.pcs);
+		const set = new Set(displayInfo.pcs);
 		const keys: { x: number; pc: number; inScale: boolean; isRoot: boolean }[] = [];
 		for (let i = 0; i < N_WHITE - 1; i++) {
 			const deg = i % 7;
 			if (!BLACK_AFTER.includes(deg)) continue;
 			const pc = (WHITE_PCS[deg] + 1) % 12;
-			keys.push({ x: (i + 1) * W - BW / 2, pc, inScale: set.has(pc), isRoot: pc === info.rootPc });
+			keys.push({ x: (i + 1) * W - BW / 2, pc, inScale: set.has(pc), isRoot: pc === displayInfo.rootPc });
 		}
 		return keys;
 	});
 
+	// Sounds CONCERT pitch (like the chords) even though the display is written.
 	function play() {
 		void playScale(scaleMidis(scales.root, info.pcs, info.rootPc), progression.current.instrument);
 	}
@@ -73,7 +81,7 @@
 			</svg>
 		</span>
 		<span class="wordmark scales__title">Scales</span>
-		<span class="label scales__hint">{info.name}</span>
+		<span class="label scales__hint">{displayInfo.name}</span>
 	</button>
 
 	{#if scales.open}
@@ -84,8 +92,9 @@
 					<select
 						id="scale-root"
 						class="sel"
-						value={scales.root}
-						onchange={(e) => scales.setRoot((e.target as HTMLSelectElement).value)}
+						value={displayRoot}
+						onchange={(e) =>
+							scales.setRoot(concertFromDisplay((e.target as HTMLSelectElement).value, view.offset))}
 					>
 						{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
 						{#each SCALE_ROOTS as r (r)}<option value={r}>{r}</option>{/each}
@@ -110,7 +119,7 @@
 
 			{#if scales.suggestedFor}
 				<div class="suggest">
-					<span class="label">Fits {scales.suggestedFor}</span>
+					<span class="label">Fits {displayChord(scales.suggestedFor, view.offset)}</span>
 					<div class="suggest__chips">
 						{#each scales.suggestedTypes as t (t)}
 							<button
@@ -127,7 +136,7 @@
 			{/if}
 
 			<div class="notes" aria-label="Scale notes">
-				{#each info.notes as note, i (i)}
+				{#each displayInfo.notes as note, i (i)}
 					<span class="note" class:note--root={i === 0}>{note}</span>
 				{/each}
 			</div>
@@ -145,11 +154,11 @@
 			</div>
 
 			{#if scales.display === 'staff'}
-				<ScaleStaff notes={info.notes} />
+				<ScaleStaff notes={displayInfo.notes} />
 			{:else if scales.display === 'fretboard'}
-				<ScaleFretboard pcs={info.pcs} rootPc={info.rootPc} />
+				<ScaleFretboard pcs={displayInfo.pcs} rootPc={displayInfo.rootPc} />
 			{:else}
-				<svg class="kbd" viewBox="0 0 {N_WHITE * W} {H}" role="img" aria-label="{info.name} on a keyboard">
+				<svg class="kbd" viewBox="0 0 {N_WHITE * W} {H}" role="img" aria-label="{displayInfo.name} on a keyboard">
 					{#each whiteKeys as k (k.x)}
 						<rect class="wkey" x={k.x + 0.5} y="0" width={W - 1} height={H} rx="3" />
 						{#if k.inScale}
