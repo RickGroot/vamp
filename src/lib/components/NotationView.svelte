@@ -1,5 +1,6 @@
 <script lang="ts">
 	import StaffSheet from './StaffSheet.svelte';
+	import NotationExportMenu from './NotationExportMenu.svelte';
 
 	// Open by default (consistent with the Band / Practice sections). VexFlow is
 	// still fetched lazily via StaffSheet's dynamic import when this mounts.
@@ -24,13 +25,16 @@
 		</button>
 
 		{#if open}
-			<button
-				class="toggle"
-				class:toggle--on={showNotes}
-				type="button"
-				aria-pressed={showNotes}
-				onclick={() => (showNotes = !showNotes)}>Helper notes</button
-			>
+			<div class="notation__actions">
+				<button
+					class="toggle"
+					class:toggle--on={showNotes}
+					type="button"
+					aria-pressed={showNotes}
+					onclick={() => (showNotes = !showNotes)}>Helper notes</button
+				>
+				<NotationExportMenu {showNotes} />
+			</div>
 		{/if}
 	</div>
 
@@ -53,6 +57,13 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-4);
+	}
+
+	.notation__actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		flex: 0 0 auto;
 	}
 
 	.notation__toggle {

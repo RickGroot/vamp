@@ -37,6 +37,7 @@ Single route. Layering: **model → storage / audio(pure) → stores → compone
 | `src/lib/storage/share.ts` | base64url encode/decode of a progression into the URL hash |
 | `src/lib/storage/backup.ts` | Browser file I/O: downloadBlob, safeFileName, downloadBackup, readFileAsText |
 | `src/lib/export/{midi,audio}.ts` | Dependency-free SMF (format 0) writer; WAV via smplr renderOffline |
+| `src/lib/export/notation.ts` | Notation → PNG/PDF/clipboard: re-renders to a VexFlow CANVAS (fonts from document.fonts, no SVG-serialise), hand-rolled FlateDecode PDF; own single-pass layout (NOT StaffSheet's) |
 | `src/lib/audio/engine.ts` | Singleton `PlaybackEngine`: Tone.Part loop, `playGen` token, live mix/trade, Draw-synced highlight |
 | `src/lib/audio/schedule.ts` | Progression → CompSlot[] → events (quarter notes); shared by engine + exporters |
 | `src/lib/audio/comp.ts` | PURE groove expansion: block/strum/arp, bass modes, drums, metronome → CompEvent[] |
