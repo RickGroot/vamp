@@ -63,12 +63,17 @@
 		slotStart: number;
 	}
 
-	/** A chord name to draw above the staff. */
+	/** A chord name to draw above the staff (+ geometry for the playhead box). */
 	interface Label {
 		x: number;
 		row: number;
 		slot: number;
 		symbol: string;
+		/** Note-area extent of the containing bar (from VexFlow), for slot boxes. */
+		barLeft: number;
+		barRight: number;
+		firstInBar: boolean;
+		lastInBar: boolean;
 	}
 
 	/** Assign each bar an x position, width and row (wrapping to fit `available`). */
@@ -176,11 +181,19 @@
 					/* ignore unmeasurable note */
 				}
 			}
-			const labels: Label[] = built.map((b) => ({
+			// The bar's playable note area (after clef/time-sig), so slot boxes tile
+			// the bar instead of drifting into trailing space.
+			const barLeft = stave.getNoteStartX();
+			const barRight = stave.getNoteEndX();
+			const labels: Label[] = built.map((b, i) => ({
 				x: b.note.getAbsoluteX(),
 				row: p.row,
 				slot: b.vi,
-				symbol: written[b.vi]
+				symbol: written[b.vi],
+				barLeft,
+				barRight,
+				firstInBar: i === 0,
+				lastInBar: i === built.length - 1
 			}));
 			return { labels, topLine: stave.getYForLine(0), bottomLine: stave.getYForLine(4), minY, maxY };
 		};
@@ -275,8 +288,11 @@
 				rowLabels.forEach((lab, i) => {
 					const prev = rowLabels[i - 1];
 					const next = rowLabels[i + 1];
-					const left = prev ? (prev.x + lab.x) / 2 : lab.x - (next ? (next.x - lab.x) / 2 : 26);
-					const right = next ? (lab.x + next.x) / 2 : lab.x + (prev ? (lab.x - prev.x) / 2 : 26);
+					// Boxes tile each bar's note area: bar edges at bar boundaries,
+					// midpoints between adjacent slots WITHIN a bar. A single-slot bar
+					// highlights the whole bar; the box no longer drifts past the note.
+					const left = lab.firstInBar ? lab.barLeft : (prev.x + lab.x) / 2;
+					const right = lab.lastInBar ? lab.barRight : (lab.x + next.x) / 2;
 					const rect = document.createElementNS(NS, 'rect');
 					rect.setAttribute('x', String(Math.round(left)));
 					rect.setAttribute('y', String(top));
