@@ -34,14 +34,15 @@ const EXPORT_SCALE = 3; // supersample for crisp raster output (independent of d
 const PX_LIMIT = 32767; // browser canvas dimension ceiling
 
 // Row geometry (logical px). Voicings are bounded to a compact ~B3–G5 window
-// (notationVoicing), so fixed reserves never clip — no measure pass needed.
+// (notationVoicing) with stems drawn DOWN, so fixed reserves never clip.
+// NOTE: a VexFlow Stave's top LINE sits well below its constructor `y` (the box
+// reserves headroom) — the offset is probed from a throwaway Stave at render
+// time, never assumed.
 const PAD = 16;
-const NAME_BAND = 22; // room above the staff for a chord name
-const ABOVE = 18; // notes/ledger lines above the top staff line
-const STAFF = 40; // 4 spaces × 10px
-const BELOW = 30; // notes/ledger lines below the bottom line
-const ROW_GAP = 14;
-const ROW_H = NAME_BAND + ABOVE + STAFF + BELOW;
+const NAME_BAND = 24; // chord-name text band at the top of each row
+const ABOVE = 24; // clearance between the name baseline and the top staff line
+const BELOW = 56; // low noteheads (~B3) + downward stems below the bottom line
+const ROW_GAP = 12;
 const CLEF_W = 36;
 const TIME_W = 28;
 
@@ -108,28 +109,46 @@ async function renderNotationCanvas(
 		return c.empty ? [] : notationVoicing(c.notes, c.bass);
 	});
 
+	// Probe the stave's internal offsets WITHOUT drawing: where do lines 0 and 4
+	// actually sit relative to the Stave's constructor y?
+	const probe = new Stave(0, 0, 100);
+	const lineTopOff = probe.getYForLine(0); // top line offset below `y`
+	const lineSpan = probe.getYForLine(4) - lineTopOff;
+
+	const rowH = NAME_BAND + ABOVE + lineSpan + BELOW;
 	const { placements, rowCount } = computeColumns(p.bars, EXPORT_WIDTH);
-	const height = PAD * 2 + rowCount * ROW_H + (rowCount - 1) * ROW_GAP;
+	const height = Math.ceil(PAD * 2 + rowCount * rowH + (rowCount - 1) * ROW_GAP);
 
 	// Supersample, clamped to the canvas pixel ceiling (tall charts).
 	const scale = Math.max(1, Math.min(EXPORT_SCALE, Math.floor(PX_LIMIT / Math.max(EXPORT_WIDTH, height))));
 	const canvas = document.createElement('canvas');
-	canvas.width = Math.round(EXPORT_WIDTH * scale);
-	canvas.height = Math.round(height * scale);
+	const renderer = new Renderer(canvas, Renderer.Backends.CANVAS);
+	const ctx = renderer.getContext();
+	// VexFlow's own DPR-aware resize: backing store = logical × scale, transform
+	// managed by it. (CanvasContext.resize takes the ratio; the base type doesn't.)
+	(ctx as InstanceType<typeof VF.CanvasContext>).resize(EXPORT_WIDTH, height, scale);
 	const g = canvas.getContext('2d');
 	if (!g) throw new Error('Canvas 2D unavailable.');
-	g.scale(scale, scale); // draw in logical coords, rasterise at `scale`
-	g.fillStyle = '#ffffff';
-	g.fillRect(0, 0, EXPORT_WIDTH, height); // opaque paper (canvas starts transparent)
 
-	const renderer = new Renderer(canvas, Renderer.Backends.CANVAS);
-	const ctx = renderer.getContext(); // wraps the same 2d context; our scale transform persists
+	// Opaque paper — then IMMEDIATELY restore black ink. VexFlow's canvas backend
+	// draws glyphs (clef/time-sig/noteheads/rests) with the AMBIENT fillStyle;
+	// leaving it white paints white-on-white (invisible glyphs, white gaps
+	// punched through the staff lines).
+	g.save();
+	g.setTransform(1, 0, 0, 1, 0, 0);
+	g.fillStyle = '#ffffff';
+	g.fillRect(0, 0, canvas.width, canvas.height);
+	g.restore();
+	g.fillStyle = '#000000';
+	g.strokeStyle = '#000000';
 
 	const ink = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim() || '#1c1a1f';
 	const nameCentres: { x: number; y: number; symbol: string }[] = [];
 
 	for (const pl of placements) {
-		const staveY = PAD + pl.row * (ROW_H + ROW_GAP) + NAME_BAND + ABOVE;
+		const rowTop = PAD + pl.row * (rowH + ROW_GAP);
+		// Place the stave so its top LINE lands at rowTop + NAME_BAND + ABOVE.
+		const staveY = rowTop + NAME_BAND + ABOVE - lineTopOff;
 		const stave = new Stave(pl.x, staveY, pl.w);
 		if (pl.firstInRow) stave.addClef('treble');
 		if (pl.index === 0) stave.addTimeSignature(`${ts.numerator}/${ts.denominator}`);
@@ -163,10 +182,10 @@ async function renderNotationCanvas(
 		new Formatter().joinVoices([voice]).format([voice], pl.w - reserved);
 		voice.draw(ctx, stave);
 
-		// Chord names: our own text, above the staff, in the jazz font.
+		// Chord names: our own text, in the name band above the staff lines.
 		notes.forEach((n, i) => {
 			const sym = written[pl.slotStart + i]?.trim();
-			if (sym) nameCentres.push({ x: n.getAbsoluteX(), y: staveY - ABOVE - 4, symbol: sym });
+			if (sym) nameCentres.push({ x: n.getAbsoluteX(), y: rowTop + NAME_BAND - 4, symbol: sym });
 		});
 	}
 
