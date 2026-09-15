@@ -106,6 +106,16 @@ half-bar is just `beats: 2`). See [`src/lib/model/types.ts`](src/lib/model/types
 Stored records and imported files are run through a defensive migrator
 ([`src/lib/storage/db.ts`](src/lib/storage/db.ts)) keyed on `schemaVersion`.
 
+## For AI assistants (`llms.txt`)
+
+The deployed site serves [`static/llms.txt`](static/llms.txt) at
+<https://rickgroot.github.io/vamp/llms.txt>: a plain-text guide to the song JSON so an AI
+assistant can write a progression you paste straight in via **File → Paste JSON…** (the
+paste panel links to it). For example: *"Read https://rickgroot.github.io/vamp/llms.txt and
+give me a 12-bar blues in Bb as Vamp JSON."* Every JSON example in the guide is
+import-tested by [`src/lib/storage/llms.test.ts`](src/lib/storage/llms.test.ts), so it
+cannot drift from the real schema unnoticed.
+
 ## Known shortcuts / not production-ready (PoC flags)
 
 - **Samples are runtime-cached, not vendored.** Instruments load from smplr's CDN

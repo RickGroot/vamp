@@ -85,6 +85,10 @@ export default defineConfig(({ command }) => {
 					globIgnores: ['**/og-image.png', '**/screenshot-*.png'],
 					// SPA fallback for offline deep links.
 					navigateFallback: `${BASE_PATH}/`,
+					// Plain-text files (robots.txt, llms.txt) are fetched by crawlers and AI
+					// tools and opened directly by people. They are not precached, so never
+					// answer a navigation to them with the app shell — let them hit the network.
+					navigateFallbackDenylist: [/\.txt$/],
 					runtimeCaching: [
 						{
 							// Cross-origin instrument samples (smpldsnds.github.io + soundfont CDNs).

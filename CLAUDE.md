@@ -16,6 +16,7 @@
 - `.github/workflows/deploy.yml`: on push to `main` → `pnpm install --frozen-lockfile --ignore-scripts` → `pnpm build` → `cp build/200.html build/404.html` → deploy to Pages (node 22). Live: https://rickgroot.github.io/vamp/.
 - **base path `/vamp` applies to BUILD ONLY; dev stays at root.** Never hardcode `/vamp/` in code — use SvelteKit's `base` from `$app/paths`. `src/app.html` hardcodes the GH-Pages origin only in `og:url` / `og:image` / `twitter:image`; icons/manifest use `%sveltekit.assets%`.
 - No `svelte.config.js` — SvelteKit config is INLINE on the `sveltekit()` plugin in `vite.config.ts` (adapter-static, SPA fallback `200.html`, runes forced on for app code). `ssr=false` + `prerender=true` live in `src/routes/+layout.ts` (CSR/SPA; there is no `+page.ts`).
+- **The SW `navigateFallback` answers EVERY navigation with the app shell** unless denylisted — `navigateFallbackDenylist: [/\.txt$/]` keeps the non-precached `robots.txt` / `llms.txt` reachable inside an installed PWA. A new plain-text file needs to match that pattern (or be precached).
 
 ## Architecture map
 
@@ -36,6 +37,7 @@ Single route. Layering: **model → storage / audio(pure) → stores → compone
 | `src/lib/storage/import.ts` | `parseProgressionInput`: forgiving parser (fences/prose/multiple shapes) |
 | `src/lib/storage/share.ts` | base64url encode/decode of a progression into the URL hash |
 | `src/lib/storage/backup.ts` | Browser file I/O: downloadBlob, safeFileName, downloadBackup, readFileAsText |
+| `static/llms.txt` | AI-facing guide to the song JSON, served at `/vamp/llms.txt` (linked from the Paste JSON panel); every fenced JSON example in it is import-tested by `storage/llms.test.ts` |
 | `src/lib/export/{midi,audio}.ts` | Dependency-free SMF (format 0) writer; WAV via smplr renderOffline |
 | `src/lib/export/notation.ts` | Notation → PNG/PDF/clipboard: re-renders to a VexFlow CANVAS (fonts from document.fonts, no SVG-serialise), hand-rolled FlateDecode PDF; own single-pass layout (NOT StaffSheet's) |
 | `src/lib/audio/engine.ts` | Singleton `PlaybackEngine`: Tone.Part loop, `playGen` token, live mix/trade, Draw-synced highlight |
@@ -81,7 +83,7 @@ Each `stores/*.svelte.ts` exports ONE eagerly-constructed singleton — no barre
 
 - **`engine.play()` generation guard.** Every `await` inside `play()` is followed by `if (gen !== this.playGen) return;` and the catch is gen-guarded; stop()/new play() bump `playGen`. → a stale/superseded play must not bleed over the new song.
 - **`unlockAudio()` (context.ts) must run synchronously from a real user gesture** before any playback; engine.play / drone.start / playScale all await it. → prevents no-audio on mobile / a suspended context.
-- **ALL persistence routes through `migrateProgression` (db.ts)** — db reads, `importProgressions`, `share.decodeProgression`. Add a persisted field → add its `coerce*` default there; never trust a raw record. Its bounds are load-bearing: `slot.beats` >0 and ≤64; TS numerator 1–16, denominator ∈ {2,4,8,16}; tempo clamped 20–300; empty bars → `[createBar()]`, empty bar → one slot. → a hostile share hash with `beats≤0` corrupts MIDI ticks / freezes scheduling. Legacy path: `coerceGroove.bass` maps boolean `true→'root'`, `false→'none'` — any new persisted enum needs the same.
+- **ALL persistence routes through `migrateProgression` (db.ts)** — db reads, `importProgressions`, `share.decodeProgression`. Add a persisted field → add its `coerce*` default there AND document it in `static/llms.txt` (`storage/llms.test.ts` imports every example in that guide, so a schema change without a doc update fails the suite); never trust a raw record. Its bounds are load-bearing: `slot.beats` >0 and ≤64; TS numerator 1–16, denominator ∈ {2,4,8,16}; tempo clamped 20–300; empty bars → `[createBar()]`, empty bar → one slot. → a hostile share hash with `beats≤0` corrupts MIDI ticks / freezes scheduling. Legacy path: `coerceGroove.bass` maps boolean `true→'root'`, `false→'none'` — any new persisted enum needs the same.
 - **Tempo/TS bounds live ONLY in `model/factory.ts`** (re-exported by the progression store; drills imports from factory). UI clamp and db coercion both import from here — change bounds in one place.
 - **Keep pure modules pure:** comp / mix / drills / voicing / chord / transpose / tapTempo import no `tone` and no stores. → keeps them node-unit-testable and out of the AudioContext graph.
 - **`flattenSlots` (slots.ts) is the single source** of the global slot index the engine and UI key on — don't recompute it elsewhere.
@@ -121,7 +123,7 @@ Each `stores/*.svelte.ts` exports ONE eagerly-constructed singleton — no barre
 
 ## Testing
 
-- Vitest 4, `environment: 'node'` (NOT jsdom; the `$lib` alias is mirrored, the SvelteKit plugin is deliberately omitted). No setupFiles/globals — every test imports `{ describe, it, expect }` from `'vitest'`. Colocated `foo.ts` + `foo.test.ts`. ~18 files / ~138 tests, runs in ~2s.
+- Vitest 4, `environment: 'node'` (NOT jsdom; the `$lib` alias is mirrored, the SvelteKit plugin is deliberately omitted). No setupFiles/globals — every test imports `{ describe, it, expect }` from `'vitest'`. Colocated `foo.ts` + `foo.test.ts`. ~20 files / ~210 tests, runs in ~4s.
 - **TESTED = the pure, deterministic layer:** music theory (audio/chord, transpose, voicing; model/key, scales, presets, examples, inspire; midi/input), timing (model/time, audio/tapTempo, drills), arrangement (comp.buildCompEvents, mix), IO (export/midi bytes, storage/import + db.migrateProgression), and art MATH (art/lattice).
 - **Assert music by pitch-class set (chroma mod 12)**, not raw MIDI arrays or symbol equality — reuse `chromaSet`/`expectedChroma` (voicing.test.ts). Re-parse detected/transposed symbols with tonal `Chord.get` and assert tonic+quality. **Randomness is injected** (`rand: () => number = Math.random`); tests pass a seeded LCG.
 - When you add a `migrateProgression` coercion or a new example/preset, extend `import.test.ts` / `examples.test.ts` / `presets.test.ts` (they assert every generated chord is valid across roots and that legacy/hostile values are made safe).

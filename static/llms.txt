@@ -1,0 +1,279 @@
+# Vamp — chord progression sketchpad
+
+> Vamp is a free, local-first web app for sketching chord progressions and looping a
+> backing track (sampled chords, bass and drums) to improvise over. It runs at
+> https://rickgroot.github.io/vamp/ with no account, no server and no upload: songs live
+> in the browser. This file is written for AI assistants. It explains the JSON a user can
+> paste into Vamp, so that when someone asks you for a progression "for Vamp" you can
+> answer with exactly that JSON.
+
+## If a user asks you for a Vamp song
+
+Follow these rules; they are what makes the result paste cleanly.
+
+1. **Reply with the JSON and nothing else.** No introduction, no explanation, no comments
+   inside the JSON. Wrapping it in a single markdown code fence is fine (Vamp strips it).
+2. **One song = one JSON object** in the shape below. Several songs = a backup envelope:
+   `{ "app": "vamp", "progressions": [ ...songs ] }`. Vamp opens the first song and saves
+   all of them to its library.
+3. **Do not include `id`, `createdAt` or `updatedAt`.** Vamp generates them. A copied `id`
+   that matches a song the user already saved would overwrite that song.
+4. **The beats in a bar add up to `timeSignature.numerator`.** A whole bar in 4/4 is
+   `"beats": 4`; two chords in that bar are `2` + `2`; a whole bar in 3/4 is `3`; in 6/8 it
+   is `6` (six eighth-note beats).
+5. **1 to 4 chords per bar.** Need more changes? Use more bars.
+6. **Chord symbols are plain ASCII**: `Bb`, `F#`, `Ebmaj7`, never `♭` or `♯`. No spaces, no
+   parentheses, one chord per slot. A rest is the empty string `""`.
+7. **Write the song in the key the user asked for.** There is no key field; Vamp infers the
+   key from the chords. Users can transpose inside the app.
+8. Unless asked otherwise, choose a `tempo`, `instrument` and `groove` that fit the style
+   (see "Style suggestions" below).
+9. **Before you answer, check your work**: valid JSON, every bar adds up, every symbol is in
+   the list below or built from it.
+
+If the user does not know how to load it, tell them separately from the JSON: in Vamp open
+**File → Paste JSON…**, paste, press **Import**. The song appears on the canvas and is saved
+to the library; **Space** plays it. A saved `.json` file also works via **File → Import file…**.
+
+## The song JSON
+
+The complete shape, with every field. Only `bars` is strictly required (everything else has a
+default), but a good answer always fills in `name`, `tempo`, `timeSignature`, `instrument`
+and `groove`.
+
+```json
+{
+  "name": "Four-chord loop",
+  "tempo": 96,
+  "timeSignature": { "numerator": 4, "denominator": 4 },
+  "instrument": "piano",
+  "groove": {
+    "pattern": "block",
+    "bass": "root",
+    "bassInstrument": "electric",
+    "metronome": false,
+    "drums": "pop"
+  },
+  "loopRange": null,
+  "bars": [
+    { "slots": [{ "chord": "C", "beats": 4 }] },
+    { "slots": [{ "chord": "G", "beats": 4 }] },
+    { "slots": [{ "chord": "Am", "beats": 4 }] },
+    { "slots": [{ "chord": "F", "beats": 4 }] }
+  ]
+}
+```
+
+### Field reference
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | string | `"Untitled progression"` | Song title; also used for export file names. |
+| `tempo` | integer 20–300 | `100` | Beats per minute, counted in **quarter notes** whatever the time signature (in 6/8 the eighth-note pulse therefore runs at twice the tempo). |
+| `timeSignature.numerator` | integer 1–16 | `4` | Beats per bar. |
+| `timeSignature.denominator` | `2`, `4`, `8` or `16` | `4` | The beat unit (4 = quarter note, 8 = eighth note). |
+| `instrument` | `"piano"` `"guitar"` `"rhodes"` `"pad"` | `"piano"` | Chord sound: grand piano, nylon acoustic guitar, electric piano, warm pad. |
+| `groove.pattern` | `"block"` `"strum"` `"arpeggio"` | `"block"` | How each chord is played: sustained block chord, strummed, or arpeggiated. |
+| `groove.bass` | `"none"` `"root"` `"alt"` `"walking"` `"octaves"` | `"none"` | Bass line: none · root on strong beats · alternating root/fifth (boom-chuck) · walking quarter notes · root jumping octaves. |
+| `groove.bassInstrument` | `"upright"` `"electric"` `"synth"` `"keys"` | `"upright"` | Bass sound; `"keys"` plays the bass on the chord instrument. |
+| `groove.drums` | `"none"` `"rock"` `"pop"` `"swing"` `"bossa"` | `"none"` | Drum-kit pattern (TR-808 samples). |
+| `groove.metronome` | boolean | `false` | Click on every beat. |
+| `bars` | array of bars | one empty bar | The progression, left to right. **Required.** |
+| `bars[].slots` | array of 1–4 slots | one rest slot | The chords in that bar, left to right. |
+| `bars[].slots[].chord` | string | `""` | A chord symbol as a musician would write it (see below), or `""` for a rest. |
+| `bars[].slots[].beats` | number > 0 and ≤ 64 | `4` | Duration in beats of the time signature's beat unit. Fractions such as `1.5` are allowed. The slots of one bar should add up to the numerator. |
+| `loopRange` | `{ "startBar": n, "endBar": n }` or `null` | `null` | Zero-based, inclusive bar indices to loop. `null` loops the whole song. |
+| `schemaVersion` | `1` | `1` | Optional. The current format version. |
+
+Unknown fields are ignored. Vamp never rejects a song because of a wrong value: an
+out-of-range tempo is clamped, an unknown instrument, pattern, bass or drum value falls back
+to its default, invalid beats become `4`, and an impossible time signature becomes 4/4. A
+sloppy file therefore imports without an error but sounds different from what you intended,
+so stick to the values listed above.
+
+### Style suggestions
+
+Pick values that fit the request; the user can change them afterwards.
+
+| Style | instrument | pattern | bass | bassInstrument | drums | tempo |
+|---|---|---|---|---|---|---|
+| Jazz standard / bebop | `rhodes` or `piano` | `block` | `walking` | `upright` | `swing` | 120–220 |
+| Ballad | `piano` or `pad` | `block` or `arpeggio` | `root` | `upright` | `none` | 60–80 |
+| Pop / rock | `piano` or `guitar` | `block` or `strum` | `root` or `alt` | `electric` | `pop` or `rock` | 90–130 |
+| Bossa nova / latin | `guitar` | `strum` or `block` | `alt` | `upright` | `bossa` | 120–150 |
+| Folk / country | `guitar` | `strum` | `alt` | `upright` | `none` or `pop` | 90–120 |
+| Blues | `piano` or `guitar` | `block` | `alt` or `walking` | `electric` | `rock` or `swing` | 90–120 |
+| Ambient / scale practice | `pad` | `block` | `root` or `none` | `synth` | `none` | 60–90 |
+
+## Chord symbols
+
+Vamp stores each symbol exactly as written and parses it with the *tonal* music-theory
+library when it plays or draws the chord.
+
+- **Roots**: `A` to `G`, with `#` or `b`: `C`, `Db`, `F#`, `Bb`, `Eb`, `Ab`, `C#`, `G#`.
+- **Known-good qualities** (shown on C): `C`, `Cm`, `C7`, `Cmaj7`, `Cm7`, `Cm7b5`, `Cdim`, `Cdim7`, `Caug`, `C+`, `Csus2`, `Csus4`, `C7sus4`, `C6`, `Cm6`, `C69`, `Cadd9`, `Cmaj9`, `Cm9`, `C9`, `C11`, `C13`, `Cmaj13`, `Cm11`, `C7b5`, `C7#5`, `C7b9`, `C7#9`, `C7#11`, `C7b13`, `C7alt`, `CmMaj7`, `Cmaj7#11`, `C5`.
+- **Slash chords** put the bass note after `/`: `C/E`, `G7/B`, `Dm7/G`, `Am/G`.
+- **Rest**: `""` (the empty string) means silence for that slot.
+- **Avoid** these. An unrecognised symbol still imports, but it plays as silence and shows
+  as invalid in the editor:
+  - Unicode accidentals `B♭`, `F♯`: write `Bb`, `F#`.
+  - Parentheses `C7(b9)`, `Cm7(b5)`: write `C7b9`, `Cm7b5`.
+  - Jazz shorthand `CΔ7`, `Cø7`, `Cm(maj7)`, `Calt`: write `Cmaj7`, `Cm7b5`, `CmMaj7`, `C7alt`.
+  - All caps `CMAJ7`: write `Cmaj7`. Never put spaces inside a symbol.
+  - No-chord marks `N.C.`: write `""`.
+  - Two chords in one slot such as `"Dm7 G7"`: use two slots.
+
+## More examples
+
+A jazz tune with split bars, a four-chord turnaround bar, a slash chord, a rest, and a loop
+over the first four bars only:
+
+```json
+{
+  "name": "ii-V-I workout",
+  "tempo": 160,
+  "timeSignature": { "numerator": 4, "denominator": 4 },
+  "instrument": "rhodes",
+  "groove": {
+    "pattern": "block",
+    "bass": "walking",
+    "bassInstrument": "upright",
+    "metronome": false,
+    "drums": "swing"
+  },
+  "loopRange": { "startBar": 0, "endBar": 3 },
+  "bars": [
+    { "slots": [{ "chord": "Dm7", "beats": 4 }] },
+    { "slots": [{ "chord": "G7", "beats": 4 }] },
+    { "slots": [{ "chord": "Cmaj7", "beats": 2 }, { "chord": "C6", "beats": 2 }] },
+    {
+      "slots": [
+        { "chord": "Em7", "beats": 1 },
+        { "chord": "A7", "beats": 1 },
+        { "chord": "Dm7", "beats": 1 },
+        { "chord": "G7", "beats": 1 }
+      ]
+    },
+    { "slots": [{ "chord": "Dm7", "beats": 4 }] },
+    { "slots": [{ "chord": "G7b9", "beats": 4 }] },
+    { "slots": [{ "chord": "Cmaj7/E", "beats": 4 }] },
+    { "slots": [{ "chord": "Cmaj7", "beats": 2 }, { "chord": "", "beats": 2 }] }
+  ]
+}
+```
+
+A compound meter. 6/8 has six eighth-note beats per bar, so a whole bar is `"beats": 6` and
+a half bar is `3`:
+
+```json
+{
+  "name": "Slow 6/8 ballad",
+  "tempo": 72,
+  "timeSignature": { "numerator": 6, "denominator": 8 },
+  "instrument": "guitar",
+  "groove": {
+    "pattern": "strum",
+    "bass": "alt",
+    "bassInstrument": "upright",
+    "metronome": false,
+    "drums": "none"
+  },
+  "loopRange": null,
+  "bars": [
+    { "slots": [{ "chord": "Am", "beats": 6 }] },
+    { "slots": [{ "chord": "F", "beats": 6 }] },
+    { "slots": [{ "chord": "C", "beats": 6 }] },
+    { "slots": [{ "chord": "G", "beats": 3 }, { "chord": "E7", "beats": 3 }] }
+  ]
+}
+```
+
+Several songs at once, in the same envelope Vamp writes when a user exports a backup (the
+`"app"` and `"schemaVersion"` keys are optional on import):
+
+```json
+{
+  "app": "vamp",
+  "schemaVersion": 1,
+  "progressions": [
+    {
+      "name": "12-bar blues in A",
+      "tempo": 110,
+      "timeSignature": { "numerator": 4, "denominator": 4 },
+      "instrument": "guitar",
+      "groove": {
+        "pattern": "block",
+        "bass": "alt",
+        "bassInstrument": "electric",
+        "metronome": false,
+        "drums": "rock"
+      },
+      "loopRange": null,
+      "bars": [
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "D7", "beats": 4 }] },
+        { "slots": [{ "chord": "D7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "E7", "beats": 4 }] },
+        { "slots": [{ "chord": "D7", "beats": 4 }] },
+        { "slots": [{ "chord": "A7", "beats": 4 }] },
+        { "slots": [{ "chord": "E7", "beats": 4 }] }
+      ]
+    },
+    {
+      "name": "Andalusian cadence",
+      "tempo": 84,
+      "timeSignature": { "numerator": 4, "denominator": 4 },
+      "instrument": "pad",
+      "groove": {
+        "pattern": "block",
+        "bass": "root",
+        "bassInstrument": "synth",
+        "metronome": false,
+        "drums": "none"
+      },
+      "loopRange": null,
+      "bars": [
+        { "slots": [{ "chord": "Am", "beats": 4 }] },
+        { "slots": [{ "chord": "G", "beats": 4 }] },
+        { "slots": [{ "chord": "F", "beats": 4 }] },
+        { "slots": [{ "chord": "E", "beats": 4 }] }
+      ]
+    }
+  ]
+}
+```
+
+## What the format cannot express
+
+- Melody, lyrics or individual notes. Vamp is a chord sketchpad; chords are voiced
+  automatically.
+- Inversions or specific voicings, beyond a slash bass note.
+- Sections, repeats or a form such as AABA. Write the bars out in order.
+- Dynamics, tempo changes, or a swing feel beyond `"drums": "swing"`.
+- A key signature. It is inferred from the chords.
+
+## About Vamp
+
+Vamp (https://rickgroot.github.io/vamp/) is a free, installable web app (PWA) that works
+offline once loaded. Chords are typed into bars with live validation and colour-coding by
+quality; the loop plays with a sampled instrument, an optional bass line, drums and a
+metronome. Practice tools include a rhythm-section mixer, a trade-solos mode, a drone /
+pedal tone, a transposing-instrument view (Bb, Eb, F), scale suggestions per chord,
+notation and chord-chart export (PNG, PDF), MIDI and WAV export, and mic recording of your
+solo. All data stays in the browser (IndexedDB and localStorage). Share links encode the
+same song JSON in the URL hash, but for assistants the JSON above is the reliable way to
+hand over a song.
+
+## Links
+
+- [Vamp app](https://rickgroot.github.io/vamp/): the app itself.
+- [This file](https://rickgroot.github.io/vamp/llms.txt): the canonical URL to point an assistant at.
+- [Source code](https://github.com/RickGroot/vamp): SvelteKit + TypeScript.
+- [README](https://github.com/RickGroot/vamp#readme): features, stack and known limitations.
+- [Data model](https://github.com/RickGroot/vamp/blob/main/src/lib/model/types.ts): the TypeScript types this file describes.
+- [Import coercion](https://github.com/RickGroot/vamp/blob/main/src/lib/storage/db.ts): exactly how imported values are validated and defaulted.

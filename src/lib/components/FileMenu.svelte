@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { asset } from '$app/paths';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { library } from '$lib/stores/library.svelte';
 	import { readFileAsText } from '$lib/storage/backup';
@@ -133,6 +134,11 @@
 						placeholder={'Paste song JSON here — a Vamp backup, a single progression, or an array.'}
 						aria-label="Song JSON to import"
 					></textarea>
+					<p class="paste__hint">
+						Using an AI assistant? Point it at
+						<a class="paste__link" href={asset('/llms.txt')} target="_blank" rel="noopener">llms.txt</a>,
+						which describes this JSON format.
+					</p>
 					<div class="paste__actions">
 						<button
 							class="bar-btn"
@@ -230,6 +236,19 @@
 			outline: none;
 			border-color: var(--color-accent);
 		}
+	}
+
+	.paste__hint {
+		margin: 0;
+		font-size: 0.75rem;
+		line-height: 1.4;
+		color: var(--color-text-muted);
+	}
+
+	.paste__link {
+		color: var(--color-accent);
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.paste__actions {

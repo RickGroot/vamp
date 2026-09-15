@@ -23,7 +23,8 @@ const MIME = {
 	'.m4a': 'audio/mp4',
 	'.png': 'image/png',
 	'.woff2': 'font/woff2',
-	'.map': 'application/json'
+	'.map': 'application/json',
+	'.txt': 'text/plain; charset=utf-8'
 };
 
 async function serveFile(res, filePath) {
