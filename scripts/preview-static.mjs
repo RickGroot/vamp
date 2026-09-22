@@ -27,10 +27,10 @@ const MIME = {
 	'.txt': 'text/plain; charset=utf-8'
 };
 
-async function serveFile(res, filePath) {
+async function serveFile(res, filePath, status = 200) {
 	try {
 		const data = await readFile(filePath);
-		res.writeHead(200, {
+		res.writeHead(status, {
 			'content-type': MIME[extname(filePath)] || 'application/octet-stream',
 			'service-worker-allowed': BASE
 		});
@@ -53,11 +53,29 @@ const server = createServer(async (req, res) => {
 		res.end('Serve under /vamp/');
 		return;
 	}
-	let rel = path.slice(BASE.length);
-	if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-	if (await serveFile(res, join(BUILD, rel))) return;
-	// SPA fallback for extension-less deep links.
-	if (!extname(rel) && (await serveFile(res, join(BUILD, '200.html')))) return;
+	const rel = path.slice(BASE.length);
+	// Mirror GitHub Pages' lookup order for a project site:
+	//   /vamp/            -> index.html
+	//   /vamp/practice    -> practice.html, else practice/index.html
+	//   /vamp/practice/   -> practice/index.html
+	// then the SPA fallback (GH Pages serves 404.html, which CI copies from 200.html).
+	const candidates =
+		rel === '' || rel.endsWith('/')
+			? [`${rel}index.html`]
+			: extname(rel)
+				? [rel]
+				: [rel, `${rel}.html`, `${rel}/index.html`];
+	for (const candidate of candidates) {
+		if (await serveFile(res, join(BUILD, candidate))) return;
+	}
+	// Any navigation (no file extension) falls back to the app shell, exactly as
+	// GH Pages does via 404.html — this is what makes deep links work offline and
+	// on refresh. Asset requests must still 404 honestly.
+	if (!extname(rel)) {
+		for (const shell of ['404.html', '200.html']) {
+			if (await serveFile(res, join(BUILD, shell), 404)) return;
+		}
+	}
 	res.writeHead(404);
 	res.end('Not found');
 });

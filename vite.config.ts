@@ -27,7 +27,12 @@ export default defineConfig(({ command }) => {
 					fallback: '200.html',
 					precompress: true
 				}),
-				paths: { base }
+				// `relative: false` emits absolute asset URLs (/vamp/_app/…) instead of
+				// document-relative ones. With a sub-route, relative paths resolve
+				// against the document: /vamp/practice/ (trailing slash) would look for
+				// /vamp/practice/_app/… and 404 the whole app. The base is fixed for
+				// this GitHub Pages project site, so absolute is strictly safer.
+				paths: { base, relative: false }
 			}),
 			SvelteKitPWA({
 				registerType: 'prompt',

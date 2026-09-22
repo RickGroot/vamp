@@ -1,6 +1,7 @@
 // Share a progression via a URL hash — no backend. The progression is encoded
 // as compact base64url JSON in `#s=…` and decoded + migrated on load.
 
+import { base } from '$app/paths';
 import type { Progression } from '$lib/model/types';
 import { migrateProgression } from './db';
 
@@ -46,8 +47,11 @@ export function decodeProgression(encoded: string): Progression | null {
 const HASH_KEY = 's';
 
 export function buildShareUrl(progression: Progression): string {
-	const base = `${location.origin}${location.pathname}`;
-	return `${base}#${HASH_KEY}=${encodeProgression(progression)}`;
+	// Pinned to the sketchpad, not `location.pathname`: sharing from the Practice
+	// route would otherwise mint a link that opens Practice. `base` is empty in
+	// dev and '/vamp' in the GitHub Pages build — never hardcode it.
+	const root = `${location.origin}${base}/`;
+	return `${root}#${HASH_KEY}=${encodeProgression(progression)}`;
 }
 
 /** Read a shared progression from the current URL hash, if present. */
