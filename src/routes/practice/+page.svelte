@@ -1,8 +1,21 @@
 <script lang="ts">
-	// The Practice workspace. Generated drills land here in the next slice; for
-	// now this is the route itself — the shared chrome (header, nav, shortcuts,
-	// art) comes from +layout.svelte, so this page owns only its own <main>.
-	import { base } from '$app/paths';
+	// The Practice workspace. The shared chrome (header, nav, shortcuts, art)
+	// comes from +layout.svelte, so this page owns only its own <main>.
+	import { onDestroy } from 'svelte';
+	import { practice } from '$lib/stores/practice.svelte';
+	import { view } from '$lib/stores/view.svelte';
+	import DrillRunner from '$lib/components/practice/DrillRunner.svelte';
+	import DrillPicker from '$lib/components/practice/DrillPicker.svelte';
+
+	// The pitch select lives in the shared header, so mirror it into the drill
+	// store rather than reaching across for it at resolve time.
+	$effect(() => {
+		practice.setOffset(view.offset);
+	});
+
+	// One transport, one thing playing: leaving Practice stops the drill rather
+	// than leaving it running under the editor.
+	onDestroy(() => practice.stop());
 </script>
 
 <svelte:head>
@@ -10,19 +23,16 @@
 </svelte:head>
 
 <main class="practice-page">
-	<header class="intro">
-		<h1 class="wordmark intro__title">Practice</h1>
-		<p class="intro__lead">
-			Generated drills to play on your horn — scale patterns and chord tones, through every key,
-			in your own range, with the band or just a click.
-		</p>
-	</header>
-
-	<p class="soon label">Drill generator arriving in the next slice.</p>
-
-	<p class="back">
-		<a href={base || '/'}>← Back to the sketchpad</a>
-	</p>
+	<DrillRunner />
+	<details class="settings" open>
+		<summary class="settings__toggle">
+			<span class="wordmark settings__title">Set up</span>
+			<span class="label settings__hint">Drill · key · range · tempo · backing</span>
+		</summary>
+		<div class="settings__body">
+			<DrillPicker />
+		</div>
+	</details>
 </main>
 
 <style lang="scss">
@@ -30,46 +40,48 @@
 		max-width: 1100px;
 		margin: 0 auto;
 		padding: var(--space-6);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
 	}
 
-	.intro {
-		margin-bottom: var(--space-6);
+	.settings {
+		border-top: 1px solid var(--color-border);
+		padding-top: var(--space-4);
 	}
 
-	.intro__title {
-		font-size: 1.75rem;
-		margin: 0 0 var(--space-2);
-		background: var(--grad-flow);
-		background-size: 230% 100%;
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		-webkit-text-fill-color: transparent;
+	.settings__toggle {
+		display: flex;
+		align-items: baseline;
+		gap: var(--space-3);
+		cursor: pointer;
+		list-style: none;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--color-accent);
+			outline-offset: 2px;
+		}
 	}
 
-	.intro__lead {
-		margin: 0;
-		max-width: 52ch;
-		color: var(--color-text-muted);
+	.settings__title {
+		font-size: 1rem;
 	}
 
-	.soon {
-		display: inline-block;
-		padding: var(--space-3) var(--space-4);
-		border: 1px dashed var(--color-border);
+	.settings__hint {
 		color: var(--color-text-faint);
 	}
 
-	.back {
-		margin-top: var(--space-6);
+	.settings__body {
+		padding-top: var(--space-4);
 	}
 
-	.back a {
-		color: var(--color-text-muted);
-		text-decoration: none;
-
-		&:hover {
-			color: var(--color-black);
+	@media (max-width: 640px) {
+		.practice-page {
+			padding: var(--space-4) var(--space-3);
 		}
 	}
 </style>
