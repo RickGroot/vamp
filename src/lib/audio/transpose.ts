@@ -1,7 +1,26 @@
 // Transpose a chord symbol by a number of semitones, preserving its quality and
 // any slash bass, and simplifying the resulting spelling (e.g. E# -> F).
+//
+// Also the single source of the transposing-instrument offsets. They live in
+// this pure module (re-exported by the view store) for the same reason the tempo
+// bounds live in model/factory: the store is not importable in the node test
+// environment, and the offsets need testing.
 
 import { Interval, Note } from 'tonal';
+
+export interface TransposeOption {
+	id: string;
+	label: string;
+	/** Written pitch = concert + offset semitones. */
+	offset: number;
+}
+
+export const TRANSPOSE_OPTIONS: TransposeOption[] = [
+	{ id: 'concert', label: 'Concert', offset: 0 },
+	{ id: 'bb', label: 'B♭ Trumpet', offset: 2 },
+	{ id: 'eb', label: 'E♭ Alto sax', offset: 9 },
+	{ id: 'f', label: 'F Horn', offset: 7 }
+];
 
 const CHORD_RE = /^([A-Ga-g][#b]?)(.*?)(?:\/([A-Ga-g][#b]?))?$/;
 

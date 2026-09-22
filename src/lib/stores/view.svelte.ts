@@ -5,6 +5,7 @@
 
 import { browser } from '$app/environment';
 import { engine } from '$lib/audio/engine';
+import { TRANSPOSE_OPTIONS } from '$lib/audio/transpose';
 import {
 	computeMixLevels,
 	defaultMix,
@@ -14,19 +15,8 @@ import {
 	type MixState
 } from '$lib/audio/mix';
 
-export interface TransposeOption {
-	id: string;
-	label: string;
-	/** Written pitch = concert + offset semitones. */
-	offset: number;
-}
-
-export const TRANSPOSE_OPTIONS: TransposeOption[] = [
-	{ id: 'concert', label: 'Concert', offset: 0 },
-	{ id: 'bb', label: 'B♭ Trumpet', offset: 2 },
-	{ id: 'eb', label: 'E♭ Alto sax', offset: 9 },
-	{ id: 'f', label: 'F Horn', offset: 7 }
-];
+// Canonical offsets live in the pure audio layer (testable without $app/*).
+export { TRANSPOSE_OPTIONS, type TransposeOption } from '$lib/audio/transpose';
 
 const STORAGE_KEY = 'vamp:transpose';
 const COUNT_IN_KEY = 'vamp:countIn';
