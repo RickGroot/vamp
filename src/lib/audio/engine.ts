@@ -1,16 +1,23 @@
-// Playback engine: turn a Progression into a looping Tone.Transport schedule.
+// Playback engine: turn a PlaybackPlan into a looping Tone.Transport schedule.
 //
-// Chords are voiced (voicing.ts) and expanded into rhythmic events by the groove
-// (comp.ts), then scheduled in transport *ticks* (PPQ-based) so tempo stays live
-// and non-4/4 meters work. Chords/bass play through the sampled instrument; the
-// metronome uses a small Tone synth. The active-slot highlight is synced to audio
-// time via Tone.getDraw().
+// There is one Tone Transport, so there is one engine. It takes a plan (plan.ts)
+// rather than a Progression, so both the editor's song and a generated practice
+// drill share this scheduling, mix and highlight machinery; `play()` is the thin
+// Progression adapter over `start()`.
+//
+// For a song, chords are voiced (voicing.ts) and expanded into rhythmic events by
+// the groove (comp.ts). Either way events arrive in quarter notes and are
+// scheduled in transport *ticks* (PPQ-based) so tempo stays live and non-4/4
+// meters work. Chords/bass/lead play through the sampled instrument; the
+// metronome uses a small Tone synth. Highlights are synced to audio time via
+// Tone.getDraw(), on two disjoint channels — slotIndex for songs, cueIndex for
+// generated plans (see CompEvent).
 
 import * as Tone from 'tone';
 import type { Progression } from '$lib/model/types';
-import { barBeats, beatsToQuarters } from '$lib/model/time';
-import { buildScheduledEvents } from './schedule';
-import { type CompKind } from './comp';
+import { progressionPlan } from './schedule';
+import { type CompEvent } from './comp';
+import { type PlaybackPlan, type PlaybackSource } from './plan';
 import { isComping, type MixLevels } from './mix';
 import { type ClickFeel } from './drills';
 import {
@@ -29,21 +36,14 @@ const VELOCITY = 95;
 const BASS_VELOCITY = 80;
 const DRUM_VELOCITY = 80;
 const DRUM_ACCENT_VELOCITY = 110;
+const LEAD_VELOCITY = 100;
 
-interface ScheduledEvent {
-	time: string; // transport ticks, e.g. "384i"
-	/** Start position in quarter notes from the loop start (for trade-fours windows). */
-	atQuarters: number;
-	durQuarters: number;
-	midi: number[];
-	kind: CompKind;
-	slotIndex: number | null;
-	accent?: boolean;
-	drum?: string;
-}
+/** A CompEvent placed on the transport: same shape plus its tick position. */
+type ScheduledEvent = CompEvent & { time: string }; // time e.g. "384i"
 
 type StateListener = (state: EngineState) => void;
 type SlotListener = (index: number | null) => void;
+type CueListener = (index: number | null) => void;
 type LoopListener = () => void;
 
 class PlaybackEngine {
@@ -60,15 +60,27 @@ class PlaybackEngine {
 	private playGen = 0;
 	private readonly stateListeners = new Set<StateListener>();
 	private readonly slotListeners = new Set<SlotListener>();
+	private readonly cueListeners = new Set<CueListener>();
 	private readonly loopListeners = new Set<LoopListener>();
 
 	// Practice mix, read live by the Part callback so changes apply without a restart.
 	private mix: MixLevels = { chords: 1, bass: 1, drums: 1 };
 	private tradeBars = 0;
 	private quartersPerBar = 4;
+	private leadGain = 1;
+	private _source: PlaybackSource = 'progression';
 
 	get state(): EngineState {
 		return this._state;
+	}
+
+	/**
+	 * What is currently on the transport. There is one shared engine, so a store
+	 * that owns engine callbacks must check this before acting on its own data —
+	 * otherwise a drill's loop boundary drives the editor's song.
+	 */
+	get source(): PlaybackSource {
+		return this._source;
 	}
 
 	/** Set per-lane playback gains (0..1). Applies live while playing. */
@@ -79,6 +91,15 @@ class PlaybackEngine {
 	/** "Trade fours" block length in bars (0 = off). Applies live while playing. */
 	setTradeBars(bars: number): void {
 		this.tradeBars = Math.max(0, Math.floor(bars));
+	}
+
+	/**
+	 * Lead-line gain (0..1). 0 = silent, so you play the line yourself over the
+	 * backing. Applies live, so listen↔play flips with no restart, no re-await of
+	 * samples and no lost position.
+	 */
+	setLeadGain(gain: number): void {
+		this.leadGain = Math.max(0, Math.min(1, gain));
 	}
 
 	get isPlaying(): boolean {
@@ -95,6 +116,16 @@ class PlaybackEngine {
 		return () => this.slotListeners.delete(fn);
 	}
 
+	/**
+	 * Fires when a generated plan's highlight advances (which drill note is
+	 * sounding). Separate from onActiveSlot so a drill can never light up a chord
+	 * slot in the user's song — see CompEvent.cueIndex.
+	 */
+	onActiveCue(fn: CueListener): () => void {
+		this.cueListeners.add(fn);
+		return () => this.cueListeners.delete(fn);
+	}
+
 	/** Fires once each time the loop wraps back to the start (for practice drills). */
 	onLoop(fn: LoopListener): () => void {
 		this.loopListeners.add(fn);
@@ -108,6 +139,10 @@ class PlaybackEngine {
 
 	private setActiveSlot(index: number | null): void {
 		for (const fn of this.slotListeners) fn(index);
+	}
+
+	private setActiveCue(index: number | null): void {
+		for (const fn of this.cueListeners) fn(index);
 	}
 
 	private ensureClick(): Tone.Synth {
@@ -126,25 +161,38 @@ class PlaybackEngine {
 		progression: Progression,
 		opts: { countIn?: boolean; clickFeel?: ClickFeel } = {}
 	): Promise<void> {
+		return this.start(progressionPlan(progression, opts));
+	}
+
+	/**
+	 * Start (or restart) looping playback of a prepared plan. This is the only
+	 * entry point that touches the transport; `play()` is the Progression adapter.
+	 */
+	async start(plan: PlaybackPlan): Promise<void> {
 		const gen = ++this.playGen;
 		await unlockAudio();
 		if (gen !== this.playGen) return; // stopped/superseded while unlocking
 		this.setState('loading');
 		try {
-			this.quartersPerBar = beatsToQuarters(barBeats(progression.timeSignature), progression.timeSignature);
-			this.instrument = await getInstrument(progression.instrument);
-			// A dedicated bass voice, unless the bass is off or set to play through
-			// the chord instrument ('keys'). Falls back to the chord instrument.
-			const bassId = progression.groove.bassInstrument;
-			this.bassInstrument =
-				progression.groove.bass !== 'none' && bassId !== 'keys'
-					? await getBassInstrument(bassId)
-					: null;
-			this.drums = progression.groove.drums !== 'none' ? await getDrumMachine() : null;
+			this.instrument = await getInstrument(plan.voices.chords);
+			// A dedicated bass voice when the plan asks for one; otherwise the bass
+			// (if any) falls back to the chord instrument.
+			this.bassInstrument = plan.voices.bass ? await getBassInstrument(plan.voices.bass) : null;
+			this.drums = plan.voices.drums ? await getDrumMachine() : null;
 			if (gen !== this.playGen) return; // stopped/superseded while samples loaded
 
-			const { events, totalTicks } = buildEvents(progression, opts.clickFeel);
+			// Adopt the plan's parameters only once this run is confirmed current:
+			// the live Part callback reads quartersPerBar, so a superseded start()
+			// must not shift the *playing* loop's trade-fours windows.
+			this.quartersPerBar = plan.quartersPerBar;
+			this._source = plan.source;
+
+			const { events, totalTicks } = toScheduled(plan.events, plan.totalQuarters);
 			this.teardownPart();
+			// A new plan may highlight the other channel, or neither — clear both so
+			// a chord slot can't stay lit underneath a drill.
+			this.setActiveSlot(null);
+			this.setActiveCue(null);
 
 			if (events.length === 0 || totalTicks <= 0) {
 				this.setState('stopped');
@@ -155,7 +203,7 @@ class PlaybackEngine {
 			transport.stop();
 			transport.cancel();
 			transport.position = 0;
-			transport.bpm.value = progression.tempo;
+			transport.bpm.value = plan.tempo;
 
 			this.part = new Tone.Part<ScheduledEvent>((time, ev) => {
 				// "Trade fours": the band drops out during your solo blocks. Chords and
@@ -181,26 +229,36 @@ class PlaybackEngine {
 					}
 				} else {
 					const isBass = ev.kind === 'bass';
+					const isLead = ev.kind === 'lead';
 					// Bass plays its own instrument when set; otherwise ('keys') the chord one.
 					const inst = isBass ? (this.bassInstrument ?? this.instrument) : this.instrument;
-					const gain = isBass ? this.mix.bass : this.mix.chords;
-					if (comping && inst && gain > 0 && ev.midi.length) {
+					const gain = isBass ? this.mix.bass : isLead ? this.leadGain : this.mix.chords;
+					// The lead is *your* line — trade-fours drops the band out, never it.
+					if ((comping || isLead) && inst && gain > 0 && ev.midi.length) {
 						// Seconds-per-quarter from the *current* tempo keeps durations live.
 						const duration = (ev.durQuarters * 60) / Tone.getTransport().bpm.value;
-						const base = isBass ? BASS_VELOCITY : VELOCITY;
+						const base = isBass ? BASS_VELOCITY : isLead ? LEAD_VELOCITY : VELOCITY;
 						const velocity = Math.round(base * gain);
 						for (const note of ev.midi) inst.start({ note, time, duration, velocity });
 					}
 				}
 				// Always advance the highlight, even when a lane is silenced, so you can
 				// see the chord you're soloing over during your trade-fours turn.
+				//
+				// Draw callbacks queue ~lookAhead ahead of audio time and outlive
+				// transport.cancel(), so both guards are load-bearing: `_state` covers a
+				// stop just before a change, `gen` covers a *replacement* — without it a
+				// stale draw from the previous run lights a slot mid-drill and it stays lit.
 				if (ev.slotIndex !== null) {
 					const slot = ev.slotIndex;
-					// Draw callbacks queue ~lookAhead ahead of audio time and outlive
-					// transport.cancel() — guard so a stop just before a chord change
-					// doesn't leave the next slot highlighted while stopped.
 					Tone.getDraw().schedule(() => {
-						if (this._state === 'playing') this.setActiveSlot(slot);
+						if (this._state === 'playing' && gen === this.playGen) this.setActiveSlot(slot);
+					}, time);
+				}
+				if (ev.cueIndex !== undefined) {
+					const cue = ev.cueIndex;
+					Tone.getDraw().schedule(() => {
+						if (this._state === 'playing' && gen === this.playGen) this.setActiveCue(cue);
 					}, time);
 				}
 			}, events);
@@ -210,17 +268,17 @@ class PlaybackEngine {
 			this.part.loopEnd = `${totalTicks}i`;
 
 			let loopStartTicks = 0;
-			if (opts.countIn) {
+			if (plan.countIn) {
 				// One-bar metronome pre-roll (one-shot), then start the loop a bar in.
 				const ppq = transport.PPQ || 192;
-				const ts = progression.timeSignature;
-				const beatTicks = (4 / ts.denominator) * ppq;
-				for (let beat = 0; beat < ts.numerator; beat++) {
+				const { beats, quartersPerBeat } = plan.countIn;
+				const beatTicks = quartersPerBeat * ppq;
+				for (let beat = 0; beat < beats; beat++) {
 					transport.schedule((t) => {
 						this.ensureClick().triggerAttackRelease(beat === 0 ? 'C6' : 'G5', 0.03, t, beat === 0 ? 0.9 : 0.6);
 					}, `${Math.round(beat * beatTicks)}i`);
 				}
-				loopStartTicks = Math.round(ts.numerator * beatTicks);
+				loopStartTicks = Math.round(beats * beatTicks);
 				this.part.start(`${loopStartTicks}i`);
 			} else {
 				this.part.start(0);
@@ -256,6 +314,7 @@ class PlaybackEngine {
 		this.teardownPart();
 		this.instrument?.stop();
 		this.setActiveSlot(null);
+		this.setActiveCue(null);
 		this.setState('stopped');
 	}
 
@@ -277,23 +336,20 @@ class PlaybackEngine {
 	}
 }
 
-function buildEvents(
-	progression: Progression,
-	clickFeel?: ClickFeel
+/**
+ * Place quarter-note positions on the transport as PPQ ticks. Ticks (not seconds)
+ * keep tempo live and non-4/4 meters correct. Spreading the event keeps this in
+ * step with CompEvent automatically — a new field never needs re-listing here.
+ */
+function toScheduled(
+	events: CompEvent[],
+	totalQuarters: number
 ): { events: ScheduledEvent[]; totalTicks: number } {
 	const ppq = Tone.getTransport().PPQ || 192;
-	const { events, totalQuarters } = buildScheduledEvents(progression, { clickFeel });
-	const scheduled: ScheduledEvent[] = events.map((e) => ({
-		time: `${Math.round(e.atQuarters * ppq)}i`,
-		atQuarters: e.atQuarters,
-		durQuarters: e.durQuarters,
-		midi: e.midi,
-		kind: e.kind,
-		slotIndex: e.slotIndex,
-		accent: e.accent,
-		drum: e.drum
-	}));
-	return { events: scheduled, totalTicks: Math.round(totalQuarters * ppq) };
+	return {
+		events: events.map((e) => ({ ...e, time: `${Math.round(e.atQuarters * ppq)}i` })),
+		totalTicks: Math.round(totalQuarters * ppq)
+	};
 }
 
 /** Single shared engine (there is only one Tone Transport). */

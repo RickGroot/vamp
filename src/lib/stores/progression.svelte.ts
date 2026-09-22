@@ -64,6 +64,16 @@ class ProgressionStore {
 		return this.engineState === 'playing';
 	}
 
+	/**
+	 * Playing *this* progression, rather than something else on the shared
+	 * transport (a practice drill). Every "restart so the change is heard" and
+	 * "resume after undo" path must use this, not `isPlaying` — otherwise editing
+	 * the song while a drill runs silently replaces the drill with the song.
+	 */
+	private get isPlayingThis(): boolean {
+		return this.engineState === 'playing' && engine.source === 'progression';
+	}
+
 	get isLoading(): boolean {
 		return this.engineState === 'loading';
 	}
@@ -119,7 +129,7 @@ class ProgressionStore {
 		// Finalize any active drill first: its transposed chords/tempo must not be
 		// restored into (or captured against) an unrelated historical snapshot.
 		this.endDrillSession();
-		const wasPlaying = this.isPlaying;
+		const wasPlaying = this.isPlayingThis;
 		this.future.push($state.snapshot(this.current));
 		this.current = this.past.pop()!;
 		this.lastTag = '';
@@ -130,7 +140,7 @@ class ProgressionStore {
 	redo(): void {
 		if (this.future.length === 0) return;
 		this.endDrillSession();
-		const wasPlaying = this.isPlaying;
+		const wasPlaying = this.isPlayingThis;
 		this.past.push($state.snapshot(this.current));
 		this.current = this.future.pop()!;
 		this.lastTag = '';
@@ -162,7 +172,7 @@ class ProgressionStore {
 		this.checkpoint();
 		this.current.instrument = id;
 		this.touch();
-		if (this.isPlaying) void this.play(); // restart so the new sound is heard
+		if (this.isPlayingThis) void this.play(); // restart so the new sound is heard
 	}
 
 	setTimeSignature(ts: TimeSignature): void {
@@ -174,7 +184,7 @@ class ProgressionStore {
 			for (const slot of bar.slots) slot.beats = each;
 		}
 		this.touch();
-		if (this.isPlaying) void this.play(); // rebuild the schedule in the new meter
+		if (this.isPlayingThis) void this.play(); // rebuild the schedule in the new meter
 	}
 
 	// ---- groove ----
@@ -183,7 +193,7 @@ class ProgressionStore {
 		this.checkpoint('groove');
 		this.current.groove.pattern = pattern;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	setBassMode(mode: BassMode): void {
@@ -191,7 +201,7 @@ class ProgressionStore {
 		this.checkpoint('groove');
 		this.current.groove.bass = mode;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	setBassInstrument(id: BassInstrumentId): void {
@@ -199,21 +209,21 @@ class ProgressionStore {
 		this.checkpoint('groove');
 		this.current.groove.bassInstrument = id;
 		this.touch();
-		if (this.isPlaying) void this.play(); // reload + reroute the bass voice
+		if (this.isPlayingThis) void this.play(); // reload + reroute the bass voice
 	}
 
 	toggleMetronome(): void {
 		this.checkpoint('groove');
 		this.current.groove.metronome = !this.current.groove.metronome;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	setDrums(style: DrumStyle): void {
 		this.checkpoint('groove');
 		this.current.groove.drums = style;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	// ---- transpose ----
@@ -226,7 +236,7 @@ class ProgressionStore {
 			}
 		}
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	/** Replace the bars with a random diatonic progression. */
@@ -240,7 +250,7 @@ class ProgressionStore {
 		});
 		this.current.loopRange = null;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	// ---- bars & slots ----
@@ -295,7 +305,7 @@ class ProgressionStore {
 		}
 		this.clampLoopRange();
 		this.touch();
-		if (this.isPlaying) void this.play(); // drop the removed bar from the live schedule
+		if (this.isPlayingThis) void this.play(); // drop the removed bar from the live schedule
 	}
 
 	/** Reorder a bar from one index to another (drag-and-drop). */
@@ -321,7 +331,7 @@ class ProgressionStore {
 		}
 		this.clampLoopRange();
 		this.touch();
-		if (this.isPlaying) void this.play(); // resync audio + playhead with the new order
+		if (this.isPlayingThis) void this.play(); // resync audio + playhead with the new order
 	}
 
 	/**
@@ -352,7 +362,7 @@ class ProgressionStore {
 		}
 		this.clampLoopRange();
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	setSlotChord(barIndex: number, slotIndex: number, chord: string): void {
@@ -374,7 +384,7 @@ class ProgressionStore {
 		// Slot changes shift every later slot's global index — restart so the
 		// audio and the playhead highlight stay in sync. (Appending a whole bar
 		// is deliberately exempt: it preserves existing indices.)
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	removeSlot(barIndex: number, slotIndex: number): void {
@@ -384,7 +394,7 @@ class ProgressionStore {
 		bar.slots.splice(slotIndex, 1);
 		this.redistribute(barIndex);
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	private redistribute(barIndex: number): void {
@@ -408,7 +418,7 @@ class ProgressionStore {
 		if (start > end) [start, end] = [end, start];
 		this.current.loopRange = start === 0 && end === n - 1 ? null : { startBar: start, endBar: end };
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	clearLoopRange(): void {
@@ -416,7 +426,7 @@ class ProgressionStore {
 		this.checkpoint();
 		this.current.loopRange = null;
 		this.touch();
-		if (this.isPlaying) void this.play();
+		if (this.isPlayingThis) void this.play();
 	}
 
 	/** Keep loopRange valid after bars change; collapse to null if it spans everything. */
@@ -448,6 +458,11 @@ class ProgressionStore {
 
 	/** Fired by the engine at each loop boundary while playing. */
 	private onDrillLoop(): void {
+		// This listener is registered once, permanently, on the shared engine — so
+		// it also fires at the loop boundary of a practice drill. Bail out unless
+		// *our* progression is what's playing, or a drill would step the tempo and
+		// transpose the user's saved chords in the background.
+		if (engine.source !== 'progression') return;
 		if ((drills.steppingTempo || drills.cyclingKey) && !this.drillOrigin) {
 			// Snapshot the original key + tempo before the drill changes anything.
 			this.drillOrigin = { chords: this.captureChords(), tempo: this.current.tempo };
@@ -478,7 +493,7 @@ class ProgressionStore {
 
 	/** Transpose to the next key and restart the loop — transient, no undo entry. */
 	private cycleKey(semitones: number): void {
-		if (!this.isPlaying) return;
+		if (!this.isPlayingThis) return;
 		this.drillSemis = (((this.drillSemis + semitones) % 12) + 12) % 12;
 		for (const bar of this.current.bars)
 			for (const slot of bar.slots)

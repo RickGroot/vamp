@@ -7,7 +7,12 @@ import { barBeats, beatsToQuarters } from '$lib/model/time';
 import { clickAtBeat, type ClickFeel } from './drills';
 import type { BassMode, DrumStyle, Groove, TimeSignature } from '$lib/model/types';
 
-export type CompKind = 'chord' | 'bass' | 'click' | 'drum';
+/**
+ * `lead` is the practice drill's own melodic line. `buildCompEvents` never emits
+ * one — only generated practice plans do — but it shares the event shape so the
+ * engine's Part callback and the exporters need no second code path.
+ */
+export type CompKind = 'chord' | 'bass' | 'click' | 'drum' | 'lead';
 
 export interface CompEvent {
 	/** Start position in quarter notes from the loop start. */
@@ -19,6 +24,14 @@ export interface CompEvent {
 	kind: CompKind;
 	/** Slot to highlight when this event fires, or null. */
 	slotIndex: number | null;
+	/**
+	 * Highlight index within a generated plan (which drill note is sounding), or
+	 * undefined. A SEPARATE channel from `slotIndex`: that one is the flattenSlots
+	 * global index the progression UI keys on, so a drill setting it would light up
+	 * a chord slot in the user's song. Progression events set only `slotIndex`;
+	 * generated events set only `cueIndex`.
+	 */
+	cueIndex?: number;
 	/** Metronome / drum accent. */
 	accent?: boolean;
 	/** Drum sample name for kind 'drum' (e.g. 'kick', 'snare', 'hihat'). */

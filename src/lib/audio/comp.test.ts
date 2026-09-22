@@ -134,4 +134,37 @@ describe('buildCompEvents', () => {
 		expect(ev[0].midi).toEqual([]);
 		expect(ev[0].slotIndex).toBe(0);
 	});
+
+	// The lead lane and the cue highlight belong to generated practice plans only.
+	// `slotIndex` is the flattenSlots global index the progression UI keys on, so
+	// the two channels must stay disjoint: comping never produces either.
+	it('never emits lead events or cue indices, for any groove', () => {
+		const patterns = ['block', 'strum', 'arpeggio'] as const;
+		const basses = ['none', 'root', 'alt', 'walking', 'octaves'] as const;
+		const kits = ['none', 'rock', 'pop', 'swing', 'bossa'] as const;
+		for (const pattern of patterns) {
+			for (const bass of basses) {
+				for (const drums of kits) {
+					const ev = buildCompEvents(
+						[fullBar()],
+						4,
+						TS,
+						groove({ pattern, bass, drums, metronome: true })
+					);
+					expect(ev.length).toBeGreaterThan(0);
+					expect(ev.every((e) => e.kind !== 'lead')).toBe(true);
+					expect(ev.every((e) => e.cueIndex === undefined)).toBe(true);
+				}
+			}
+		}
+	});
+
+	// A drill's backing comes from this exact call: no chord slots, groove-gated
+	// click and drums. It must not need a separate code path in comp.ts.
+	it('with no slots, still builds click + drums for a drill backing', () => {
+		const ev = buildCompEvents([], 8, TS, groove({ metronome: true, drums: 'swing' }));
+		expect(ev.some((e) => e.kind === 'click')).toBe(true);
+		expect(ev.some((e) => e.kind === 'drum')).toBe(true);
+		expect(ev.every((e) => e.kind !== 'chord' && e.kind !== 'bass')).toBe(true);
+	});
 });

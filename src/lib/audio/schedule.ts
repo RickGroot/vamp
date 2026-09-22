@@ -4,11 +4,12 @@
 
 import { Note } from 'tonal';
 import type { InstrumentId, Progression } from '$lib/model/types';
-import { beatsToQuarters, resolveLoopRange } from '$lib/model/time';
+import { barBeats, beatsToQuarters, resolveLoopRange } from '$lib/model/time';
 import { flattenSlots } from '$lib/model/slots';
 import { voiceSequence, nearestMidi } from './voicing';
 import { parseChord } from './chord';
 import { buildCompEvents, type CompEvent, type CompSlot } from './comp';
+import { countInFor, type PlaybackPlan } from './plan';
 import type { ClickFeel } from './drills';
 
 const BASS_TARGET = 40; // ~E2 register for the bass note
@@ -72,5 +73,37 @@ export function buildScheduledEvents(
 	return {
 		events: buildCompEvents(compSlots, cumulativeQuarters, ts, progression.groove, opts.clickFeel),
 		totalQuarters: cumulativeQuarters
+	};
+}
+
+/**
+ * The playback plan for a progression — the adapter that keeps the engine's
+ * `start()` Progression-agnostic. Covers the active loop range, exactly like
+ * `buildScheduledEvents` (the exporters pass `{ whole: true }` and call that
+ * directly, so they never come through here).
+ */
+export function progressionPlan(
+	progression: Progression,
+	opts: { countIn?: boolean; clickFeel?: ClickFeel } = {}
+): PlaybackPlan {
+	const ts = progression.timeSignature;
+	const { events, totalQuarters } = buildScheduledEvents(progression, {
+		clickFeel: opts.clickFeel
+	});
+	// The bass gets its own sampled voice only when it actually plays and isn't
+	// deliberately routed through the chord instrument ('keys').
+	const bassId = progression.groove.bassInstrument;
+	return {
+		source: 'progression',
+		events,
+		totalQuarters,
+		tempo: progression.tempo,
+		quartersPerBar: beatsToQuarters(barBeats(ts), ts),
+		voices: {
+			chords: progression.instrument,
+			bass: progression.groove.bass !== 'none' && bassId !== 'keys' ? bassId : null,
+			drums: progression.groove.drums !== 'none'
+		},
+		countIn: opts.countIn ? countInFor(ts) : null
 	};
 }
