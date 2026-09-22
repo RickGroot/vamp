@@ -11,23 +11,16 @@
 	const shown = $derived(run.phrases.find((p) => p.rep === rep) ?? run.phrases[0] ?? null);
 	const next = $derived(run.phrases.find((p) => p.rep === rep + 1) ?? null);
 	const repNumber = $derived(rep + 1);
-	// 0 until something is actually playing — a quarter-full bar on a stopped
-	// drill reads as progress that hasn't happened.
-	const progress = $derived(
-		practice.isPlaying && total > 0 ? Math.min(1, repNumber / total) : 0
-	);
 
 	// Only the current key is on the stand. Rendering all twelve at once would be
 	// a wall of notation you cannot read, and a much taller staff.
 	const phraseNotes = $derived(run.notes.filter((n) => n.rep === rep));
-	const phraseStart = $derived(run.notes.findIndex((n) => n.rep === rep));
-	const phraseCue = $derived(
-		practice.cue === null || phraseStart < 0 ? null : practice.cue - phraseStart
-	);
 
 	const statusText = $derived(
 		practice.isPlaying
-			? `Key ${repNumber} of ${total}: ${shown?.writtenRoot ?? ''} at ${shown?.tempo ?? practice.tempo} bpm`
+			? total > 1
+				? `Key ${repNumber} of ${total}: ${shown?.writtenRoot ?? ''} at ${shown?.tempo ?? practice.tempo} bpm`
+				: `Playing at ${shown?.tempo ?? practice.tempo} bpm`
 			: practice.isLoading
 				? 'Loading sounds'
 				: 'Stopped'
@@ -39,8 +32,10 @@
 		<div class="runner__what">
 			<h2 class="wordmark runner__title">{practice.definition.name}</h2>
 			<p class="label runner__sub">
-				{shown?.writtenRoot ?? practice.root} · {practice.rangeLabel} · {shown?.tempo ??
-					practice.tempo} bpm
+				<!-- A song-sourced drill has no meaningful "key" to show — it follows
+				     the changes — so name the sketch instead. -->
+				{practice.usesSong ? practice.songName : (shown?.writtenRoot ?? practice.root)} ·
+				{practice.rangeLabel} · {shown?.tempo ?? practice.tempo} bpm
 			</p>
 		</div>
 
@@ -71,17 +66,13 @@
 	     screen reader at drilling tempos. -->
 	<p class="runner__status label" role="status" aria-live="polite">{statusText}</p>
 
-	<div class="runner__progress" aria-hidden="true">
-		<div class="runner__bar" style="transform: scaleX({progress})"></div>
-	</div>
-
 	{#if run.notes.length === 0}
 		<p class="runner__empty">
 			This pattern doesn’t fit the {practice.rangeLabel.toLowerCase()} range. Try a narrower pattern, a
 			different register, or a wider range.
 		</p>
 	{:else}
-		<DrillStaff notes={phraseNotes} cue={phraseCue} />
+		<DrillStaff notes={phraseNotes} />
 		{#if next}
 			<p class="runner__next label">Next up · {next.writtenRoot} at {next.tempo} bpm</p>
 		{/if}
@@ -157,20 +148,6 @@
 		color: var(--color-text-muted);
 	}
 
-	.runner__progress {
-		height: 3px;
-		background: var(--color-border);
-		overflow: hidden;
-	}
-
-	.runner__bar {
-		height: 100%;
-		background: var(--grad-flow);
-		background-size: 200% 100%;
-		transform-origin: left center;
-		transition: transform var(--motion-fast) var(--motion-ease-out);
-	}
-
 	.runner__empty {
 		padding: var(--space-4);
 		border: 1px dashed var(--color-border);
@@ -189,7 +166,6 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.runner__bar,
 		.play {
 			transition: none;
 		}

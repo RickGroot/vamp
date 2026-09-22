@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { resolveLoopRange } from '$lib/model/time';
@@ -85,6 +86,11 @@
 			>
 			<FileMenu />
 			<ShareMenu />
+			<!-- Takes the current changes straight into a guide-tone drill. A link,
+			     not a button: it is navigation, and it should middle-click. -->
+			<a class="bar-btn practise" href="{base}/practice?drill=guide-tones"
+				>Practise this</a
+			>
 		</div>
 	</div>
 
@@ -144,6 +150,17 @@
 		padding: var(--space-12) var(--space-6) var(--space-24);
 	}
 
+	/* Phone: tighter gutters, and the song title stops eating a third of the screen. */
+	@media (max-width: 600px) {
+		.editor {
+			padding: var(--space-6) var(--space-4) var(--space-12);
+		}
+
+		.title {
+			font-size: 1.5rem;
+		}
+	}
+
 	.toolbar {
 		display: flex;
 		align-items: center;
@@ -151,11 +168,20 @@
 		flex-wrap: wrap;
 	}
 
+	/* A link styled as a bar button — same box, no underline. */
+	.practise {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+	}
+
 	.toolbar__actions {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		flex: 0 0 auto;
+		flex: 0 1 auto;
+		/* Five controls no longer fit one phone row — wrap rather than run off. */
+		flex-wrap: wrap;
 	}
 
 	.title {

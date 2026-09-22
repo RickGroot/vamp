@@ -32,12 +32,16 @@ export const PATTERNS: Record<string, DrillPattern> = {
 };
 
 const drill = (
-	d: Omit<DrillDefinition, 'schemaVersion' | 'timeSignature' | 'builtIn'> &
+	d: Omit<DrillDefinition, 'schemaVersion' | 'timeSignature' | 'builtIn' | 'createdAt' | 'updatedAt'> &
 		Partial<Pick<DrillDefinition, 'timeSignature'>>
 ): DrillDefinition => ({
 	schemaVersion: CURRENT_DRILL_SCHEMA_VERSION,
 	timeSignature: FOUR_FOUR,
 	builtIn: true,
+	// The shipped library is never written to IndexedDB, so it carries no real
+	// timestamps — 0 keeps the type honest without implying an edit history.
+	createdAt: 0,
+	updatedAt: 0,
 	...d
 });
 
@@ -152,5 +156,56 @@ export const BUILT_IN_DRILLS: DrillDefinition[] = [
 	})
 ];
 
+/**
+ * Drills that run over a chord SEQUENCE rather than a single key — they need
+ * changes supplied in the run options (normally the editor's progression), so
+ * they are listed apart from the key-cycling library above.
+ */
+export const GUIDE_TONE_DRILLS: DrillDefinition[] = [
+	drill({
+		id: 'guide-tones',
+		name: 'Guide tones',
+		description:
+			'The 3rd and 7th of each chord, whichever is nearest — the line that spells the changes.',
+		source: { kind: 'guide', line: 'guide' },
+		pattern: PATTERNS.steps,
+		direction: 'up',
+		cellsPerKey: 1
+	}),
+	drill({
+		id: 'guide-thirds',
+		name: 'Thirds through the changes',
+		description: 'Only the 3rds. Hear major turn to minor as the chords move.',
+		source: { kind: 'guide', line: 'thirds' },
+		pattern: PATTERNS.steps,
+		direction: 'up',
+		cellsPerKey: 1
+	}),
+	drill({
+		id: 'guide-sevenths',
+		name: 'Sevenths through the changes',
+		description: 'Only the 7ths. The note that pulls each chord to the next.',
+		source: { kind: 'guide', line: 'sevenths' },
+		pattern: PATTERNS.steps,
+		direction: 'up',
+		cellsPerKey: 1
+	}),
+	drill({
+		id: 'guide-roots',
+		name: 'Roots through the changes',
+		description: 'Just the roots — start here, then move to the guide tones.',
+		source: { kind: 'guide', line: 'roots' },
+		pattern: PATTERNS.steps,
+		direction: 'up',
+		cellsPerKey: 1
+	})
+];
+
+export const ALL_DRILLS: DrillDefinition[] = [...BUILT_IN_DRILLS, ...GUIDE_TONE_DRILLS];
+
 export const drillById = (id: string): DrillDefinition | undefined =>
-	BUILT_IN_DRILLS.find((d) => d.id === id);
+	ALL_DRILLS.find((d) => d.id === id);
+
+/** Whether a drill needs changes supplied (and so a song to run over). */
+export const needsChords = (definition: DrillDefinition): boolean =>
+	definition.source.kind === 'guide';

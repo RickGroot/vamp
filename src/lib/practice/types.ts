@@ -16,13 +16,30 @@ export type DrillSchemaVersion = 1;
 export const CURRENT_DRILL_SCHEMA_VERSION: DrillSchemaVersion = 1;
 
 /**
- * What supplies the note pool the pattern indexes into.
+ * Which line a guide-tone drill traces through a set of changes.
+ * `guide` alternates 3rds and 7ths (the classic line); `roots` is the easy level.
+ */
+export type GuideLine = 'guide' | 'thirds' | 'sevenths' | 'roots';
+
+/**
+ * What supplies the notes.
  * - `scale` — a tonal scale-type id from SCALE_TYPES ('major', 'blues', …)
  * - `chord` — a chord-symbol suffix appended to the root ('maj7', 'm7', '7', '')
+ * - `guide` — one note per chord of a SEQUENCE, voice-led. Needs `chords` in the
+ *   run options (the editor's progression), so it ignores `pattern` entirely.
  */
 export type DrillSource =
 	| { kind: 'scale'; scaleType: string }
-	| { kind: 'chord'; quality: string };
+	| { kind: 'chord'; quality: string }
+	| { kind: 'guide'; line: GuideLine };
+
+/** One chord of a sequence a guide-tone drill runs over. */
+export interface DrillChord {
+	/** Chord symbol in CONCERT pitch, exactly as the song stores it. '' = rest. */
+	symbol: string;
+	/** Duration in the drill's beat unit, like Slot.beats. */
+	beats: number;
+}
 
 export type DrillDirection = 'up' | 'down' | 'updown' | 'downup';
 
@@ -50,6 +67,10 @@ export interface DrillDefinition {
 	id: string;
 	name: string;
 	description: string;
+	/** epoch milliseconds (0 for the shipped library, which is never stored) */
+	createdAt: number;
+	/** epoch milliseconds — also the IndexedDB sort index for saved drills */
+	updatedAt: number;
 	source: DrillSource;
 	pattern: DrillPattern;
 	/** Default direction; a run may override it. */
@@ -90,6 +111,13 @@ export interface DrillRunOptions {
 	tempoMax: number;
 	/** Bars of rest between repetitions — brass players need real rest. */
 	restBars: number;
+	/**
+	 * Changes for a `guide` source, CONCERT pitch — normally the editor's current
+	 * progression. Ignored by scale and chord drills.
+	 */
+	chords?: DrillChord[];
+	/** Overrides the definition's meter (a song-sourced drill follows the song). */
+	timeSignature?: TimeSignature;
 	rand?: () => number;
 }
 
@@ -116,6 +144,8 @@ export interface DrillNote {
 	role: DrillRole;
 	/** Which repetition this note belongs to. */
 	rep: number;
+	/** For a guide-tone drill: the WRITTEN chord symbol this note sits on. */
+	chord?: string;
 }
 
 /** One repetition: the drill in a single key, at a single tempo. */

@@ -9,7 +9,14 @@
 		DIRECTIONS,
 		BACKINGS
 	} from '$lib/stores/practice.svelte';
-	import { BUILT_IN_DRILLS } from '$lib/practice/patterns';
+	import { BUILT_IN_DRILLS, GUIDE_TONE_DRILLS } from '$lib/practice/patterns';
+	import { drillLibrary } from '$lib/stores/drillLibrary.svelte';
+	import DrillEditor from './DrillEditor.svelte';
+
+	let editing = $state(false);
+	// Keyed so switching the drill you're customising rebuilds the editor's
+	// fields from the new seed instead of keeping the old ones.
+	const editorKey = $derived(practice.drillId);
 	import { INSTRUMENT_RANGES } from '$lib/practice/range';
 	import { SCALE_ROOTS } from '$lib/model/scales';
 	import { KEY_MODES, CLICK_FEELS, TEMPO_STEPS } from '$lib/stores/drills.svelte';
@@ -28,34 +35,121 @@
 </script>
 
 <section class="picker" aria-label="Drill settings">
-	<div class="picker__drills" role="group" aria-label="Drill">
-		{#each BUILT_IN_DRILLS as drill (drill.id)}
-			<button
-				class="drill"
-				class:drill--on={practice.drillId === drill.id}
-				type="button"
-				aria-pressed={practice.drillId === drill.id}
-				onclick={() => practice.setDrill(drill.id)}
-			>
-				<span class="drill__name">{drill.name}</span>
-				<span class="drill__desc">{drill.description}</span>
-			</button>
-		{/each}
+	<div class="group">
+		<h3 class="label group__title">In every key</h3>
+		<div class="picker__drills" role="group" aria-label="Key-cycling drills">
+			{#each BUILT_IN_DRILLS as drill (drill.id)}
+				<button
+					class="drill"
+					class:drill--on={practice.drillId === drill.id}
+					type="button"
+					aria-pressed={practice.drillId === drill.id}
+					onclick={() => practice.setDrill(drill.id)}
+				>
+					<span class="drill__name">{drill.name}</span>
+					<span class="drill__desc">{drill.description}</span>
+				</button>
+			{/each}
+		</div>
+	</div>
+
+	<div class="group">
+		<h3 class="label group__title">Over your changes · {practice.songName}</h3>
+		<div class="picker__drills" role="group" aria-label="Drills over the current progression">
+			{#each GUIDE_TONE_DRILLS as drill (drill.id)}
+				<button
+					class="drill"
+					class:drill--on={practice.drillId === drill.id}
+					type="button"
+					aria-pressed={practice.drillId === drill.id}
+					onclick={() => practice.setDrill(drill.id)}
+				>
+					<span class="drill__name">{drill.name}</span>
+					<span class="drill__desc">{drill.description}</span>
+				</button>
+			{/each}
+		</div>
+		{#if practice.usesSong && practice.songIsEmpty}
+			<p class="group__warn label">
+				Your sketch has no chords yet — write some on the Sketch page and they’ll appear here.
+			</p>
+		{:else}
+			<p class="group__note label">
+				Follows the sketch’s loop range and meter, and never changes it. Set “Then” to cycle the
+				whole progression through keys.
+			</p>
+		{/if}
+	</div>
+
+	<div class="group">
+		<div class="group__head">
+			<h3 class="label group__title">Your own</h3>
+			{#if !editing}
+				<button class="bar-btn" type="button" onclick={() => (editing = true)}>
+					{practice.definition.builtIn ? 'Customise this drill' : 'Edit this drill'}
+				</button>
+			{/if}
+		</div>
+
+		{#if editing}
+			{#key editorKey}
+				<DrillEditor onclose={() => (editing = false)} />
+			{/key}
+		{/if}
+
+		{#if drillLibrary.error}
+			<p class="group__warn label" role="alert">{drillLibrary.error}</p>
+		{:else if practice.customDrills.length === 0}
+			<p class="group__note label">
+				Nothing saved yet. Pick a drill above, then “Customise this drill” to change its notes,
+				rhythm or shape and keep it.
+			</p>
+		{:else}
+			<div class="picker__drills" role="group" aria-label="Your saved drills">
+				{#each practice.customDrills as drill (drill.id)}
+					<div class="drill-wrap">
+						<button
+							class="drill"
+							class:drill--on={practice.drillId === drill.id}
+							type="button"
+							aria-pressed={practice.drillId === drill.id}
+							onclick={() => practice.setDrill(drill.id)}
+						>
+							<span class="drill__name">{drill.name}</span>
+							<span class="drill__desc">
+								{drill.pattern.cell.map((c) => c + 1).join(' – ')} · {drill.cellsPerKey} repeats
+							</span>
+						</button>
+						<button
+							class="drill__delete"
+							type="button"
+							aria-label="Delete {drill.name}"
+							title="Delete"
+							onclick={() => void drillLibrary.remove(drill.id)}>×</button
+						>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="picker__rows">
 		<div class="row">
-			<label class="label" for="p-root">Start key</label>
-			<select
-				id="p-root"
-				value={displayRoot}
-				onchange={(e) => practice.setRoot(concertFromDisplay(select(e), practice.offset))}
-			>
-				{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
-				{#each SCALE_ROOTS as root (root)}<option value={root}>{root}</option>{/each}
-			</select>
+			<!-- A song-sourced drill starts on the changes as written, so there is no
+			     start key to choose — only whether to cycle them afterwards. -->
+			{#if !practice.usesSong}
+				<label class="label" for="p-root">Start key</label>
+				<select
+					id="p-root"
+					value={displayRoot}
+					onchange={(e) => practice.setRoot(concertFromDisplay(select(e), practice.offset))}
+				>
+					{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
+					{#each SCALE_ROOTS as root (root)}<option value={root}>{root}</option>{/each}
+				</select>
+			{/if}
 
-			<label class="label" for="p-keymode">Then</label>
+			<label class="label" for="p-keymode">{practice.usesSong ? 'Move the changes' : 'Then'}</label>
 			<select
 				id="p-keymode"
 				value={practice.keyMode}
@@ -89,15 +183,18 @@
 				{#each REGISTERS as r (r.id)}<option value={r.id}>{r.label}</option>{/each}
 			</select>
 
-			<label class="label" for="p-direction">Direction</label>
-			<select
-				id="p-direction"
-				value={practice.direction}
-				onchange={(e) => practice.setDirection(select(e) as never)}
-			>
-				<option value="">As written</option>
-				{#each DIRECTIONS as d (d.id)}<option value={d.id}>{d.label}</option>{/each}
-			</select>
+			<!-- Direction is meaningless for a line that follows the changes. -->
+			{#if !practice.usesSong}
+				<label class="label" for="p-direction">Direction</label>
+				<select
+					id="p-direction"
+					value={practice.direction}
+					onchange={(e) => practice.setDirection(select(e) as never)}
+				>
+					<option value="">As written</option>
+					{#each DIRECTIONS as d (d.id)}<option value={d.id}>{d.label}</option>{/each}
+				</select>
+			{/if}
 		</div>
 
 		<div class="row">
@@ -194,6 +291,72 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
+	}
+
+	.group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.group__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+
+	.group__title {
+		margin: 0;
+		font-weight: 400;
+		color: var(--color-text-faint);
+	}
+
+	.drill-wrap {
+		position: relative;
+		display: flex;
+	}
+
+	.drill-wrap .drill {
+		flex: 1 1 auto;
+		padding-right: var(--space-6);
+	}
+
+	.drill__delete {
+		position: absolute;
+		top: var(--space-1);
+		right: var(--space-1);
+		border: 0;
+		background: transparent;
+		font-family: inherit;
+		font-size: 1rem;
+		line-height: 1;
+		padding: var(--space-1);
+		color: var(--color-text-faint);
+		cursor: pointer;
+
+		&:hover {
+			color: var(--c-diminished);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--color-accent);
+			outline-offset: 1px;
+		}
+	}
+
+	.group__note,
+	.group__warn {
+		margin: 0;
+		max-width: 68ch;
+	}
+
+	.group__note {
+		color: var(--color-text-faint);
+	}
+
+	.group__warn {
+		color: var(--c-diminished);
 	}
 
 	.picker__drills {

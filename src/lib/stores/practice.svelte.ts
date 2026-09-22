@@ -15,7 +15,12 @@ import { TEMPO_MAX, TEMPO_MIN } from '$lib/model/factory';
 import type { ClickFeel, KeyCycleMode } from '$lib/audio/drills';
 import { nextStepTempo } from '$lib/audio/drills';
 import type { DrumStyle, InstrumentId } from '$lib/model/types';
-import { BUILT_IN_DRILLS, drillById } from '$lib/practice/patterns';
+import { BUILT_IN_DRILLS, drillById, needsChords } from '$lib/practice/patterns';
+import { progression } from './progression.svelte';
+import { drillLibrary } from './drillLibrary.svelte';
+import { flattenSlots } from '$lib/model/slots';
+import { loopBars } from '$lib/model/time';
+import type { DrillChord, DrillDefinition } from '$lib/practice/types';
 import { drillPlan, type DrillBacking } from '$lib/practice/plan';
 import { rangeFor, DEFAULT_RANGE_ID, INSTRUMENT_RANGES } from '$lib/practice/range';
 import { resolveDrill } from '$lib/practice/resolve';
@@ -137,8 +142,43 @@ class PracticeStore {
 		engine.onActiveCue((i) => this.onCue(i));
 	}
 
-	get definition() {
-		return drillById(this.drillId) ?? BUILT_IN_DRILLS[0];
+	/**
+	 * The chosen drill. A saved custom drill wins over a built-in with the same
+	 * id, so editing a copy of one behaves the way you'd expect.
+	 */
+	get definition(): DrillDefinition {
+		return drillLibrary.byId(this.drillId) ?? drillById(this.drillId) ?? BUILT_IN_DRILLS[0];
+	}
+
+	/** Custom drills the user has saved, newest first. */
+	get customDrills(): DrillDefinition[] {
+		return drillLibrary.items;
+	}
+
+	/** True when the chosen drill runs over the editor's changes, not a key cycle. */
+	get usesSong(): boolean {
+		return needsChords(this.definition);
+	}
+
+	/**
+	 * The editor's progression as changes, CONCERT pitch — read live from the
+	 * shared store, never copied into a second format. Follows the loop range, so
+	 * "practise this" on a selected section drills exactly that section.
+	 */
+	get songChords(): DrillChord[] {
+		return flattenSlots(loopBars(progression.current)).map((f) => ({
+			symbol: f.slot.chord,
+			beats: f.slot.beats
+		}));
+	}
+
+	get songName(): string {
+		return progression.current.name?.trim() || 'Untitled';
+	}
+
+	/** A song-sourced drill has nothing to play if every slot is empty. */
+	get songIsEmpty(): boolean {
+		return this.songChords.every((c) => !c.symbol.trim());
 	}
 
 	get range() {
@@ -168,6 +208,7 @@ class PracticeStore {
 	}
 
 	get preview(): DrillRun {
+		const song = this.usesSong;
 		return resolveDrill(this.definition, {
 			root: this.root,
 			keyMode: this.keyMode,
@@ -179,7 +220,10 @@ class PracticeStore {
 			tempo: this.tempo,
 			tempoStep: this.tempoStep,
 			tempoMax: this.tempoMax,
-			restBars: this.restBars
+			restBars: this.restBars,
+			// A song-sourced drill follows the song's changes AND its meter.
+			chords: song ? this.songChords : undefined,
+			timeSignature: song ? progression.current.timeSignature : undefined
 		});
 	}
 
@@ -396,7 +440,10 @@ function read(): PracticePrefs | null {
 		const num = (v: unknown, fallback: number, min: number, max = Infinity) =>
 			typeof v === 'number' && Number.isFinite(v) ? clamp(v, min, max) : fallback;
 		return {
-			drillId: drillById(String(p.drillId)) ? String(p.drillId) : DEFAULTS.drillId,
+			// A custom drill id is only resolvable once the library has loaded from
+			// IndexedDB, so keep any non-empty string here and let `definition` fall
+			// back to a built-in if that drill turns out to be gone.
+			drillId: typeof p.drillId === 'string' && p.drillId ? p.drillId : DEFAULTS.drillId,
 			root: typeof p.root === 'string' && p.root ? p.root : DEFAULTS.root,
 			keyMode: oneOf(p.keyMode, ['off', 'fourths', 'semitone', 'random'], DEFAULTS.keyMode),
 			reps: num(p.reps, DEFAULTS.reps, 1, 64),

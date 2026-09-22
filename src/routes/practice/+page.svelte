@@ -1,9 +1,12 @@
 <script lang="ts">
 	// The Practice workspace. The shared chrome (header, nav, shortcuts, art)
 	// comes from +layout.svelte, so this page owns only its own <main>.
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { practice } from '$lib/stores/practice.svelte';
+	import { drillLibrary } from '$lib/stores/drillLibrary.svelte';
 	import { view } from '$lib/stores/view.svelte';
+	import { drillById } from '$lib/practice/patterns';
 	import DrillRunner from '$lib/components/practice/DrillRunner.svelte';
 	import DrillPicker from '$lib/components/practice/DrillPicker.svelte';
 
@@ -11,6 +14,16 @@
 	// store rather than reaching across for it at resolve time.
 	$effect(() => {
 		practice.setOffset(view.offset);
+	});
+
+	// "Practise this" on the Sketch page arrives as ?drill=… — honoured once on
+	// mount, so it opens the right drill without overriding a later choice.
+	onMount(() => {
+		// Saved drills live in IndexedDB — fire-and-forget, failures land in
+		// drillLibrary.error rather than breaking the page.
+		void drillLibrary.refresh();
+		const wanted = page.url.searchParams.get('drill');
+		if (wanted && drillById(wanted)) practice.setDrill(wanted);
 	});
 
 	// One transport, one thing playing: leaving Practice stops the drill rather

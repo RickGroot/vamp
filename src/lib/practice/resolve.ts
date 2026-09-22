@@ -24,10 +24,13 @@
 
 import { Chord, Interval, Note, Scale } from 'tonal';
 import { beatsToQuarters, barBeats } from '$lib/model/time';
+import { transposeChordSymbol } from '$lib/audio/transpose';
 import { fitOctave } from './range';
+import { guideToneLine } from './guideTones';
 import { readable } from './spelling';
 import { buildRunPlan } from './sequence';
 import type {
+	DrillChord,
 	DrillDefinition,
 	DrillDirection,
 	DrillNote,
@@ -75,7 +78,7 @@ function roleFor(label: string): DrillRole {
  * Returns null when the source can't be resolved at all.
  */
 function buildPool(
-	source: DrillSource,
+	source: Exclude<DrillSource, { kind: 'guide' }>,
 	writtenRoot: string
 ): { step: (i: number) => string; labels: string[]; size: number } | null {
 	if (source.kind === 'scale') {
@@ -133,8 +136,28 @@ export const concertMidi = (written: number, offset: number): number => written 
  * Resolve a drill into the exact notes to read and play. Deterministic given
  * `options.rand`, so a whole run is reproducible in tests.
  */
+/** Where in the range to seed a guide-tone line before the phrase is fitted. */
+function registerTarget(options: DrillRunOptions): number {
+	const width = options.range.max - options.range.min;
+	const at = options.register === 'low' ? 0.25 : options.register === 'high' ? 0.75 : 0.5;
+	return options.range.min + width * at;
+}
+
+/**
+ * The changes for one repetition, moved into written pitch AND into this rep's
+ * key. Both are symbol-level transpositions of a COPY — the editor's progression
+ * is never touched, which is the whole point of not reusing Sketch's key-cycle
+ * machinery here.
+ */
+function writtenChords(chords: DrillChord[], semitones: number): DrillChord[] {
+	return chords.map((chord) => ({
+		beats: chord.beats,
+		symbol: chord.symbol.trim() ? transposeChordSymbol(chord.symbol, semitones) : ''
+	}));
+}
+
 export function resolveDrill(definition: DrillDefinition, options: DrillRunOptions): DrillRun {
-	const ts = definition.timeSignature;
+	const ts = options.timeSignature ?? definition.timeSignature;
 	const direction = options.direction ?? definition.direction;
 	const cells = Math.max(1, Math.floor(definition.cellsPerKey));
 	const rhythm = definition.pattern.rhythm.length ? definition.pattern.rhythm : [1];
@@ -162,6 +185,62 @@ export function resolveDrill(definition: DrillDefinition, options: DrillRunOptio
 		const writtenRoot = options.offset
 			? Note.simplify(Note.transpose(concertRoot, Interval.fromSemitones(options.offset)))
 			: concertRoot;
+
+		// A guide-tone drill walks a chord SEQUENCE rather than indexing a pool, so
+		// it takes its own path and ignores the pattern entirely.
+		if (definition.source.kind === 'guide') {
+			const source = options.chords ?? [];
+			if (source.length === 0) {
+				skipped.push({ concertRoot, reason: 'unresolvable' });
+				continue;
+			}
+			// Each rep transposes the changes by however far the key plan has moved
+			// from the starting root, plus the instrument offset.
+			const fromStart = (Note.chroma(concertRoot) ?? 0) - (Note.chroma(options.root) ?? 0);
+			const line = guideToneLine({
+				chords: writtenChords(source, mod(fromStart, 12) + options.offset),
+				line: definition.source.line,
+				timeSignature: ts,
+				target: registerTarget(options),
+				startQuarters: cursor,
+				rep
+			});
+			const sounding = line.filter((n) => n.midi !== null).map((n) => n.midi!);
+			const fittedLine = fitOctave(sounding, options.range, options.register);
+			if (!fittedLine.fit) {
+				skipped.push({ concertRoot, reason: fittedLine.reason });
+				continue;
+			}
+			// Shift the whole line as one, so its voice leading survives intact.
+			const shift = 12 * fittedLine.shift;
+			const startQuarters = cursor;
+			for (const note of line) {
+				notes.push(note.midi === null ? note : { ...note, midi: note.midi + shift });
+				cursor += note.durQuarters;
+			}
+			if (restQuarters > 0 && i < plan.roots.length - 1) {
+				notes.push({
+					midi: null,
+					name: '',
+					atQuarters: cursor,
+					durQuarters: restQuarters,
+					label: '',
+					role: 'rest',
+					rep
+				});
+				cursor += restQuarters;
+			}
+			phrases.push({
+				rep,
+				concertRoot,
+				writtenRoot,
+				tempo: plan.tempos[i],
+				startQuarters,
+				lengthQuarters: cursor - startQuarters
+			});
+			rep++;
+			continue;
+		}
 
 		const pool = buildPool(definition.source, writtenRoot);
 		if (!pool) {

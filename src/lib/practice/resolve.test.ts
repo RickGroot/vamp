@@ -34,6 +34,8 @@ const scaleDrill = (scaleType: string, patternId: keyof typeof PATTERNS): DrillD
 	id: `t-${scaleType}-${String(patternId)}`,
 	name: 'test',
 	description: 'test',
+	createdAt: 0,
+	updatedAt: 0,
 	source: { kind: 'scale', scaleType },
 	pattern: PATTERNS[patternId],
 	direction: 'up',
@@ -291,6 +293,103 @@ describe('the built-in library', () => {
 		for (const definition of BUILT_IN_DRILLS) {
 			const revived = JSON.parse(JSON.stringify(definition)) as DrillDefinition;
 			expect(resolveDrill(revived, run())).toEqual(resolveDrill(definition, run()));
+		}
+	});
+});
+
+describe('resolveDrill — guide tones over a set of changes', () => {
+	const iiVI = [
+		{ symbol: 'Dm7', beats: 4 },
+		{ symbol: 'G7', beats: 4 },
+		{ symbol: 'Cmaj7', beats: 4 }
+	];
+	const guide = drillById('guide-tones')!;
+
+	it('traces the line through the supplied changes', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI }));
+		expect(got.notes.map((n) => n.role)).toEqual(['third', 'seventh', 'third']);
+		expect(got.notes.map((n) => n.chord)).toEqual(['Dm7', 'G7', 'Cmaj7']);
+	});
+
+	it('ignores the pattern entirely — one note per chord', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI }));
+		expect(got.notes).toHaveLength(iiVI.length);
+	});
+
+	it('transposes the whole set of changes per repetition, non-destructively', () => {
+		const chords = [...iiVI];
+		const got = resolveDrill(guide, run({ chords, reps: 2, keyMode: 'fourths' }));
+		// The caller's array is never mutated — the editor's song is untouchable.
+		expect(chords).toEqual(iiVI);
+		expect(got.phrases.map((p) => p.concertRoot)).toEqual(['C', 'F']);
+		// The second repetition really is the same changes a fourth up.
+		expect(got.notes.filter((n) => n.rep === 0).map((n) => n.chord)).toEqual([
+			'Dm7',
+			'G7',
+			'Cmaj7'
+		]);
+		expect(got.notes.filter((n) => n.rep === 1).map((n) => n.chord)).toEqual([
+			'Gm7',
+			'C7',
+			'Fmaj7'
+		]);
+	});
+
+	// Each repetition re-seeds from the register target rather than continuing
+	// from the last note, so a twelve-key run stays playable instead of climbing
+	// out of range. That means a key may start on the 7th instead of the 3rd —
+	// which is what a player does too.
+	it('re-centres each repetition in the register', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI, reps: 12, keyMode: 'fourths' }));
+		const centre = (rep: number) => {
+			const ms = got.notes.filter((n) => n.rep === rep && n.midi !== null).map((n) => n.midi!);
+			return ms.reduce((a, b) => a + b, 0) / ms.length;
+		};
+		const centres = Array.from({ length: 12 }, (_, i) => centre(i));
+		// No drift: the last key sits within a fifth of the first.
+		expect(Math.abs(centres[11] - centres[0])).toBeLessThanOrEqual(7);
+	});
+
+	it('writes the changes for a transposing instrument', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI, offset: 2 }));
+		// A Bb trumpet reads a concert ii-V-I in C as one in D.
+		expect(got.notes.map((n) => n.chord)).toEqual(['Em7', 'A7', 'Dmaj7']);
+	});
+
+	it('follows the supplied meter, not the definition’s', () => {
+		const got = resolveDrill(
+			guide,
+			run({ chords: [{ symbol: 'Dm7', beats: 6 }], timeSignature: { numerator: 6, denominator: 8 } })
+		);
+		expect(got.notes[0].durQuarters).toBe(3);
+	});
+
+	it('skips the key when no changes are supplied, rather than throwing', () => {
+		const got = resolveDrill(guide, run());
+		expect(got.notes).toHaveLength(0);
+		expect(got.skipped[0].reason).toBe('unresolvable');
+	});
+
+	it('keeps the line inside the written range', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI, range: TRUMPET, offset: 2 }));
+		for (const n of got.notes) {
+			if (n.midi === null) continue;
+			expect(n.midi).toBeGreaterThanOrEqual(TRUMPET.min);
+			expect(n.midi).toBeLessThanOrEqual(TRUMPET.max);
+		}
+	});
+
+	// Range fitting shifts the whole phrase by octaves as one unit. If it moved
+	// notes individually, a 12-semitone jump would appear mid-line.
+	it('keeps the line voice-led after range fitting', () => {
+		for (const range of [KEYS, TRUMPET]) {
+			for (const root of SCALE_ROOTS) {
+				const got = resolveDrill(guide, run({ chords: iiVI, root, range, offset: 2 }));
+				const ms = got.notes.filter((n) => n.midi !== null).map((n) => n.midi!);
+				for (let i = 1; i < ms.length; i++) {
+					expect(Math.abs(ms[i] - ms[i - 1])).toBeLessThanOrEqual(4);
+				}
+			}
 		}
 	});
 });

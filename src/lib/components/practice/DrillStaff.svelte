@@ -1,74 +1,85 @@
 <script lang="ts">
-	// The drill line on a staff, with a playhead.
+	// The drill line on a staff.
 	//
 	// Built on ScaleStaff's approach — lazy VexFlow import, two-pass measure/fit
 	// layout, CSS custom properties resolved to hex before setStyle (VexFlow
 	// writes literal SVG attributes and ignores inherited CSS vars) — extended to
-	// arbitrary durations, wrapped rows and a highlight.
+	// arbitrary durations and wrapped rows.
 	//
-	// The playhead is a separate no-re-render effect moving one overlay rect, so
-	// advancing a note never re-runs the (expensive) VexFlow layout.
+	// Deliberately plain black notation: this is sheet music to read off a stand,
+	// so it looks like sheet music. Role information lives in the degree labels,
+	// not in the noteheads. There is no moving playhead either — tracking one
+	// per note meant animating `left`/`top` on an overlay, which forces layout on
+	// every note and was visibly rough at drilling tempos. Progress is reported in
+	// text instead, once per key.
 	import { beatsToVexDuration } from '$lib/notation/vex';
 	import { voicedToVexKey } from '$lib/notation/vex';
 	import type { DrillNote } from '$lib/practice/types';
 
 	interface Props {
 		notes: DrillNote[];
-		/** Index of the sounding note, or null. */
-		cue?: number | null;
-		/** How many notes to show per row before wrapping. */
-		perRow?: number;
+		/** Upper bound on notes per row; the real figure is fitted to the width. */
+		maxPerRow?: number;
 	}
-	let { notes, cue = null, perRow = 16 }: Props = $props();
+	let { notes, maxPerRow = 16 }: Props = $props();
 
 	let container = $state<HTMLDivElement>();
 	let error = $state<string | null>(null);
 	let lastWidth = 0;
 	let vf: typeof import('vexflow') | null = null;
-	/** Screen-space box per note index, filled during draw, read by the playhead. */
-	let boxes: { x: number; y: number; w: number; h: number }[] = [];
-	let playhead = $state<{ x: number; y: number; w: number; h: number } | null>(null);
+	/** Chord names to draw above the staff (guide-tone drills only). */
+	let chordLabels = $state<{ x: number; y: number; text: string }[]>([]);
 
 	const PAD = 8;
 	const ROW_GAP = 14;
 	const CLEF_W = 40;
 	const PROV_Y = 150;
+	const CHORD_ROOM = 20; // vertical room reserved for chord names above the staff
+	/**
+	 * VexFlow's own minimum spacing per note, measured (~64–66px for eighths with
+	 * accidentals). The formatter OVERFLOWS the stave rather than compressing
+	 * below this, so the row length has to be fitted to it — 16 notes on a 345px
+	 * phone staff ran the last third of every row off the screen.
+	 */
+	const MIN_NOTE_W = 66;
+	/**
+	 * Below this the notation is drawn scaled down, so a phone still gets a
+	 * useful number of notes per row instead of four. Layout maths stays in
+	 * unscaled ("logical") units; only the final canvas size and the HTML chord
+	 * labels are multiplied by the factor.
+	 */
+	const NARROW_W = 560;
+	const NARROW_SCALE = 0.7;
 
-	// Re-layout only when the music changes — never when only the cue moves.
+	const hasChords = $derived(notes.some((n) => n.chord));
+
+	// Re-layout only when the music changes.
 	const signature = $derived(
-		JSON.stringify(notes.map((n) => [n.midi, n.name, n.durQuarters, n.role]))
+		JSON.stringify(notes.map((n) => [n.midi, n.name, n.durQuarters, n.chord]))
 	);
-
-	/** A note's colour by role, so chord tones read at a glance. */
-	function colourFor(role: DrillNote['role'], css: CSSStyleDeclaration): string {
-		const token =
-			role === 'root'
-				? '--c-dominant'
-				: role === 'third'
-					? '--c-major'
-					: role === 'seventh'
-						? '--c-suspended'
-						: role === 'fifth'
-							? '--c-minor'
-							: '--color-black';
-		return css.getPropertyValue(token).trim() || '#1c1a1f';
-	}
 
 	function draw(VF: typeof import('vexflow')) {
 		const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = VF;
 		const el = container;
 		if (!el || notes.length === 0) return;
 		el.innerHTML = '';
-		boxes = [];
 
-		const width = Math.max(320, (el.clientWidth || 640) - 4);
+		const cssWidth = Math.max(280, (el.clientWidth || 640) - 4);
 		lastWidth = el.clientWidth || 0;
+		const scale = cssWidth < NARROW_W ? NARROW_SCALE : 1;
+		// Everything below lays out in logical units; `scale` is applied once, to
+		// the drawing context and the canvas size.
+		const width = cssWidth / scale;
+		// VexFlow writes literal SVG attributes and ignores inherited CSS vars, so
+		// the ink colour has to be resolved here rather than set in the stylesheet.
 		const css = getComputedStyle(document.documentElement);
-		const restColour = css.getPropertyValue('--color-text-faint').trim() || '#999';
+		const ink = css.getPropertyValue('--color-black').trim() || '#1c1a1f';
+
+		const noteRoom = width - PAD * 2 - CLEF_W - 12;
+		const perRow = Math.max(4, Math.min(maxPerRow, Math.floor(noteRoom / MIN_NOTE_W)));
 
 		const rows: DrillNote[][] = [];
 		for (let i = 0; i < notes.length; i += perRow) rows.push(notes.slice(i, i + perRow));
-		const indexOfRow = (row: number) => row * perRow;
 
 		const makeRow = (rowNotes: DrillNote[]) =>
 			rowNotes.map((n) => {
@@ -77,16 +88,15 @@
 					// A rest is real notation, not a gap — it is what tells a brass
 					// player to actually stop blowing.
 					const rest = new StaveNote({ keys: ['b/4'], duration: `${duration}r` });
-					rest.setStyle({ fillStyle: restColour, strokeStyle: restColour });
+					rest.setStyle({ fillStyle: ink, strokeStyle: ink });
 					return rest;
 				}
 				const key = voicedToVexKey({ midi: n.midi, name: n.name });
 				const note = new StaveNote({ keys: [key.key], duration });
-				const colour = colourFor(n.role, css);
-				note.setStyle({ fillStyle: colour, strokeStyle: colour });
+				note.setStyle({ fillStyle: ink, strokeStyle: ink });
 				if (key.accidental) {
 					const acc = new Accidental(key.accidental);
-					acc.setStyle({ fillStyle: colour, strokeStyle: colour });
+					acc.setStyle({ fillStyle: ink, strokeStyle: ink });
 					note.addModifier(acc, 0);
 				}
 				return note;
@@ -134,15 +144,24 @@
 		const below = maxBottom === -Infinity ? 0 : Math.max(0, maxBottom - bottomLine);
 		const staveTopPad = topLine - PROV_Y;
 		const lineSpan = bottomLine - topLine;
-		const rowHeight = Math.ceil(Math.max(above, 14) + lineSpan + Math.max(below, 18) + ROW_GAP);
+		// Chord names sit above the staff, so reserve room for them in the row
+		// height rather than letting them collide with high notes.
+		const chordRoom = hasChords ? CHORD_ROOM : 0;
+		const topRoom = Math.max(above, 14) + chordRoom;
+		const rowHeight = Math.ceil(topRoom + lineSpan + Math.max(below, 18) + ROW_GAP);
 
-		// Pass 2 — draw every row at its fitted height, recording note boxes.
+		// Pass 2 — draw every row at its fitted height.
 		el.innerHTML = '';
+		chordLabels = [];
+		const logicalHeight = rowHeight * rows.length + PAD * 2;
 		const renderer = new Renderer(el, Renderer.Backends.SVG);
-		renderer.resize(width, rowHeight * rows.length + PAD * 2);
+		// The canvas is sized in CSS pixels; the context is scaled so the logical
+		// layout below fits inside it.
+		renderer.resize(Math.round(width * scale), Math.round(logicalHeight * scale));
 		const context = renderer.getContext();
+		if (scale !== 1) context.scale(scale, scale);
 		rows.forEach((row, r) => {
-			const y = PAD + r * rowHeight + Math.max(above, 14) - staveTopPad;
+			const y = PAD + r * rowHeight + topRoom - staveTopPad;
 			const stave = new Stave(PAD, y, width - PAD * 2);
 			stave.addClef('treble');
 			stave.setContext(context).draw();
@@ -152,16 +171,25 @@
 			new Formatter().joinVoices([voice]).format([voice], width - PAD * 2 - CLEF_W - 12);
 			voice.draw(context, stave);
 
-			const top = stave.getYForLine(0) - Math.max(above, 14);
-			staveNotes.forEach((n, i) => {
-				let x = PAD + CLEF_W;
-				try {
-					x = n.getAbsoluteX();
-				} catch {
-					/* fall back to the clef edge */
-				}
-				boxes[indexOfRow(r) + i] = { x: x - 9, y: top, w: 20, h: lineSpan + Math.max(above, 14) + Math.max(below, 18) };
-			});
+			// Chord names are our own HTML, not VexFlow annotations — same choice as
+			// StaffSheet, and it keeps them out of the formatter's spacing.
+			if (hasChords) {
+				const top = stave.getYForLine(0) - Math.max(above, 14);
+				let lastChord = '';
+				staveNotes.forEach((n, i) => {
+					const chord = row[i].chord;
+					if (!chord || chord === lastChord) return;
+					let x = PAD + CLEF_W;
+					try {
+						x = n.getAbsoluteX();
+					} catch {
+						/* fall back to the clef edge */
+					}
+					// HTML overlay, so these are CSS pixels — scale them to match.
+					chordLabels.push({ x: (x - 4) * scale, y: (top - chordRoom) * scale, text: chord });
+					lastChord = chord;
+				});
+			}
 		});
 	}
 
@@ -185,12 +213,6 @@
 		void render();
 	});
 
-	// Playhead only — deliberately separate, so advancing a note never re-runs
-	// the VexFlow layout above.
-	$effect(() => {
-		playhead = cue === null ? null : (boxes[cue] ?? null);
-	});
-
 	// Re-flow on WIDTH change only: reacting to height loops forever, because
 	// auto-sizing the SVG changes the height.
 	$effect(() => {
@@ -208,13 +230,9 @@
 
 <div class="drill-staff">
 	<div class="drill-staff__sheet" bind:this={container}></div>
-	{#if playhead}
-		<div
-			class="drill-staff__playhead"
-			aria-hidden="true"
-			style="left:{playhead.x}px; top:{playhead.y}px; width:{playhead.w}px; height:{playhead.h}px"
-		></div>
-	{/if}
+	{#each chordLabels as chord (chord.x + chord.text)}
+		<span class="drill-staff__chord" style="left:{chord.x}px; top:{chord.y}px">{chord.text}</span>
+	{/each}
 </div>
 
 <style lang="scss">
@@ -234,19 +252,11 @@
 		display: block;
 	}
 
-	.drill-staff__playhead {
+	.drill-staff__chord {
 		position: absolute;
-		border: 2px solid var(--c-dominant);
-		border-radius: 3px;
+		font-size: 0.85rem;
+		color: var(--color-text);
 		pointer-events: none;
-		transition:
-			left 90ms var(--motion-ease-out),
-			top 90ms var(--motion-ease-out);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.drill-staff__playhead {
-			transition: none;
-		}
+		white-space: nowrap;
 	}
 </style>

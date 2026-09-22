@@ -105,4 +105,12 @@ export interface VampBackup {
 	/** epoch milliseconds */
 	exportedAt: number;
 	progressions: Progression[];
+	/**
+	 * Custom practice drills, if any. OPTIONAL on purpose: every backup written
+	 * before Practice mode existed still imports unchanged, and a reader that
+	 * doesn't know about drills ignores it — so the song schema version stays 1.
+	 * Typed loosely so model/ stays independent of practice/; storage/drillDb.ts
+	 * coerces every entry on the way in.
+	 */
+	drills?: unknown[];
 }

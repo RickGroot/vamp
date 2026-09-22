@@ -292,6 +292,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: var(--space-2) var(--space-4);
+		/* The two groups drop onto separate rows rather than running off the edge. */
+		flex-wrap: wrap;
 		padding: var(--space-4) var(--space-6);
 		border-bottom: 1px solid var(--color-border);
 	}
@@ -300,6 +303,9 @@
 		display: flex;
 		align-items: baseline;
 		gap: var(--space-4);
+		/* Without this, a flex child refuses to shrink below its content width and
+		   pushes the pitch select off-screen instead of wrapping. */
+		min-width: 0;
 	}
 
 	.head__mark {
@@ -356,6 +362,7 @@
 		display: flex;
 		align-items: baseline;
 		gap: var(--space-3);
+		min-width: 0;
 	}
 
 	.art-toggle {
@@ -412,10 +419,33 @@
 		border-bottom: 1px solid var(--color-border);
 		padding: var(--space-1) 0;
 		border-radius: 0;
+		min-width: 0;
 
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--color-accent);
+		}
+	}
+
+	/* Phone: wordmark + nav on one row, the controls on their own underneath.
+	   Everything fitted on one line at 375px only by overflowing the viewport. */
+	@media (max-width: 600px) {
+		.head {
+			padding: var(--space-3) var(--space-4);
+			gap: var(--space-2);
+		}
+
+		.head__left,
+		.head__right {
+			flex: 1 1 100%;
+		}
+
+		.head__right {
+			justify-content: flex-start;
+		}
+
+		.head__mark {
+			font-size: 1.125rem;
 		}
 	}
 

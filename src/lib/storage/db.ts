@@ -29,16 +29,25 @@ import {
 	TEMPO_MAX
 } from '$lib/model/factory';
 import { INSTRUMENT_ORDER } from '$lib/audio/instruments';
+import type { DrillDefinition } from '$lib/practice/types';
 import { parseProgressionInput } from './import';
+import { importDrills, listDrills } from './drillDb';
 
 const DB_NAME = 'vamp';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'progressions';
+export const DRILL_STORE = 'drills';
 
 interface VampDB extends DBSchema {
 	progressions: {
 		key: string;
 		value: Progression;
+		indexes: { updatedAt: number };
+	};
+	/** Custom practice drills. CRUD + coercion live in storage/drillDb.ts. */
+	drills: {
+		key: string;
+		value: DrillDefinition;
 		indexes: { updatedAt: number };
 	};
 	meta: {
@@ -49,7 +58,13 @@ interface VampDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<VampDB>> | null = null;
 
-function getDb(): Promise<IDBPDatabase<VampDB>> {
+/**
+ * The shared database handle. Exported for storage/drillDb.ts — drills live in
+ * the same database so there is one version line and one upgrade path, which is
+ * what the fall-through `upgrade` below exists for. Nothing outside `storage/`
+ * should touch this.
+ */
+export function getDb(): Promise<IDBPDatabase<VampDB>> {
 	if (!dbPromise) {
 		dbPromise = openDB<VampDB>(DB_NAME, DB_VERSION, {
 			upgrade(db, oldVersion) {
@@ -61,7 +76,12 @@ function getDb(): Promise<IDBPDatabase<VampDB>> {
 					// later needs no version bump). Intentionally unused for now.
 					db.createObjectStore('meta', { keyPath: 'key' });
 				}
-				// if (oldVersion < 2) { ...future structural changes... }
+				if (oldVersion < 2) {
+					// Custom practice drills. Added as its own store rather than a new
+					// database so an existing install upgrades in one transaction.
+					const drills = db.createObjectStore(DRILL_STORE, { keyPath: 'id' });
+					drills.createIndex('updatedAt', 'updatedAt');
+				}
 			}
 		});
 		// A failed open (private browsing, quota) must not poison every later
@@ -118,11 +138,15 @@ export async function deleteProgression(id: string): Promise<void> {
 
 export async function exportBackup(): Promise<VampBackup> {
 	const progressions = await listProgressions();
+	const drills = await listDrills();
 	return {
 		app: 'vamp',
 		schemaVersion: CURRENT_SCHEMA_VERSION,
 		exportedAt: Date.now(),
-		progressions
+		progressions,
+		// Omitted entirely when there are none, so a backup looks exactly as it
+		// did before Practice mode for anyone who never made a custom drill.
+		...(drills.length ? { drills } : {})
 	};
 }
 
@@ -133,7 +157,29 @@ export async function exportBackup(): Promise<VampBackup> {
  * Throws a human-readable Error the UI surfaces on failure.
  */
 export async function importProgressions(text: string): Promise<Progression[]> {
-	const migrated = parseProgressionInput(text).map(migrateProgression);
+	// Drills first, and independently: a malformed `drills` field must never cost
+	// the user the songs beside it, and a backup whose owner has drills but no
+	// saved songs must still import rather than throwing "no songs found".
+	let drillsImported = 0;
+	try {
+		const parsed = JSON.parse(text) as { drills?: unknown };
+		if (parsed && Array.isArray(parsed.drills)) {
+			drillsImported = (await importDrills(parsed.drills)).length;
+		}
+	} catch {
+		/* not a JSON envelope, or no drills — songs are handled below regardless */
+	}
+
+	let migrated: Progression[];
+	try {
+		migrated = parseProgressionInput(text).map(migrateProgression);
+	} catch (err) {
+		// Only stay quiet when we actually salvaged something; otherwise the UI
+		// must still tell the user their file had nothing in it.
+		if (drillsImported > 0) return [];
+		throw err;
+	}
+
 	const db = await getDb();
 	const tx = db.transaction(STORE, 'readwrite');
 	await Promise.all(migrated.map((p) => tx.store.put(p)));
