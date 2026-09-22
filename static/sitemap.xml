@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Two routes, both prerendered to static HTML. Hand-maintained: there is no
+  route-discovery step in the build, and at two URLs a generator would be more
+  machinery than it saves. Add a line here when a route is added.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url>
+		<loc>https://rickgroot.github.io/vamp/</loc>
+		<changefreq>monthly</changefreq>
+		<priority>1.0</priority>
+	</url>
+	<url>
+		<loc>https://rickgroot.github.io/vamp/practice</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.8</priority>
+	</url>
+</urlset>

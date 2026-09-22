@@ -1,9 +1,10 @@
 # Vamp
 
-A **local-first, offline PWA** for sketching chord progressions and looping small
-backing tracks. Enter chords into bars (and half-bars), set tempo + time signature,
-pick a sampled instrument, and loop the progression to jam over it. No login, no
-backend, no accounts — everything stays on your device.
+A **local-first, offline PWA** in two halves: a **Sketch** pad for chord progressions —
+enter chords into bars, set tempo and time signature, pick a sampled instrument and loop
+it to jam over — and a **Practice** workspace of generated drills to play on your own
+instrument, through every key, in your range and written pitch. No login, no backend, no
+accounts — everything stays on your device.
 
 Built with **SvelteKit + TypeScript + SCSS**, deployed as a static PWA to GitHub
 Pages. Clean Swiss-ish type (Suisse Int'l with system fallback) on a 4px grid, with a
@@ -50,6 +51,48 @@ minor = violet, dominant = orange, diminished = red, augmented = pink, suspended
 - Save / load / rename / delete progressions locally (IndexedDB)
 - JSON export / import for backup and transfer
 - Installable, works offline (service worker)
+
+## Practice mode
+
+A separate **Practice** workspace (top-right of the header, or `/practice`) with *generated*
+drills to play on your instrument — as opposed to the Sketch page's drill controls, which
+modify playback of your own song.
+
+- **12 built-in drills**: scale sequences (straight up, 1-2-3-5, thirds, a turn figure),
+  blues and pentatonic cells, and arpeggios (major 7th, minor 7th, dominant 7th,
+  half-diminished, triads, up-and-back). All original exercises built from general
+  technical concepts — nothing is transcribed from a copyrighted method book.
+- **Every key**: start anywhere and cycle up a 4th, up a semitone, or at random, for as many
+  keys as you want — with **automatic tempo step-up** and **bars of rest between keys**,
+  because brass players need actual rest.
+- **Your range, your register**: pick an instrument range (written pitch) and a low / middle /
+  high register, and every phrase is placed to fit. A pattern that can't fit says so and skips
+  that key rather than teaching you a truncated shape.
+- **Hear it or play it**: the line can sound as a reference, or go silent so you play it over
+  the backing — and it flips live, mid-drill, with no restart.
+- **Backing**: a click (with the same feels as the Sketch page), a drum groove, or nothing.
+- **Reads in your pitch**: the header's Concert / B♭ / E♭ / F switch applies here too, so a
+  trumpeter reads written F while it sounds concert E♭.
+- Notation is plain, black and large — it reads like sheet music — and shows one key at a time
+  with the next one named underneath, sized to fit a phone or tablet on a music stand.
+
+### Practise your own changes
+
+**Practise this** (next to Share on the Sketch page) takes the progression you're writing
+straight into a **guide-tone drill** — the 3rd and 7th of each chord, voice-led by nearest
+motion, which is the line that actually spells the harmony. Thirds-only, sevenths-only and
+roots-only versions are there too, roots being the sensible place to start.
+
+It follows the sketch's loop range and meter, reads in your written pitch, and **never changes
+the song** — set "Move the changes" to cycle the whole progression through keys and your
+sketch still comes back exactly as you left it.
+
+### Your own patterns
+
+**Customise this drill** turns any built-in into a starting point: enter a cell as scale
+degrees (`1 2 3 5 4 3`), set the beat value, how far it moves each repetition and how many
+repetitions — and save it. Saved drills persist locally, travel in the JSON backup, and get
+transposition through every key and register for free.
 
 ## Tech stack
 

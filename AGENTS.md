@@ -1,4 +1,4 @@
-# Vamp — CLAUDE.md
+# Vamp — AGENTS.md
 
 100% local-first, offline, installable PWA for sketching chord progressions and looping backing tracks to improvise over, plus a Practice workspace of generated drills (scale patterns and chord tones, through every key, in your own written range). SvelteKit + Svelte 5 (RUNES) + TypeScript + SCSS. Music theory via **tonal**, audio clock/AudioContext via **tone**, sampled instruments + TR-808 via **smplr**, notation via **vexflow**, persistence via **idb** (IndexedDB). No backend, no network except the sample CDN (runtime-cached). Deployed as a static SPA to GitHub Pages under base path `/vamp/`.
 

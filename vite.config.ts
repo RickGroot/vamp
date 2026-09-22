@@ -45,10 +45,10 @@ export default defineConfig(({ command }) => {
 				kit: { base: `${BASE_PATH}/` },
 				manifest: {
 					id: `${BASE_PATH}/`,
-					name: 'Vamp — Chord Sketchpad',
+					name: 'Vamp — Chord Sketchpad & Practice Companion',
 					short_name: 'Vamp',
 					description:
-						'Sketch chord progressions and loop backing tracks to improvise over. Local-first, installable, works offline.',
+						'Sketch chord progressions and loop backing tracks to improvise over, then drill them through every key. Local-first, installable, works offline.',
 					start_url: `${BASE_PATH}/`,
 					scope: `${BASE_PATH}/`,
 					display: 'standalone',
@@ -90,10 +90,11 @@ export default defineConfig(({ command }) => {
 					globIgnores: ['**/og-image.png', '**/screenshot-*.png'],
 					// SPA fallback for offline deep links.
 					navigateFallback: `${BASE_PATH}/`,
-					// Plain-text files (robots.txt, llms.txt) are fetched by crawlers and AI
+					// robots.txt / llms.txt / sitemap.xml are fetched by crawlers and AI
 					// tools and opened directly by people. They are not precached, so never
-					// answer a navigation to them with the app shell — let them hit the network.
-					navigateFallbackDenylist: [/\.txt$/],
+					// answer a navigation to them with the app shell — let them hit the
+					// network. A new file of this kind must match this pattern or be precached.
+					navigateFallbackDenylist: [/\.txt$/, /\.xml$/],
 					runtimeCaching: [
 						{
 							// Cross-origin instrument samples (smpldsnds.github.io + soundfont CDNs).

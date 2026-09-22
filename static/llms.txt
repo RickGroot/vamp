@@ -15,7 +15,9 @@ Follow these rules; they are what makes the result paste cleanly.
    inside the JSON. Wrapping it in a single markdown code fence is fine (Vamp strips it).
 2. **One song = one JSON object** in the shape below. Several songs = a backup envelope:
    `{ "app": "vamp", "progressions": [ ...songs ] }`. Vamp opens the first song and saves
-   all of them to its library.
+   all of them to its library. (A backup exported from Vamp may also carry a `drills` array
+   — the user's own practice patterns. Leave it out when you write one; if you are editing a
+   backup a user gave you, pass it through untouched.)
 3. **Do not include `id`, `createdAt` or `updatedAt`.** Vamp generates them. A copied `id`
    that matches a song the user already saved would overwrite that song.
 4. **The beats in a bar add up to `timeSignature.numerator`.** A whole bar in 4/4 is
@@ -268,6 +270,13 @@ notation and chord-chart export (PNG, PDF), MIDI and WAV export, and mic recordi
 solo. All data stays in the browser (IndexedDB and localStorage). Share links encode the
 same song JSON in the URL hash, but for assistants the JSON above is the reliable way to
 hand over a song.
+
+A second workspace at /vamp/practice generates drills to play on your own instrument —
+scale patterns, chord-tone arpeggios and guide-tone lines over the changes of the song you
+are writing — through every key, fitted to your instrument's range and shown in written
+pitch. That workspace has its own format for a *drill*, which this file does not describe:
+it is not something an assistant is asked to write, and the song JSON above is unaffected
+by it.
 
 ## Links
 
