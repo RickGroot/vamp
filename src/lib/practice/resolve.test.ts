@@ -393,3 +393,67 @@ describe('resolveDrill — guide tones over a set of changes', () => {
 		}
 	});
 });
+
+// The exact scenario that shipped broken: "Practise this" on a full-length tune.
+// The line drifted out of a trumpet's range, every key was skipped, and the
+// runner said the pattern didn't fit — for guide tones over any real standard.
+describe('resolveDrill — guide tones over a full-length tune', () => {
+	const form = [
+		'Dm7', 'G7', 'Cmaj7', 'Am7', 'Fmaj7', 'Bm7b5', 'E7', 'Am7',
+		'Gm7', 'C7', 'Fmaj7', 'Fm7', 'Em7', 'A7', 'Dm7', 'G7'
+	];
+	const tune = Array.from({ length: 64 }, (_, i) => ({ symbol: form[i % form.length], beats: 2 }));
+	const guide = drillById('guide-tones')!;
+
+	it('plays every key instead of skipping them all', () => {
+		for (const offset of TRANSPOSE_OPTIONS.map((o) => o.offset)) {
+			const got = resolveDrill(
+				guide,
+				run({ chords: tune, reps: 12, keyMode: 'fourths', range: TRUMPET, offset })
+			);
+			expect(got.skipped).toEqual([]);
+			expect(got.phrases).toHaveLength(12);
+			// One note per chord per key, all playable.
+			expect(got.notes.filter((n) => n.role !== 'rest')).toHaveLength(64 * 12);
+			for (const n of got.notes) {
+				if (n.midi === null) continue;
+				expect(n.midi).toBeGreaterThanOrEqual(TRUMPET.min);
+				expect(n.midi).toBeLessThanOrEqual(TRUMPET.max);
+			}
+		}
+	});
+
+	it('keeps every note on its chord’s guide tone, even after folding', () => {
+		const got = resolveDrill(guide, run({ chords: tune, range: TRUMPET }));
+		for (const n of got.notes) {
+			if (n.midi === null) continue;
+			const tones = Chord.get(n.chord!).notes.map((t) => Note.chroma(t));
+			expect(tones).toContain(chroma(n.midi));
+		}
+	});
+});
+
+// A folded line has a misleading average pitch, so re-centring it by average —
+// which the guide branch used to do — shoved it an octave up and made "middle"
+// sit HIGHER than "high". Register must mean what it says.
+describe('resolveDrill — guide-tone register is monotonic', () => {
+	const form = [
+		'Dm7', 'G7', 'Cmaj7', 'Am7', 'Fmaj7', 'Bm7b5', 'E7', 'Am7',
+		'Gm7', 'C7', 'Fmaj7', 'Fm7', 'Em7', 'A7', 'Dm7', 'G7'
+	];
+	const guide = drillById('guide-tones')!;
+	const firstNote = (register: 'low' | 'middle' | 'high', chords: { symbol: string; beats: number }[]) =>
+		resolveDrill(guide, run({ chords, register, range: TRUMPET })).notes.find((n) => n.midi !== null)!.midi!;
+
+	for (const [label, length] of [['short', 3], ['full-length', 64]] as const) {
+		it(`low <= middle <= high on a ${label} tune`, () => {
+			const chords = Array.from({ length }, (_, i) => ({ symbol: form[i % form.length], beats: 2 }));
+			const low = firstNote('low', chords);
+			const mid = firstNote('middle', chords);
+			const high = firstNote('high', chords);
+			expect(low).toBeLessThanOrEqual(mid);
+			expect(mid).toBeLessThanOrEqual(high);
+			expect(low).toBeLessThan(high);
+		});
+	}
+});

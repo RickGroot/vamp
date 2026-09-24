@@ -12,6 +12,7 @@
 	// per note meant animating `left`/`top` on an overlay, which forces layout on
 	// every note and was visibly rough at drilling tempos. Progress is reported in
 	// text instead, once per key.
+	import { untrack } from 'svelte';
 	import { beatsToVexDuration } from '$lib/notation/vex';
 	import { voicedToVexKey } from '$lib/notation/vex';
 	import type { DrillNote } from '$lib/practice/types';
@@ -53,9 +54,10 @@
 
 	const hasChords = $derived(notes.some((n) => n.chord));
 
-	// Re-layout only when the music changes.
+	// Re-layout only when the music changes. Everything draw() depends on belongs
+	// in here — it is the render effect's ONLY trigger (see the effect below).
 	const signature = $derived(
-		JSON.stringify(notes.map((n) => [n.midi, n.name, n.durQuarters, n.chord]))
+		JSON.stringify([maxPerRow, notes.map((n) => [n.midi, n.name, n.durQuarters, n.chord])])
 	);
 
 	function draw(VF: typeof import('vexflow')) {
@@ -118,11 +120,15 @@
 			return { stave, staveNotes };
 		};
 
-		// Pass 1 — one throwaway render of EVERY note, to learn the true vertical
+		// Pass 1 — one throwaway render of every note, to learn the true vertical
 		// extent. Noteheads and the clef are font glyphs, so DOM getBBox returns the
-		// em-box; only VexFlow's own getBoundingBox / getYForLine are trustworthy
-		// here. Measuring all the notes at once keeps this to a single extra render
-		// rather than one per row.
+		// em-box; only VexFlow's own getBoundingBox / getYForLine are trustworthy.
+		//
+		// Every note, deliberately. Probing only the extremes was tried and measured:
+		// it saved ~3ms on a 65-note staff (47 -> 44ms median), because the final pass
+		// and the label DOM dominate, and it needed staff-position ranking to be right
+		// at all — MIDI order is not drawn order (E# sits below F; Cb above B), and
+		// stems flip at the middle line. Not worth the subtlety for noise-level gain.
 		const probe = renderRow(notes, PROV_Y, PROV_Y * 2);
 		const topLine = probe.stave.getYForLine(0);
 		const bottomLine = probe.stave.getYForLine(4);
@@ -152,7 +158,12 @@
 
 		// Pass 2 — draw every row at its fitted height.
 		el.innerHTML = '';
-		chordLabels = [];
+		// Built locally and assigned ONCE at the end. Pushing into the $state array
+		// directly meant this function read the very state it wrote; running inside
+		// the render effect, that re-scheduled the effect, which re-rendered, which
+		// wrote again — a loop that froze the page on every drill with chord labels
+		// (i.e. every drill over your own changes).
+		const labels: { x: number; y: number; text: string }[] = [];
 		const logicalHeight = rowHeight * rows.length + PAD * 2;
 		const renderer = new Renderer(el, Renderer.Backends.SVG);
 		// The canvas is sized in CSS pixels; the context is scaled so the logical
@@ -186,11 +197,12 @@
 						/* fall back to the clef edge */
 					}
 					// HTML overlay, so these are CSS pixels — scale them to match.
-					chordLabels.push({ x: (x - 4) * scale, y: (top - chordRoom) * scale, text: chord });
+					labels.push({ x: (x - 4) * scale, y: (top - chordRoom) * scale, text: chord });
 					lastChord = chord;
 				});
 			}
 		});
+		chordLabels = labels;
 	}
 
 	// The lazy VexFlow chunk can fail (flaky network before the service worker has
@@ -208,9 +220,19 @@
 		}
 	}
 
+	// Re-render when — and ONLY when — the music changes. `render()` is untracked
+	// because once VexFlow has loaded it runs draw() synchronously, and every $state
+	// draw() touched became a dependency of this effect: `notes` by identity (so
+	// every upstream recompute re-rendered musically identical notation) and, until
+	// the labels were built locally, the chord-label array draw() writes. The
+	// value-compared signature is the whole contract; nothing else may trigger this.
 	$effect(() => {
 		void signature;
-		void render();
+		// Tracked explicitly: the element is bound before effects run today, but if
+		// that ever changed, an untracked render would bail on a missing container
+		// and never be retried.
+		void container;
+		untrack(() => void render());
 	});
 
 	// Re-flow on WIDTH change only: reacting to height loops forever, because
@@ -230,7 +252,10 @@
 
 <div class="drill-staff">
 	<div class="drill-staff__sheet" bind:this={container}></div>
-	{#each chordLabels as chord (chord.x + chord.text)}
+	<!-- Keyed on position, not x + text: on a long tune the form repeats, so the
+	     same chord lands in the same column on different rows — an x-and-text key
+	     collided and Svelte threw each_key_duplicate, dropping every label. -->
+	{#each chordLabels as chord (`${chord.x},${chord.y}`)}
 		<span class="drill-staff__chord" style="left:{chord.x}px; top:{chord.y}px">{chord.text}</span>
 	{/each}
 </div>

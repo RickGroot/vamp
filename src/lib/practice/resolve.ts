@@ -203,19 +203,27 @@ export function resolveDrill(definition: DrillDefinition, options: DrillRunOptio
 				timeSignature: ts,
 				target: registerTarget(options),
 				startQuarters: cursor,
-				rep
+				rep,
+				// Folded as it goes, so a tune of any length stays playable.
+				range: options.range
 			});
-			const sounding = line.filter((n) => n.midi !== null).map((n) => n.midi!);
-			const fittedLine = fitOctave(sounding, options.range, options.register);
-			if (!fittedLine.fit) {
-				skipped.push({ concertRoot, reason: fittedLine.reason });
+			// No fitOctave here, deliberately. The line is SEEDED at the register
+			// target and folded into range as it goes, so it is already where it
+			// belongs. Re-centring it by average pitch — what fitOctave does — is
+			// wrong for a line that has folded: its average is misleading, and it got
+			// shoved an octave up, so "middle" came out higher than "high".
+			const outOfRange = line.some(
+				(n) => n.midi !== null && (n.midi < options.range.min || n.midi > options.range.max)
+			);
+			// Only reachable with a range narrower than an octave, where some pitch
+			// class has no in-range octave at all to fold into.
+			if (outOfRange) {
+				skipped.push({ concertRoot, reason: 'octave' });
 				continue;
 			}
-			// Shift the whole line as one, so its voice leading survives intact.
-			const shift = 12 * fittedLine.shift;
 			const startQuarters = cursor;
 			for (const note of line) {
-				notes.push(note.midi === null ? note : { ...note, midi: note.midi + shift });
+				notes.push(note);
 				cursor += note.durQuarters;
 			}
 			if (restQuarters > 0 && i < plan.roots.length - 1) {

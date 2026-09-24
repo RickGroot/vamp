@@ -16,7 +16,8 @@ import { Chord, Note } from 'tonal';
 import { parseChord } from '$lib/audio/chord';
 import { beatsToQuarters } from '$lib/model/time';
 import { readable } from './spelling';
-import type { DrillChord, DrillNote, DrillRole, GuideLine } from './types';
+import { foldIntoRange } from './range';
+import type { DrillChord, DrillNote, DrillRole, GuideLine, WrittenRange } from './types';
 import type { TimeSignature } from '$lib/model/types';
 
 interface Candidate {
@@ -78,6 +79,16 @@ export interface GuideToneOptions {
 	/** Quarter-note position the phrase starts at. */
 	startQuarters: number;
 	rep: number;
+	/**
+	 * Written range to keep the line inside, folding by an octave whenever the
+	 * next nearest note would leave it. Omit for an unbounded line.
+	 *
+	 * Without it, a real-length tune fails outright: each step is small, but a
+	 * line that keeps falling a semitone every other chord — which is exactly what
+	 * guide tones do through a cycle of fifths — drifts past a trumpet's whole
+	 * range within 64 changes, and the phrase is rejected in every key.
+	 */
+	range?: WrittenRange;
 }
 
 /**
@@ -147,6 +158,12 @@ export function guideToneLine(opts: GuideToneOptions): DrillNote[] {
 			}
 		}
 		if (!best) continue;
+
+		// Fold, don't skip. A whole-octave move keeps the spelling and midi in step
+		// (the range.ts invariant) and is what a horn player does when the line runs
+		// out of room: jump the octave and carry on. The line then continues from
+		// where it actually is, so the next step is voice-led from the folded note.
+		if (opts.range) best.midi = foldIntoRange(best.midi, opts.range);
 
 		out.push({
 			midi: best.midi,

@@ -149,3 +149,53 @@ describe('guideToneLine — real charts are messy', () => {
 		expect(line([])).toEqual([]);
 	});
 });
+
+// The regression: a real-length tune. Nearest-note voice leading is path-
+// dependent — it need not come back to its starting pitch after one pass of a
+// form. This 16-bar form starts each chorus LOWER (65, 60, 48, 36 unbounded), so
+// over 64 changes the line spans 46 semitones: past a trumpet's whole range, which
+// got the phrase rejected in EVERY key and left the drill empty. (An 8-bar form
+// happens to return home each time and never drifts — the bug is form-dependent,
+// which is why it only showed up on a real tune.)
+describe('guideToneLine — long tunes stay playable', () => {
+	const form = [
+		'Dm7', 'G7', 'Cmaj7', 'Am7', 'Fmaj7', 'Bm7b5', 'E7', 'Am7',
+		'Gm7', 'C7', 'Fmaj7', 'Fm7', 'Em7', 'A7', 'Dm7', 'G7'
+	];
+	const standard: DrillChord[] = Array.from({ length: 64 }, (_, i) => ({
+		symbol: form[i % form.length],
+		beats: 2
+	}));
+	const TRUMPET = { min: 54, max: 84 }; // written F#3..C6
+
+	it('drifts out of range without a range to fold into (the bug, documented)', () => {
+		const got = line(standard).map((n) => n.midi!);
+		expect(Math.max(...got) - Math.min(...got)).toBeGreaterThan(TRUMPET.max - TRUMPET.min);
+	});
+
+	it('stays inside the range when given one', () => {
+		for (const n of line(standard, { range: TRUMPET })) {
+			expect(n.midi).toBeGreaterThanOrEqual(TRUMPET.min);
+			expect(n.midi).toBeLessThanOrEqual(TRUMPET.max);
+		}
+	});
+
+	it('only ever folds by whole octaves, so spelling and pitch stay in step', () => {
+		const free = line(standard);
+		const folded = line(standard, { range: TRUMPET });
+		// Same line, note for note — just moved by octaves where it ran out of room.
+		folded.forEach((n, i) => {
+			expect(Math.abs(n.midi! - free[i].midi!) % 12).toBe(0);
+			expect(n.name).toBe(free[i].name);
+		});
+	});
+
+	it('still voice-leads by step everywhere except the fold points', () => {
+		const got = line(standard, { range: TRUMPET }).map((n) => n.midi!);
+		const leaps = got.slice(1).map((m, i) => Math.abs(m - got[i]));
+		// Every move is either a small step, or an octave fold minus a small step.
+		expect(leaps.every((d) => d <= 4 || (d >= 8 && d <= 12))).toBe(true);
+		// And folds are rare — the line mostly flows.
+		expect(leaps.filter((d) => d > 4).length).toBeLessThan(got.length / 8);
+	});
+});

@@ -116,8 +116,13 @@ class PracticeStore {
 	/** Index of the sounding drill note, or null. Driven by engine.onActiveCue. */
 	cue = $state<number | null>(null);
 
-	/** The run that is actually on the transport — frozen at start. */
-	private playing: DrillRun | null = null;
+	/**
+	 * The run that is actually on the transport — frozen at start. `$state.raw`,
+	 * not `$state`: it has to be reactive so `run` follows it, but a deep proxy
+	 * over every note of a twelve-key run would cost more than it could ever save,
+	 * and it is only ever replaced, never mutated.
+	 */
+	private playing = $state.raw<DrillRun | null>(null);
 	private lastRep = -1;
 
 	constructor() {
@@ -142,13 +147,19 @@ class PracticeStore {
 		engine.onActiveCue((i) => this.onCue(i));
 	}
 
+	// Everything derived below is a `$derived` FIELD, not a getter. A getter is
+	// recomputed on every read, and these are read from several components and
+	// from each other — so each settings change was re-resolving the whole drill
+	// (up to ~9ms for a 64-chord tune through twelve keys) several times over.
+	// A derived is computed once per actual change and cached for every reader.
+
 	/**
 	 * The chosen drill. A saved custom drill wins over a built-in with the same
 	 * id, so editing a copy of one behaves the way you'd expect.
 	 */
-	get definition(): DrillDefinition {
-		return drillLibrary.byId(this.drillId) ?? drillById(this.drillId) ?? BUILT_IN_DRILLS[0];
-	}
+	definition = $derived<DrillDefinition>(
+		drillLibrary.byId(this.drillId) ?? drillById(this.drillId) ?? BUILT_IN_DRILLS[0]
+	);
 
 	/** Custom drills the user has saved, newest first. */
 	get customDrills(): DrillDefinition[] {
@@ -156,34 +167,28 @@ class PracticeStore {
 	}
 
 	/** True when the chosen drill runs over the editor's changes, not a key cycle. */
-	get usesSong(): boolean {
-		return needsChords(this.definition);
-	}
+	usesSong = $derived(needsChords(this.definition));
 
 	/**
 	 * The editor's progression as changes, CONCERT pitch — read live from the
 	 * shared store, never copied into a second format. Follows the loop range, so
 	 * "practise this" on a selected section drills exactly that section.
 	 */
-	get songChords(): DrillChord[] {
-		return flattenSlots(loopBars(progression.current)).map((f) => ({
+	songChords = $derived<DrillChord[]>(
+		flattenSlots(loopBars(progression.current)).map((f) => ({
 			symbol: f.slot.chord,
 			beats: f.slot.beats
-		}));
-	}
+		}))
+	);
 
 	get songName(): string {
 		return progression.current.name?.trim() || 'Untitled';
 	}
 
 	/** A song-sourced drill has nothing to play if every slot is empty. */
-	get songIsEmpty(): boolean {
-		return this.songChords.every((c) => !c.symbol.trim());
-	}
+	songIsEmpty = $derived(this.songChords.every((c) => !c.symbol.trim()));
 
-	get range() {
-		return rangeFor(this.rangeId);
-	}
+	range = $derived(rangeFor(this.rangeId));
 
 	get rangeLabel(): string {
 		return INSTRUMENT_RANGES.find((r) => r.id === this.rangeId)?.label ?? this.rangeId;
@@ -198,16 +203,10 @@ class PracticeStore {
 	}
 
 	/**
-	 * The resolved run for the CURRENT settings — recomputed on every change so
-	 * the notation previews what pressing Start will play. While playing, the
-	 * frozen run is authoritative, so edits can't desync the notation from audio.
+	 * What Start would play with the CURRENT settings — so the notation previews
+	 * it before a note sounds. Resolved once per change, however many read it.
 	 */
-	get run(): DrillRun {
-		if (this.playing) return this.playing;
-		return this.preview;
-	}
-
-	get preview(): DrillRun {
+	preview = $derived.by<DrillRun>(() => {
 		const song = this.usesSong;
 		return resolveDrill(this.definition, {
 			root: this.root,
@@ -225,7 +224,13 @@ class PracticeStore {
 			chords: song ? this.songChords : undefined,
 			timeSignature: song ? progression.current.timeSignature : undefined
 		});
-	}
+	});
+
+	/**
+	 * The run on screen. While playing, the frozen run is authoritative, so a
+	 * settings change mid-drill can never desync the notation from the audio.
+	 */
+	run = $derived<DrillRun>(this.playing ?? this.preview);
 
 	/** Which repetition is sounding (0-based), or null when stopped. */
 	get rep(): number | null {
