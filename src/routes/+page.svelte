@@ -44,7 +44,8 @@
 	// Tab title reflects the progression name once it's been named.
 	const pageTitle = $derived.by(() => {
 		const n = progression.current.name?.trim();
-		return n && n !== 'Untitled progression' ? `${n} · Vamp` : 'Vamp — Chord Sketchpad & Improv Trainer';
+		// Keep in step with the static <title> in src/app.html.
+		return n && n !== 'Untitled progression' ? `${n} · Vamp` : 'Vamp — Chord Sketchpad & Practice Companion';
 	});
 
 	// Which bar the playhead is on (contains the active slot).
