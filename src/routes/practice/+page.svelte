@@ -40,7 +40,7 @@
 	<details class="settings" open>
 		<summary class="settings__toggle">
 			<span class="wordmark settings__title">Set up</span>
-			<span class="label settings__hint">Drill · key · range · tempo · backing</span>
+			<span class="hint settings__hint">Drill · key · range · tempo · backing</span>
 		</summary>
 		<div class="settings__body">
 			<DrillPicker />

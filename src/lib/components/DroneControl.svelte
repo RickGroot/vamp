@@ -105,25 +105,24 @@
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text);
 		min-width: 9ch;
 
 		&:hover {
-			background: var(--color-black);
-			color: var(--color-white);
+			background: var(--wash);
+			border-color: var(--ink);
+			color: var(--ink);
 		}
 
 		&--on {
-			background: var(--c-suspended);
-			border-color: var(--c-suspended);
-			color: var(--color-white);
+			background: var(--spot);
+			border-color: var(--spot);
+			color: var(--on-spot);
 
 			&:hover {
-				background: var(--c-suspended);
+				background: var(--spot);
 			}
 		}
 
@@ -131,7 +130,7 @@
 			width: 10px;
 			height: 10px;
 			border-radius: var(--radius-pill);
-			background: var(--c-suspended);
+			background: var(--ink);
 		}
 
 		&--on .dronebtn__wave {
@@ -156,10 +155,8 @@
 		background: transparent;
 		padding: var(--space-2) var(--space-3);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text-muted);
 
 		&:hover {
@@ -168,9 +165,9 @@
 		}
 
 		&--on {
-			background: var(--c-suspended);
-			border-color: var(--c-suspended);
-			color: var(--color-white);
+			background: var(--spot);
+			border-color: var(--spot);
+			color: var(--on-spot);
 		}
 	}
 
@@ -183,7 +180,7 @@
 	.fader {
 		width: 160px;
 		max-width: 100%;
-		accent-color: var(--c-suspended);
+		accent-color: var(--ink);
 		cursor: pointer;
 	}
 </style>

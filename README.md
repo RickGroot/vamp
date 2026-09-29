@@ -7,9 +7,20 @@ instrument, through every key, in your range and written pitch. No login, no bac
 accounts — everything stays on your device.
 
 Built with **SvelteKit + TypeScript + SCSS**, deployed as a static PWA to GitHub
-Pages. Clean Swiss-ish type (Suisse Int'l with system fallback) on a 4px grid, with a
-colourful accent palette — chords are **colour-coded by quality** (major = teal,
-minor = violet, dominant = orange, diminished = red, augmented = pink, suspended = blue).
+Pages. It looks like **golden hour**: choose **Sunrise** (a pale morning sky warming to
+gold), **Sunset** (indigo into plum and a rose glow) or Auto. The chart is a hand-lettered
+lead sheet — barlines, repeat signs for the loop, rhythm slashes — and chords are
+**colour-coded by quality** in the colours of the light (major = gold, minor = lilac,
+dominant = coral, diminished = rose, augmented = sky, suspended = lagoon). The chord
+sounding now lights up as a solid block of its colour. The play button is the sun.
+
+**Nature** is always on, and paints only the music: weather that takes the colour of the
+chord sounding, a sun on the horizon that rises when you press play, a wildflower meadow
+grown from your song's chords (silhouettes and glowing flowers at sunset), growth rings
+round the play button — one per chorus — and the key drawn as a circle-of-fifths
+**sunflower**. When the music stops, everything holds still. **Stand** opens a
+full-screen music stand. A blank canvas offers back the sketches you were recently
+working on, saved or not.
 
 ## Features (v1 / MVP)
 
@@ -49,6 +60,9 @@ minor = violet, dominant = orange, diminished = red, augmented = pink, suspended
   above it (a chord chart), with a **Helper notes** toggle that overlays the chord tones
   as notes on the same staff
 - Save / load / rename / delete progressions locally (IndexedDB)
+- **Picks up where you left off**: the song you're working on autosaves as you edit, saved or
+  not, and is back on the canvas after a reload, a closed tab or a relaunch. Opening a shared
+  link never overwrites it — the shared song only replaces your draft once you edit it
 - JSON export / import for backup and transfer
 - Installable, works offline (service worker)
 
@@ -192,6 +206,10 @@ cannot drift from the real schema unnoticed.
   as `.webm`/etc.) and are lost on reload — they are deliberately *not* uploaded anywhere.
   Persisting takes to IndexedDB is a possible follow-up. Recording needs a one-time mic
   permission grant; the mic stream is released as soon as a take stops.
+- **The autosaved draft is one per browser, last writer wins.** Two tabs editing different
+  songs each save over the other, and whichever saved last is what reopens. Undo history is
+  not restored — the song is. Edits made while a Sketch key-cycle / tempo step-up drill is
+  running are saved once it stops (saving mid-drill would store the song in the wrong key).
 
 ## Roadmap (later)
 

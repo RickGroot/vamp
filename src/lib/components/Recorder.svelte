@@ -51,7 +51,7 @@
 			<ul class="takes">
 				{#each recorder.takes as take (take.id)}
 					<li class="take">
-						<span class="take__meta label">{fmtTime(take.createdAt)} · {fmt(take.durationMs)}</span>
+						<span class="take__meta hint">{fmtTime(take.createdAt)} · {fmt(take.durationMs)}</span>
 						<!-- svelte-ignore a11y_media_has_caption -->
 						<audio class="take__audio" controls src={take.url}></audio>
 						<a class="take__act" href={take.url} download={recorder.fileName(take)} title="Download take"
@@ -91,9 +91,7 @@
 		background: transparent;
 		padding: 0;
 		font-family: inherit;
-		font-size: 0.6875rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+		font-size: 0.8125rem;
 		color: var(--color-text-faint);
 
 		&:hover {
@@ -115,15 +113,14 @@
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text);
 
 		&:hover:not(:disabled) {
-			background: var(--color-black);
-			color: var(--color-white);
+			background: var(--wash);
+			border-color: var(--ink);
+			color: var(--ink);
 		}
 
 		&:disabled {
@@ -136,15 +133,15 @@
 			width: 10px;
 			height: 10px;
 			border-radius: var(--radius-pill);
-			background: var(--c-diminished);
+			background: var(--danger);
 		}
 
 		&--stop {
-			border-color: var(--c-diminished);
-			color: var(--c-diminished);
+			border-color: var(--danger);
+			color: var(--danger);
 
 			&:hover {
-				background: var(--c-diminished);
+				background: var(--danger);
 				color: var(--color-white);
 			}
 
@@ -165,13 +162,13 @@
 	.rec__elapsed {
 		font-variant-numeric: tabular-nums;
 		font-size: 1rem;
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 
 	.rec__error {
 		margin: 0;
 		font-size: 0.85rem;
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 
 	.rec__note {

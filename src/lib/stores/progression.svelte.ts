@@ -1,7 +1,14 @@
 // Editor state: the current progression, playback wiring, and an undo/redo
 // history — as a Svelte 5 runes store. A single shared instance backs the editor.
+//
+// The song on the canvas is autosaved as a draft (storage/draft.ts) and restored
+// on launch, so reopening Vamp puts you back where you were. Undo history is not
+// restored — the song is.
 
+import { browser } from '$app/environment';
 import { engine, type EngineState } from '$lib/audio/engine';
+import { isBlank as isBlankSong, readDraft, writeDraft } from '$lib/storage/draft';
+import { forgetSketch, readRecent, rememberSketch, type RecentSketch } from '$lib/storage/recent';
 import { barBeats } from '$lib/model/time';
 import { createBar, createProgression, createSlot, TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
 import { buildPresetChords, type Preset } from '$lib/model/presets';
@@ -11,6 +18,7 @@ import { transposeChordSymbol } from '$lib/audio/transpose';
 import { keyCycleInterval, nextStepTempo } from '$lib/audio/drills';
 import { view } from './view.svelte';
 import { drills } from './drills.svelte';
+import { notice } from './notice.svelte';
 import type {
 	BassInstrumentId,
 	BassMode,
@@ -31,6 +39,17 @@ export const MAX_SLOTS_PER_BAR = 4;
 
 const HISTORY_LIMIT = 100;
 const COALESCE_MS = 700;
+/** Quiet period before the draft is written — typing a chord is one save, not one per key. */
+const DRAFT_DEBOUNCE_MS = 400;
+
+/** localStorage, or null where merely touching it throws (some privacy modes). */
+function safeStorage(): Storage | null {
+	try {
+		return browser ? localStorage : null;
+	} catch {
+		return null;
+	}
+}
 
 class ProgressionStore {
 	current = $state<Progression>(createProgression());
@@ -51,7 +70,40 @@ class ProgressionStore {
 	private tempoLoops = 0;
 	private keyLoops = 0;
 
+	/**
+	 * False while the canvas holds a song that isn't yours yet — a shared link
+	 * you haven't touched. Such a song must not overwrite your draft: opening a
+	 * link in a new tab would otherwise replace your unsaved sketch the next time
+	 * any tab reloads. Your first edit makes it yours.
+	 */
+	private draftable = true;
+	private draftTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/** The "Replaced … · Undo" notice while it's up. Any other history move
+	 *  retires it — its Undo would otherwise undo that move instead. */
+	private replaceNoticeId: number | null = null;
+
+	/** Songs that recently left the canvas, newest first — the start screen offers them back. */
+	recent = $state.raw<RecentSketch[]>([]);
+
 	constructor() {
+		// Reopen where you left off. Restored here, before anything renders, so
+		// there's no flash of an empty sketch. A share link still wins: the layout
+		// loads it on mount, which is after this.
+		const storage = safeStorage();
+		if (storage) {
+			const draft = readDraft(storage);
+			if (draft) this.current = draft;
+			this.recent = readRecent(storage);
+			// The debounce means your last edit can still be pending when the tab
+			// goes away. pagehide / visibilitychange are the last reliable moments —
+			// mobile browsers routinely skip beforeunload, and iOS kills background
+			// pages without warning.
+			addEventListener('pagehide', () => this.flushDraft());
+			document.addEventListener('visibilitychange', () => {
+				if (document.visibilityState === 'hidden') this.flushDraft();
+			});
+		}
 		engine.onActiveSlot((i) => (this.activeSlot = i));
 		engine.onState((s) => {
 			this.engineState = s;
@@ -86,16 +138,65 @@ class ProgressionStore {
 		return this.future.length > 0;
 	}
 
-	/** Replace the edited progression (e.g. after load / new). Stops playback + clears history. */
-	load(progression: Progression): void {
+	/**
+	 * Replace the edited progression (open / new / example / import / shared
+	 * link). Stops playback.
+	 *
+	 * The song being replaced becomes an undo step, so one Undo brings it back —
+	 * browsing an example must never cost you the sketch on the canvas (the draft
+	 * autosaves the replacement moments later). When that song had chords, a
+	 * notice offers the Undo directly.
+	 *
+	 * `adopt: false` shows the song without making it the draft — for a shared
+	 * link, which must not overwrite unsaved work until you edit it. Everything
+	 * chosen from inside the app (open, new, example, import) is adopted.
+	 * `announce: false` skips the notice, for a load that replaces nothing you'd
+	 * miss (continuing on a saved copy of the same song).
+	 */
+	load(progression: Progression, opts: { adopt?: boolean; announce?: boolean } = {}): void {
 		// Unconditional: also invalidates an in-flight play() that hasn't flipped
 		// the state to 'loading' yet (it awaits unlockAudio first) — otherwise the
 		// just-replaced song could start playing over the newly loaded one.
 		engine.stop();
-		this.current = progression;
-		this.past = [];
+		const outgoing = $state.snapshot(this.current) as Progression;
+		this.dismissReplaceNotice();
+		this.past.push(outgoing);
+		if (this.past.length > HISTORY_LIMIT) this.past.shift();
+		// Remember it beyond this session too: undo history doesn't survive a reload.
+		const storage = safeStorage();
+		if (storage && !isBlankSong(outgoing)) this.recent = rememberSketch(storage, outgoing);
 		this.future = [];
+		this.current = progression;
 		this.lastTag = '';
+		if (opts.announce !== false && !isBlankSong(outgoing)) {
+			const name = outgoing.name?.trim() || 'Untitled';
+			this.replaceNoticeId = notice.show(`Replaced “${name}”`, {
+				label: 'Undo',
+				run: () => this.undo()
+			});
+		}
+		this.draftable = opts.adopt !== false;
+		// engine.stop() may have queued a save of the OLD song (a drill ending
+		// restores it); cancel that, then save the new one only if it's adopted.
+		this.cancelDraftSave();
+		if (this.draftable) this.scheduleDraftSave();
+	}
+
+	/** True when the canvas has no chords — nothing a shared link could destroy. */
+	get isBlank(): boolean {
+		return isBlankSong(this.current);
+	}
+
+	/** Put a recent sketch back on the canvas. */
+	resumeSketch(id: string): void {
+		const sketch = this.recent.find((r) => r.song.id === id);
+		if (sketch) this.load(structuredClone(sketch.song));
+	}
+
+	/** Drop a sketch from the start screen's list. */
+	forgetSketch(id: string): void {
+		const storage = safeStorage();
+		this.recent = storage ? forgetSketch(storage, id) : this.recent.filter((r) => r.song.id !== id);
 	}
 
 	newProgression(): void {
@@ -114,6 +215,7 @@ class ProgressionStore {
 	 * (e.g. typing in one chord slot) coalesce into a single undo step.
 	 */
 	private checkpoint(tag = ''): void {
+		this.dismissReplaceNotice();
 		const now = Date.now();
 		const coalesce = tag !== '' && tag === this.lastTag && now - this.lastTagTime < COALESCE_MS;
 		this.lastTag = tag;
@@ -126,6 +228,7 @@ class ProgressionStore {
 
 	undo(): void {
 		if (this.past.length === 0) return;
+		this.dismissReplaceNotice();
 		// Finalize any active drill first: its transposed chords/tempo must not be
 		// restored into (or captured against) an unrelated historical snapshot.
 		this.endDrillSession();
@@ -135,10 +238,13 @@ class ProgressionStore {
 		this.lastTag = '';
 		engine.setTempo(this.current.tempo);
 		if (wasPlaying) void this.play();
+		// Undo swaps the whole song without touch(), so it saves explicitly.
+		this.scheduleDraftSave();
 	}
 
 	redo(): void {
 		if (this.future.length === 0) return;
+		this.dismissReplaceNotice();
 		this.endDrillSession();
 		const wasPlaying = this.isPlayingThis;
 		this.past.push($state.snapshot(this.current));
@@ -146,10 +252,50 @@ class ProgressionStore {
 		this.lastTag = '';
 		engine.setTempo(this.current.tempo);
 		if (wasPlaying) void this.play();
+		this.scheduleDraftSave();
+	}
+
+	private dismissReplaceNotice(): void {
+		if (this.replaceNoticeId === null) return;
+		notice.dismiss(this.replaceNoticeId);
+		this.replaceNoticeId = null;
 	}
 
 	private touch(): void {
 		this.current.updatedAt = Date.now();
+		// You edited it, so it's yours now — a shared song included.
+		this.draftable = true;
+		this.scheduleDraftSave();
+	}
+
+	// ---- the draft (reopen where you left off) ----
+
+	private scheduleDraftSave(): void {
+		if (!browser || !this.draftable) return;
+		clearTimeout(this.draftTimer);
+		this.draftTimer = setTimeout(() => this.flushDraft(), DRAFT_DEBOUNCE_MS);
+	}
+
+	private cancelDraftSave(): void {
+		clearTimeout(this.draftTimer);
+		this.draftTimer = undefined;
+	}
+
+	/**
+	 * Write the pending draft now. Only writes when a save is PENDING, so a page
+	 * that just hides with nothing changed costs nothing — and, in dev, a stale
+	 * store instance left behind by HMR can't overwrite the real one's draft.
+	 *
+	 * Skipped while a Sketch drill is running: key-cycle and tempo step-up
+	 * transpose and re-tempo the song IN PLACE, and persisting that would reopen
+	 * your song in the wrong key. The save stays pending; endDrillSession saves
+	 * again once the song is restored.
+	 */
+	private flushDraft(): void {
+		if (this.draftTimer === undefined || !this.draftable || this.drillOrigin) return;
+		this.cancelDraftSave();
+		const storage = safeStorage();
+		if (storage) writeDraft(storage, $state.snapshot(this.current) as Progression);
 	}
 
 	// ---- metadata ----
@@ -538,6 +684,9 @@ class ProgressionStore {
 		this.drillOrigin = null;
 		this.drillSemis = 0;
 		this.lastDrillTempo = null;
+		// Draft saves were held while the song was transposed; it's restored now,
+		// so any edits made during the drill get saved in the right key.
+		this.scheduleDraftSave();
 	}
 
 	private captureChords(): string[] {

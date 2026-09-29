@@ -67,7 +67,7 @@
 
 <div class="host" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
 	<button class="bar-btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-		Share / export
+		Share
 	</button>
 
 	{#if open}
@@ -78,7 +78,7 @@
 				{rendering ? 'Rendering…' : 'Render WAV'}
 			</button>
 			<button class="vmenu__row" type="button" onclick={onJson}>Export JSON backup</button>
-			{#if status}<p class="status label" role="status">{status}</p>{/if}
+			{#if status}<p class="status hint" role="status">{status}</p>{/if}
 		</div>
 	{/if}
 </div>

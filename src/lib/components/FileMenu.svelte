@@ -3,6 +3,7 @@
 	import { asset } from '$app/paths';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { library } from '$lib/stores/library.svelte';
+	import { notice } from '$lib/stores/notice.svelte';
 	import { readFileAsText } from '$lib/storage/backup';
 	import { newId } from '$lib/model/factory';
 	import { dismissable } from '$lib/actions/dismissable';
@@ -45,8 +46,19 @@
 		const now = Date.now();
 		const copy = { ...src, id: newId(), name: `${currentName} copy`, createdAt: now, updatedAt: now };
 		await library.save(copy);
-		progression.load(copy);
+		// Same chords, new identity: nothing on the canvas is lost, so no notice.
+		// (It's still an undo step, like every load.)
+		progression.load(copy, { announce: false });
 		status = { kind: 'ok', text: `Saved a copy “${copy.name}”.` };
+	}
+
+	// Deleting is instant and one tap away from "open", so it's undoable rather
+	// than confirmed: the record comes back unchanged, in the same place.
+	async function onDelete(id: string) {
+		const removed = await library.remove(id);
+		if (!removed) return;
+		const name = removed.name?.trim() || 'Untitled';
+		notice.show(`Deleted “${name}”`, { label: 'Undo', run: () => void library.restore(removed) });
 	}
 
 	function onLoad(id: string) {
@@ -174,13 +186,13 @@
 						<li class="saved__row" class:saved__row--current={item.id === progression.current.id}>
 							<button class="saved__load" type="button" onclick={() => onLoad(item.id)}>
 								<span class="saved__name">{item.name || 'Untitled'}</span>
-								<span class="saved__meta label">{dateFmt.format(item.updatedAt)}</span>
+								<span class="saved__meta hint">{dateFmt.format(item.updatedAt)}</span>
 							</button>
 							<button
 								class="saved__del"
 								type="button"
 								aria-label={`Delete ${item.name}`}
-								onclick={() => library.remove(item.id)}>×</button
+								onclick={() => onDelete(item.id)}>×</button
 							>
 						</li>
 					{/each}
@@ -233,8 +245,7 @@
 		padding: var(--space-2);
 
 		&:focus {
-			outline: none;
-			border-color: var(--color-accent);
+			border-color: var(--ink);
 		}
 	}
 
@@ -277,7 +288,7 @@
 		color: var(--color-accent);
 
 		&--err {
-			color: var(--c-dominant, #d33);
+			color: var(--danger);
 		}
 	}
 

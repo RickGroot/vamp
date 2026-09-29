@@ -44,15 +44,14 @@
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text);
 
 		&:hover:not(:disabled) {
-			background: var(--color-black);
-			color: var(--color-white);
+			background: var(--wash);
+			border-color: var(--ink);
+			color: var(--ink);
 		}
 		&:disabled {
 			color: var(--color-grey-400);
@@ -60,12 +59,12 @@
 			cursor: not-allowed;
 		}
 		&--on {
-			border-color: var(--c-major);
-			color: var(--c-major);
+			border-color: var(--ink);
+			color: var(--ink);
 
 			&:hover {
-				background: var(--c-major);
-				color: var(--color-white);
+				background: var(--spot);
+				color: var(--on-spot);
 			}
 		}
 	}
@@ -74,7 +73,7 @@
 		width: 9px;
 		height: 9px;
 		border-radius: var(--radius-pill);
-		background: var(--c-major);
+		background: var(--spot);
 		animation: pulse 1.2s ease-in-out infinite;
 	}
 
@@ -94,6 +93,6 @@
 	.err {
 		margin: 0;
 		font-size: 0.8rem;
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 </style>

@@ -40,7 +40,7 @@
 	const mix = $derived(view.mix);
 	const anySolo = $derived((['chords', 'bass', 'drums'] as MixLane[]).some((l) => mix[l].solo));
 
-	let open = $state(true);
+	const open = $derived(view.sections.band);
 
 	// Plain-language summary of the backing, shown when collapsed.
 	const summary = $derived.by(() => {
@@ -57,19 +57,13 @@
 </script>
 
 <section class="band" aria-label="Backing band">
-	<button class="band__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
-		<span class="sec-icon" class:sec-icon--open={open} aria-hidden="true">
-			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-				<path d="M6 4v16M12 4v16M18 4v16" />
-				<circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
-				<circle cx="12" cy="15" r="2.2" fill="currentColor" stroke="none" />
-				<circle cx="18" cy="7" r="2.2" fill="currentColor" stroke="none" />
-			</svg>
-		</span>
-		<span class="wordmark band__title">Band</span>
-		<span class="label band__hint">{open ? 'Your backing — sound & mix' : summary}</span>
-	</button>
+	<h2 class="sec-head">
+		<button class="sec-toggle" type="button" aria-expanded={open} onclick={() => view.setSectionOpen('band', !open)}>
+			<svg class="chev" class:chev--open={open} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+			<span class="sec-title">Band</span>
+			<span class="sec-hint band__hint">{open ? 'Your backing — sound & mix' : summary}</span>
+		</button>
+	</h2>
 
 	{#if open}
 		<div class="channels">
@@ -177,7 +171,7 @@
 					<option value={bars}>{tradeLabel(bars)}</option>
 				{/each}
 			</select>
-			<span class="trade__hint label">
+			<span class="trade__hint hint">
 				{#if view.tradeBars > 0}
 					Backing drops out every other {view.tradeBars} bars so you solo — drums keep time
 				{:else}
@@ -229,38 +223,11 @@
 <style lang="scss">
 	.band {
 		margin-top: var(--space-12);
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-6);
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-4);
 	}
 
-	.band__toggle {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-3);
-		width: 100%;
-		border: 0;
-		background: transparent;
-		padding: 0;
-		text-align: left;
-		color: var(--color-text);
-	}
-
-	.chev {
-		font-size: 0.8rem;
-		color: var(--color-text-faint);
-		transition: transform var(--motion-fast) var(--motion-ease-out);
-	}
-	.chev--open {
-		transform: rotate(90deg);
-	}
-
-	.band__title {
-		font-size: 1.1rem;
-	}
 	.band__hint {
-		color: var(--color-text-faint);
-		text-transform: none;
-		letter-spacing: 0;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -271,7 +238,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
-		margin-top: var(--space-6);
+		margin-top: var(--space-4);
 	}
 
 	.ch {
@@ -291,21 +258,8 @@
 	}
 
 	.ch__name {
-		font-size: 0.9rem;
-		border-left: 3px solid var(--c-other);
-		padding-left: var(--space-2);
-	}
-	.ch--chords .ch__name {
-		border-left-color: var(--c-major);
-	}
-	.ch--bass .ch__name {
-		border-left-color: var(--c-minor);
-	}
-	.ch--drums .ch__name {
-		border-left-color: var(--c-dominant);
-	}
-	.ch--click .ch__name {
-		border-left-color: var(--c-suspended);
+		font-size: 0.9375rem;
+		font-weight: 500;
 	}
 
 	.ch__src {
@@ -344,7 +298,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 
@@ -353,10 +308,8 @@
 		background: transparent;
 		padding: var(--space-1) var(--space-4);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text-muted);
 
 		&:hover {
@@ -364,15 +317,15 @@
 			color: var(--color-black);
 		}
 		&--on {
-			background: var(--c-major);
-			border-color: var(--c-major);
-			color: var(--color-white);
+			background: var(--spot);
+			border-color: var(--spot);
+			color: var(--on-spot);
 		}
 	}
 
 	.fader {
 		width: 100%;
-		accent-color: var(--c-major);
+		accent-color: var(--ink);
 		cursor: pointer;
 	}
 
@@ -385,7 +338,7 @@
 		border: 1px solid var(--color-border);
 		background: transparent;
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--color-text-muted);
 
@@ -398,14 +351,14 @@
 			opacity: 0.5;
 		}
 		&--mute {
-			background: var(--c-diminished);
-			border-color: var(--c-diminished);
-			color: var(--color-white);
+			background: var(--ink);
+			border-color: var(--ink);
+			color: var(--paper);
 		}
 		&--solo {
-			background: var(--c-major);
-			border-color: var(--c-major);
-			color: var(--color-white);
+			background: var(--spot);
+			border-color: var(--spot);
+			color: var(--on-spot);
 		}
 	}
 

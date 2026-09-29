@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { view } from '$lib/stores/view.svelte';
 	import { scaleStaffKeys } from '$lib/model/scales';
 
 	interface Props {
@@ -12,7 +13,8 @@
 	let lastWidth = 0;
 	let vf: typeof import('vexflow') | null = null;
 
-	const signature = $derived(notes.join(','));
+	// The theme is in the signature: note colours are resolved at draw time.
+	const signature = $derived(`${view.night}|${notes.join(',')}`);
 
 	const PAD = 8;
 	const CLEF_ABOVE = 12;
@@ -32,11 +34,12 @@
 		lastWidth = el.clientWidth || 0;
 		const fmtWidth = width - 16 - 48;
 
-		// Root notes orange, scale tones teal — matching the keyboard/fretboard
-		// dots. VexFlow writes literal SVG attributes, so resolve the CSS vars here.
+		// Roots in ink, scale tones in the softer ink — the keyboard/fretboard mark the
+		// root by shape; on a staff, weight of ink does it. VexFlow writes literal
+		// SVG attributes, so resolve the CSS vars here.
 		const css = getComputedStyle(document.documentElement);
-		const rootColor = css.getPropertyValue('--c-dominant').trim() || '#ff7b00';
-		const toneColor = css.getPropertyValue('--c-major').trim() || '#1fb6a6';
+		const rootColor = css.getPropertyValue('--ink').trim() || '#1d2622';
+		const toneColor = css.getPropertyValue('--ink-3').trim() || '#5f6963';
 
 		const makeNotes = () =>
 			keys.map((k, i) => {
@@ -138,7 +141,7 @@
 
 <style lang="scss">
 	.staff-error {
-		color: var(--c-diminished);
+		color: var(--danger);
 		padding: var(--space-2) 0;
 	}
 
@@ -149,7 +152,10 @@
 		background: var(--color-white);
 		border: 1px solid var(--color-border);
 	}
+	/* Staves and clef inherit from the SVG root — ink it so they follow the theme. */
 	.scale-staff :global(svg) {
 		display: block;
+		fill: var(--ink);
+		stroke: var(--ink);
 	}
 </style>

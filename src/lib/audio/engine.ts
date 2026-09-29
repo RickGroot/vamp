@@ -29,6 +29,7 @@ import {
 	type LoadedDrums
 } from './instruments';
 import { unlockAudio } from './context';
+import type { MusicClock } from '$lib/art/music';
 
 export type EngineState = 'stopped' | 'loading' | 'playing';
 
@@ -69,6 +70,9 @@ class PlaybackEngine {
 	private quartersPerBar = 4;
 	private leadGain = 1;
 	private _source: PlaybackSource = 'progression';
+	// Where the current run's loop sits on the transport, for clock().
+	private loopStartTicks = 0;
+	private loopTicks = 0;
 
 	get state(): EngineState {
 		return this._state;
@@ -104,6 +108,36 @@ class PlaybackEngine {
 
 	get isPlaying(): boolean {
 		return this._state === 'playing';
+	}
+
+	/**
+	 * Where the music is RIGHT NOW, for visuals that must move with it. Read at
+	 * the audio clock's current time (not the lookahead-scheduling time), so what
+	 * you see lines up with what you hear. Cheap: call it every animation frame.
+	 */
+	clock(): MusicClock {
+		const transport = Tone.getTransport();
+		const ppq = transport.PPQ || 192;
+		if (this._state !== 'playing' || this.loopTicks <= 0) {
+			return {
+				playing: false,
+				quarters: 0,
+				loopQuarters: 0,
+				quartersPerBar: this.quartersPerBar,
+				bpm: transport.bpm.value,
+				loops: 0
+			};
+		}
+		const rel = transport.getTicksAtTime(Tone.immediate()) - this.loopStartTicks;
+		const within = rel < 0 ? rel : rel % this.loopTicks;
+		return {
+			playing: true,
+			quarters: within / ppq,
+			loopQuarters: this.loopTicks / ppq,
+			quartersPerBar: this.quartersPerBar,
+			bpm: transport.bpm.value,
+			loops: rel < 0 ? 0 : Math.floor(rel / this.loopTicks)
+		};
 	}
 
 	onState(fn: StateListener): () => void {
@@ -266,6 +300,7 @@ class PlaybackEngine {
 			this.part.loop = true;
 			this.part.loopStart = 0;
 			this.part.loopEnd = `${totalTicks}i`;
+			this.loopTicks = totalTicks;
 
 			let loopStartTicks = 0;
 			if (plan.countIn) {
@@ -283,6 +318,7 @@ class PlaybackEngine {
 			} else {
 				this.part.start(0);
 			}
+			this.loopStartTicks = loopStartTicks;
 
 			// Fire onLoop listeners at each loop boundary (drives practice drills).
 			if (this.loopListeners.size > 0) {

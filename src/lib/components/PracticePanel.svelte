@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { view } from '$lib/stores/view.svelte';
 	import DrillsControl from './DrillsControl.svelte';
 	import DroneControl from './DroneControl.svelte';
 	import Recorder from './Recorder.svelte';
@@ -11,20 +12,20 @@
 
 	let { defaultRoot }: Props = $props();
 
-	let open = $state(true);
+	const open = $derived(view.sections.woodshed);
 </script>
 
-<section class="practice" aria-label="Practice tools">
-	<button class="practice__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-		<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
-		<span class="sec-icon" class:sec-icon--open={open} aria-hidden="true">
-			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-				<circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" />
-			</svg>
-		</span>
-		<span class="wordmark practice__title">Practice</span>
-		<span class="label practice__hint">Drills · Drone · MIDI · Record</span>
-	</button>
+<!-- "Woodshed", not "Practice": the Practice workspace is a separate route,
+     and two things with one name read as one. These tools shape how YOUR
+     song plays back while you practise over it. -->
+<section class="practice" aria-label="Woodshed">
+	<h2 class="sec-head">
+		<button class="sec-toggle" type="button" aria-expanded={open} onclick={() => view.setSectionOpen('woodshed', !open)}>
+			<svg class="chev" class:chev--open={open} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+			<span class="sec-title">Woodshed</span>
+			<span class="sec-hint">Drills · Drone · MIDI · Record, over your song</span>
+		</button>
+	</h2>
 
 	{#if open}
 		<div class="grid">
@@ -36,7 +37,7 @@
 						</svg>
 					</span>
 					<div class="card__meta">
-						<span class="card__title">Drills</span>
+						<h3 class="card__title">Drills</h3>
 						<span class="card__sub">Push your time, speed &amp; key fluency.</span>
 					</div>
 				</header>
@@ -51,7 +52,7 @@
 						</svg>
 					</span>
 					<div class="card__meta">
-						<span class="card__title">Drone</span>
+						<h3 class="card__title">Drone</h3>
 						<span class="card__sub">A held root to solo scales/modes over.</span>
 					</div>
 				</header>
@@ -67,7 +68,7 @@
 						</svg>
 					</span>
 					<div class="card__meta">
-						<span class="card__title">MIDI input</span>
+						<h3 class="card__title">MIDI input</h3>
 						<span class="card__sub">Play chords in from a keyboard.</span>
 					</div>
 				</header>
@@ -80,7 +81,7 @@
 						<svg viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="6" fill="currentColor" /></svg>
 					</span>
 					<div class="card__meta">
-						<span class="card__title">Record</span>
+						<h3 class="card__title">Record</h3>
 						<span class="card__sub">Capture your solo, then listen back.</span>
 					</div>
 				</header>
@@ -92,57 +93,26 @@
 
 <style lang="scss">
 	.practice {
-		margin-top: var(--space-8);
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-6);
+		margin-top: var(--space-12);
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-4);
 	}
 
-	.practice__toggle {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-3);
-		width: 100%;
-		border: 0;
-		background: transparent;
-		padding: 0;
-		text-align: left;
-		color: var(--color-text);
-	}
-
-	.chev {
-		font-size: 0.8rem;
-		color: var(--color-text-faint);
-		transition: transform var(--motion-fast) var(--motion-ease-out);
-	}
-	.chev--open {
-		transform: rotate(90deg);
-	}
-
-	.practice__title {
-		font-size: 1.1rem;
-	}
-	.practice__hint {
-		color: var(--color-text-faint);
-		text-transform: none;
-		letter-spacing: 0;
-	}
-
+	/* Four tools, two to a row, separated by hairline rules — not dashboard cards. */
 	.grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: var(--space-4);
-		margin-top: var(--space-6);
-		/* equal-height cards per row */
+		gap: var(--space-6) var(--space-8);
+		margin-top: var(--space-4);
 	}
 
 	.card {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
-		border: 1px solid var(--color-border);
-		border-top: 3px solid var(--c-other);
-		background: var(--color-white);
-		padding: var(--space-4);
+		min-width: 0;
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-4);
 	}
 
 	.card__head {
@@ -153,13 +123,11 @@
 
 	.card__icon {
 		flex: 0 0 auto;
-		width: 32px;
-		height: 32px;
-		border-radius: 9px;
 		display: grid;
 		place-items: center;
-		background: var(--c-other);
-		color: var(--color-white);
+		width: 28px;
+		height: 28px;
+		color: var(--ink-2);
 	}
 
 	.card__meta {
@@ -169,41 +137,16 @@
 	}
 
 	.card__title {
+		margin: 0;
 		font-size: 1rem;
-		font-weight: 400;
-		line-height: 1.1;
+		font-weight: 600;
+		line-height: 1.2;
 	}
 
 	.card__sub {
-		font-size: 0.78rem;
-		color: var(--color-text-faint);
+		font-size: 0.875rem;
+		color: var(--ink-3);
 		margin-top: 2px;
-	}
-
-	/* Per-tool accent colours (top border + icon chip). */
-	.card--drills {
-		border-top-color: var(--c-dominant);
-	}
-	.card--drills .card__icon {
-		background: var(--c-dominant);
-	}
-	.card--drone {
-		border-top-color: var(--c-suspended);
-	}
-	.card--drone .card__icon {
-		background: var(--c-suspended);
-	}
-	.card--midi {
-		border-top-color: var(--c-minor);
-	}
-	.card--midi .card__icon {
-		background: var(--c-minor);
-	}
-	.card--record {
-		border-top-color: var(--c-diminished);
-	}
-	.card--record .card__icon {
-		background: var(--c-diminished);
 	}
 
 	@media (max-width: 720px) {

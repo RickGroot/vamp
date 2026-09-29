@@ -68,7 +68,7 @@
 			<button class="vmenu__row" type="button" disabled={busy} onclick={copy}>Copy image</button>
 			<button class="vmenu__row" type="button" disabled={busy} onclick={pdf}>Export PDF</button>
 			<button class="vmenu__row" type="button" onclick={midi}>Export MIDI</button>
-			{#if status}<p class="status label" role="status">{status}</p>{/if}
+			{#if status}<p class="status hint" role="status">{status}</p>{/if}
 		</div>
 	{/if}
 </div>
@@ -85,10 +85,8 @@
 		background: transparent;
 		padding: var(--space-1) var(--space-3);
 		font-family: inherit;
-		font-size: 0.6875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: var(--color-text-muted);
 		transition:
 			border-color var(--motion-fast) var(--motion-ease-out),

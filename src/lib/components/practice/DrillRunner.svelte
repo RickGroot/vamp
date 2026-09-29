@@ -3,6 +3,7 @@
 	// actually reach for mid-session. Everything else lives in the picker.
 	import { practice } from '$lib/stores/practice.svelte';
 	import DrillStaff from './DrillStaff.svelte';
+	import KeyCompass from '../KeyCompass.svelte';
 
 	const run = $derived(practice.run);
 	const total = $derived(run.phrases.length);
@@ -15,6 +16,13 @@
 	// Only the current key is on the stand. Rendering all twelve at once would be
 	// a wall of notation you cannot read, and a much taller staff.
 	const phraseNotes = $derived(run.notes.filter((n) => n.rep === rep));
+	// The sunflower walks the circle of fifths with the run: this key's notes
+	// lit, its tonic at the top. All in WRITTEN pitch, like the staff.
+	const phrasePcs = $derived([
+		...new Set(
+			phraseNotes.flatMap((n) => (n.midi === null ? [] : [((n.midi % 12) + 12) % 12]))
+		)
+	]);
 
 	const statusText = $derived(
 		practice.isPlaying
@@ -31,13 +39,15 @@
 	<header class="runner__head">
 		<div class="runner__what">
 			<h2 class="wordmark runner__title">{practice.definition.name}</h2>
-			<p class="label runner__sub">
+			<p class="hint runner__sub">
 				<!-- A song-sourced drill has no meaningful "key" to show — it follows
 				     the changes — so name the sketch instead. -->
 				{practice.usesSong ? practice.songName : (shown?.writtenRoot ?? practice.root)} ·
 				{practice.rangeLabel} · {shown?.tempo ?? practice.tempo} bpm
 			</p>
 		</div>
+
+		<KeyCompass tonic={shown?.writtenRoot ?? ''} notes={phrasePcs} size={88} />
 
 		<div class="runner__transport">
 			<button
@@ -64,7 +74,7 @@
 
 	<!-- Polite and per-key, not per-note: announcing every note would flood a
 	     screen reader at drilling tempos. -->
-	<p class="runner__status label" role="status" aria-live="polite">{statusText}</p>
+	<p class="runner__status hint" role="status" aria-live="polite">{statusText}</p>
 
 	{#if run.notes.length === 0}
 		<p class="runner__empty">
@@ -74,12 +84,12 @@
 	{:else}
 		<DrillStaff notes={phraseNotes} />
 		{#if next}
-			<p class="runner__next label">Next up · {next.writtenRoot} at {next.tempo} bpm</p>
+			<p class="runner__next hint">Next up · {next.writtenRoot} at {next.tempo} bpm</p>
 		{/if}
 	{/if}
 
 	{#if run.skipped.length > 0}
-		<p class="runner__skipped label">
+		<p class="runner__skipped hint">
 			Skipped {run.skipped.length}
 			{run.skipped.length === 1 ? 'key' : 'keys'} that didn’t fit the range: {run.skipped
 				.map((s) => s.concertRoot)
@@ -103,8 +113,12 @@
 		flex-wrap: wrap;
 	}
 
+	/* The drill's name, lettered like the tune title on Sketch. */
 	.runner__title {
-		font-size: 1.5rem;
+		font-family: var(--font-hand);
+		font-weight: 400;
+		font-size: 2rem;
+		line-height: 1.15;
 		margin: 0;
 	}
 
@@ -119,28 +133,40 @@
 		gap: var(--space-2);
 	}
 
+	/* The same sun as Sketch's play disc, with its word on it. */
 	.play {
+		min-height: var(--tap);
 		border: 0;
-		padding: var(--space-3) var(--space-6);
+		border-radius: var(--radius-pill);
+		padding: 0 var(--space-6);
 		font-family: inherit;
-		font-size: 0.8125rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-white);
-		background: var(--grad-flow);
-		background-size: 230% 100%;
-		background-position: 0% 0;
-		transition: background-position var(--motion-grad) var(--motion-ease-out);
+		font-size: 0.9375rem;
+		font-weight: 700;
+		color: var(--on-spot);
+		background: radial-gradient(circle at 35% 30%, var(--sun) 0%, var(--spot) 78%);
+		box-shadow: var(--lift);
+		transition:
+			transform var(--motion-fast) var(--motion-ease-out),
+			box-shadow var(--motion-fast) var(--motion-ease-out);
+
+		&:hover {
+			box-shadow: 0 4px 12px var(--shadow);
+		}
+
+		&:active {
+			transform: scale(0.97);
+		}
 
 		&:focus-visible {
-			outline: 2px solid var(--color-accent);
-			outline-offset: 2px;
+			outline-offset: 3px;
 		}
 	}
 
 	.play--on {
-		background-position: 100% 0;
+		box-shadow:
+			var(--lift),
+			0 0 0 3px var(--ground),
+			0 0 0 5px var(--spot);
 	}
 
 	.runner__status {
@@ -162,7 +188,7 @@
 
 	.runner__skipped {
 		margin: 0;
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

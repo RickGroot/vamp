@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Bar } from '$lib/model/types';
 	import type { KeyInfo } from '$lib/model/key';
+	import { barBeats } from '$lib/model/time';
 	import { progression, MAX_SLOTS_PER_BAR } from '$lib/stores/progression.svelte';
 	import ChordSlot from './ChordSlot.svelte';
 
@@ -15,12 +16,19 @@
 		loopActive: boolean;
 		/** Whether this bar is inside the current loop. */
 		inLoop: boolean;
+		/** First / last bar of an active sub-range loop — drawn as repeat signs. */
+		loopStart?: boolean;
+		loopEnd?: boolean;
+		/** Last bar of the song — closed with a final barline. */
+		final?: boolean;
 		/** Inferred key, for the Roman-numeral overlay. */
 		keyInfo: KeyInfo;
 		/** Whether playback is currently on this bar (the playhead). */
 		playing: boolean;
 		/** Hovered pattern-insight chip covers this bar (transient highlight). */
 		hinted?: boolean;
+		/** Bar 1 of a blank song: its first slot invites a chord. */
+		invite?: boolean;
 	}
 
 	let {
@@ -31,20 +39,19 @@
 		canRemoveBar,
 		loopActive,
 		inLoop,
+		loopStart = false,
+		loopEnd = false,
+		final = false,
 		keyInfo,
 		playing,
-		hinted = false
+		hinted = false,
+		invite = false
 	}: Props = $props();
 
 	const canAddSlot = $derived(bar.slots.length < MAX_SLOTS_PER_BAR);
-
-	// Stable per-bar animation phase (art mode) — seeded from the bar id so each
-	// bar's colour wash drifts a little differently (generative feel).
-	const artDelay = $derived.by(() => {
-		let h = 0;
-		for (let i = 0; i < bar.id.length; i++) h = (h * 31 + bar.id.charCodeAt(i)) >>> 0;
-		return (((h % 1000) / 1000) * 9).toFixed(2);
-	});
+	// One rhythm slash per beat of the meter, under the chords — how a chord
+	// chart shows time. Independent of how the bar is split into chords.
+	const beats = $derived(Math.max(1, Math.min(16, barBeats(progression.current.timeSignature))));
 
 	let dragOver = $state(false);
 
@@ -75,16 +82,20 @@
 	class="bar"
 	class:bar--in-loop={loopActive && inLoop}
 	class:bar--out-loop={loopActive && !inLoop}
+	class:bar--loop-start={loopStart}
+	class:bar--loop-end={loopEnd}
+	class:bar--final={final && !loopEnd}
 	class:bar--playing={playing}
 	class:bar--hinted={hinted}
 	class:bar--dragover={dragOver}
-	style="--art-delay: {artDelay}s"
 	ondragover={onDragOver}
 	ondragleave={() => (dragOver = false)}
 	ondrop={onDrop}
 	role="group"
+	aria-label={`Bar ${barIndex + 1}${loopStart ? ', loop starts' : ''}${loopEnd ? ', loop ends' : ''}`}
 >
 	<header class="bar__head">
+		<span class="bar__num">{barIndex + 1}</span>
 		<!-- The grip is mouse/touch-only; keyboard & AT users get the real move
 		     buttons below instead, so it's hidden from the accessibility tree. -->
 		<span
@@ -92,8 +103,14 @@
 			draggable="true"
 			ondragstart={onDragStart}
 			aria-hidden="true"
-			title="Drag to reorder">⠿</span
+			title="Drag to reorder"
 		>
+			<svg viewBox="0 0 10 16" width="8" height="13" fill="currentColor">
+				<circle cx="2.5" cy="3" r="1.3" /><circle cx="7.5" cy="3" r="1.3" />
+				<circle cx="2.5" cy="8" r="1.3" /><circle cx="7.5" cy="8" r="1.3" />
+				<circle cx="2.5" cy="13" r="1.3" /><circle cx="7.5" cy="13" r="1.3" />
+			</svg>
+		</span>
 		<span class="visually-hidden-buttons">
 			<button
 				class="visually-hidden"
@@ -105,27 +122,42 @@
 			<button
 				class="visually-hidden"
 				type="button"
+				disabled={barIndex === progression.current.bars.length - 1}
 				onclick={() => progression.moveBar(barIndex, barIndex + 1)}
 				>Move bar {barIndex + 1} right</button
 			>
 		</span>
-		<span class="label bar__num">{barIndex + 1}</span>
 		<div class="bar__actions">
 			<button
 				class="bar__action"
 				type="button"
 				title="Add a chord (split the bar)"
+				aria-label={`Add a chord to bar ${barIndex + 1}`}
 				disabled={!canAddSlot}
-				onclick={() => progression.addSlot(barIndex)}>+ chord</button
+				onclick={() => progression.addSlot(barIndex)}
 			>
+				<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"
+					><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg
+				>
+				<span class="bar__action-text">Chord</span>
+			</button>
 			{#if canRemoveBar}
 				<button
 					class="bar__action bar__action--remove"
 					type="button"
 					title="Remove bar"
 					aria-label={`Remove bar ${barIndex + 1}`}
-					onclick={() => progression.removeBar(barIndex)}>×</button
+					onclick={() => progression.removeBar(barIndex)}
 				>
+					<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"
+						><path
+							d="M4 4l8 8M12 4l-8 8"
+							stroke="currentColor"
+							stroke-width="1.6"
+							stroke-linecap="round"
+						/></svg
+					>
+				</button>
 			{/if}
 		</div>
 	</header>
@@ -136,68 +168,147 @@
 				{barIndex}
 				{slotIndex}
 				chord={slot.chord}
+				beats={slot.beats}
+				placeholder={invite && slotIndex === 0 ? 'try Dm7' : '–'}
 				{keyInfo}
 				active={activeSlot === baseGlobalIndex + slotIndex}
 				canRemove={bar.slots.length > 1}
 			/>
 		{/each}
 	</div>
+
+	<div class="bar__staff" aria-hidden="true">
+		{#each { length: beats } as _, i (i)}
+			<span class="slash">/</span>
+		{/each}
+	</div>
 </div>
 
 <style lang="scss">
+	/* A measure on the chart: barlines left and right (neighbours overlap by a
+	   pixel so a shared barline stays one line), chords above a faint staff of
+	   rhythm slashes. No box, no card. */
 	.bar {
+		/* Inner barlines are the lighter ink; repeat and final barlines stay full ink. */
+		--barline: var(--ink-2);
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
-		border: var(--border-hairline);
-		background: var(--color-white);
-		padding: var(--space-3);
+		min-width: 0;
+		margin-right: -1px;
+		border-left: 1px solid var(--barline);
+		border-right: 1px solid var(--barline);
+		padding: 0 var(--space-2) var(--space-2);
 		transition:
 			opacity var(--motion-standard) var(--motion-ease-out),
-			box-shadow var(--motion-fast) var(--motion-ease-out);
+			background-color var(--motion-fast) var(--motion-ease-out);
 	}
 
-	/* In a sub-range loop: highlight the looped bars, fade the rest. */
-	.bar--in-loop {
-		box-shadow: inset 0 3px 0 var(--c-major);
-	}
-
+	/* In a sub-range loop, the bars outside it recede. */
 	.bar--out-loop {
-		opacity: 0.45;
+		opacity: 0.55;
+		filter: saturate(0.25);
 	}
 
-	/* Playhead: the bar currently sounding. */
+	/* Playhead: a bar of ink across the top of the measure that's sounding. */
 	.bar--playing {
-		box-shadow: 0 0 0 2px var(--c-major);
+		box-shadow: inset 0 4px 0 var(--spot);
 	}
 
-	/* Pattern-insight hover: bottom edge (loop uses the TOP edge). box-shadow
-	   does not stack across classes, so the combined rules are required — without
-	   them a chip hover would visually delete the loop edge / playhead ring. */
+	/* Pattern-insight hover: the bars it names get a wash. */
 	.bar--hinted {
-		box-shadow: inset 0 -3px 0 var(--c-suspended);
-	}
-	.bar--in-loop.bar--hinted {
-		box-shadow:
-			inset 0 3px 0 var(--c-major),
-			inset 0 -3px 0 var(--c-suspended);
-	}
-	.bar--playing.bar--hinted {
-		box-shadow:
-			0 0 0 2px var(--c-major),
-			inset 0 -3px 0 var(--c-suspended);
+		background: var(--wash);
 	}
 
 	.bar--dragover {
-		border-color: var(--color-accent);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 40%, transparent);
+		outline: 2px dashed var(--ink);
+		outline-offset: -2px;
+	}
+
+	/* Repeat signs mark the loop: thick + thin barline and two dots, facing in. */
+	.bar--loop-start {
+		--barline: var(--ink);
+		border-left: 4px solid var(--barline);
+		padding-left: calc(var(--space-2) + 6px);
+
+		&::before {
+			content: '';
+			position: absolute;
+			left: 3px;
+			top: 0;
+			bottom: 0;
+			width: 1px;
+			background: var(--barline);
+		}
+
+		.bar__staff::before {
+			left: calc(-1 * var(--space-2) + 2px);
+		}
+	}
+
+	.bar--loop-end {
+		--barline: var(--ink);
+		border-right: 4px solid var(--barline);
+		padding-right: calc(var(--space-2) + 6px);
+
+		&::after {
+			content: '';
+			position: absolute;
+			right: 3px;
+			top: 0;
+			bottom: 0;
+			width: 1px;
+			background: var(--barline);
+		}
+
+		.bar__staff::after {
+			right: calc(-1 * var(--space-2) + 2px);
+		}
+	}
+
+	/* Repeat dots sit in the staff's two middle spaces. */
+	.bar--loop-start .bar__staff::before,
+	.bar--loop-end .bar__staff::after {
+		content: '';
+		position: absolute;
+		top: 6px;
+		width: 4px;
+		height: 4px;
+		border-radius: 50%;
+		background: var(--barline);
+		box-shadow: 0 5px 0 var(--barline);
+	}
+
+	/* Final barline at the end of the tune: thin + thick. */
+	.bar--final {
+		--barline: var(--ink);
+		border-right: 4px solid var(--barline);
+		padding-right: calc(var(--space-2) + 6px);
+
+		&::after {
+			content: '';
+			position: absolute;
+			right: 3px;
+			top: 0;
+			bottom: 0;
+			width: 1px;
+			background: var(--barline);
+		}
 	}
 
 	.bar__head {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
-		min-height: 20px;
+		gap: var(--space-1);
+		min-height: 28px;
+	}
+
+	.bar__num {
+		font-size: 0.75rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-3);
+		min-width: 1.5ch;
 	}
 
 	.visually-hidden-buttons {
@@ -221,25 +332,30 @@
 			width: auto;
 			height: auto;
 			margin: 0;
-			padding: 0 var(--space-1);
+			padding: 0 var(--space-2);
 			overflow: visible;
 			clip-path: none;
 			white-space: nowrap;
-			font-size: 0.65rem;
-			background: var(--color-white);
-			border: 1px solid var(--color-accent);
+			font-size: 0.75rem;
+			color: var(--ink);
+			background: var(--paper);
+			border: 1px solid var(--ink);
+			border-radius: var(--radius);
 		}
 	}
 
 	.bar__grip {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 24px;
 		cursor: grab;
-		color: var(--color-grey-400);
-		font-size: 0.85rem;
-		line-height: 1;
+		color: var(--ink-4);
 		user-select: none;
 
 		&:hover {
-			color: var(--color-black);
+			color: var(--ink);
 		}
 
 		&:active {
@@ -247,45 +363,95 @@
 		}
 	}
 
-	.bar__num {
-		color: var(--color-text-faint);
-	}
-
 	.bar__actions {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: 2px;
 		margin-left: auto;
 	}
 
 	.bar__action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-1);
+		min-width: 28px;
+		height: 28px;
 		border: 0;
+		border-radius: var(--radius);
 		background: transparent;
-		padding: var(--space-1) var(--space-2);
+		padding: 0 var(--space-2);
 		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text-muted);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--ink-2);
 
 		&:hover:not(:disabled) {
-			color: var(--color-black);
+			background: var(--wash);
+			color: var(--ink);
 		}
 
 		&:disabled {
-			color: var(--color-grey-400);
+			color: var(--ink-4);
 			cursor: not-allowed;
 		}
 
 		&--remove {
-			font-size: 1rem;
-			letter-spacing: 0;
+			padding: 0;
+		}
+	}
+
+	/* The bar tools stay out of the chart until you reach for the bar — on
+	   devices that can hover. Touch always shows them, at a reachable size. */
+	@media (hover: hover) and (pointer: fine) {
+		.bar__grip,
+		.bar__actions {
+			opacity: 0;
+			transition: opacity var(--motion-fast) var(--motion-ease-out);
+		}
+
+		.bar:hover .bar__grip,
+		.bar:hover .bar__actions,
+		.bar:focus-within .bar__actions {
+			opacity: 1;
+		}
+	}
+
+	@media (pointer: coarse) {
+		.bar__head {
+			min-height: 40px;
+		}
+
+		.bar__action {
+			min-width: 40px;
+			height: 40px;
+		}
+
+		.bar__action-text {
+			display: none;
 		}
 	}
 
 	.bar__slots {
 		display: flex;
-		gap: var(--space-2);
+		gap: 2px;
+	}
+
+	/* A single-line staff band with one slash per beat. */
+	.bar__staff {
+		position: relative;
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		height: 21px;
+		margin-top: var(--space-1);
+		background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 5px);
+	}
+
+	.slash {
+		font-family: var(--font-hand);
+		font-size: 1.125rem;
+		line-height: 1;
+		color: var(--ink-3);
 	}
 </style>

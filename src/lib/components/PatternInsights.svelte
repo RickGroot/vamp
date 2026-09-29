@@ -69,7 +69,7 @@
 							{d.formula} · {d.chords.map((c) => displayChord(c, view.offset)).join(' → ')}
 						</p>
 						{#if d.relation}
-							<p class="label info__relation">
+							<p class="hint info__relation">
 								In {displayChord(d.localTonic, view.offset)} — the {d.relation} of {keyInfo.tonic}
 								{keyInfo.mode}
 							</p>
@@ -118,37 +118,43 @@
 		display: inline-block;
 	}
 
-	/* Quiet-control voice (matches the header's art toggle), pill-shaped. */
+	/* A margin note on the chart: what this stretch of bars is. */
 	.chip {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-1);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
-		background: transparent;
-		padding: var(--space-1) var(--space-2);
+		gap: var(--space-2);
+		min-height: 32px;
+		border: 1px solid var(--edge);
+		border-radius: var(--radius);
+		background: var(--paper);
+		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text-muted);
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--ink);
 
-		&:hover {
-			border-color: var(--color-black);
-			color: var(--color-black);
+		&:hover,
+		&[aria-expanded='true'] {
+			border-color: var(--ink);
+			background: var(--wash);
+		}
+
+		@media (pointer: coarse) {
+			min-height: var(--tap);
 		}
 	}
 
 	.chip__dot {
-		width: 8px;
-		height: 8px;
+		width: 6px;
+		height: 6px;
 		border-radius: var(--radius-pill);
-		background: var(--c-suspended); /* informational blue — unclaimed by loop/playhead */
+		background: var(--ink-3);
 	}
 
 	.chip__bars {
-		color: var(--color-text-faint);
+		font-weight: 400;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-3);
 	}
 
 	/* Info popover: reuses the global .vmenu, but chips sit mid-page — anchor
@@ -163,8 +169,10 @@
 	.info__formula {
 		margin: 0;
 		padding: 0 var(--space-3);
-		font-size: 0.9rem;
-		color: var(--color-text);
+		font-family: var(--font-hand);
+		font-size: 1.375rem;
+		line-height: 1.2;
+		color: var(--ink);
 	}
 
 	.info__relation {
@@ -176,8 +184,8 @@
 	.info__text {
 		margin: var(--space-2) 0 0;
 		padding: 0 var(--space-3);
-		font-size: 0.85rem;
-		line-height: 1.45;
+		font-size: 0.875rem;
+		line-height: 1.5;
 		color: var(--color-text);
 
 		&--listen {

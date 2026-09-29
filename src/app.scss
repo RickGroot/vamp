@@ -1,55 +1,99 @@
-/* Vamp global styles — Hypersolid brand system.
-   Monochrome + a single orange accent, Suisse Int'l type, 4px grid, flat/sharp.
+/* Vamp global styles — golden hour.
+   The app is a sky: SUNRISE (the light theme) is a pale morning blue warming to
+   peach and gold at the horizon; SUNSET (the dark theme) is indigo deepening
+   through plum to a rose glow. The sun sits on the horizon behind the meadow and
+   rises when the band starts. Chord qualities are the colours of the light; the
+   chart is hand-lettered in Petaluma Script; the play button is the sun.
    Tokens are the single source of truth; components use var(--…), never raw hex. */
 
+@font-face {
+	font-family: 'Petaluma Script';
+	src: url('./lib/assets/petalumascript.woff2') format('woff2');
+	font-display: swap;
+}
+
 :root {
-	/* ---- Color: neutrals ---- */
-	--color-black: #1c1a1f;
-	--color-white: #ffffff;
-	--color-grey-800: #38383a;
-	--color-grey-600: #58595b;
-	--color-grey-500: #818286;
-	--color-grey-400: #b2b3b5;
-	--color-grey-200: #e4e4e4;
-	--color-grey-100: #f1f1f2;
-	--color-page-grey: #eeeeee;
+	color-scheme: light;
 
-	/* ---- Color: accent ---- */
-	--color-orange: #ff7b00;
-	--color-orange-50: #fff1e4;
-	--color-orange-200: #ffc997;
-	--color-orange-700: #d74c00;
+	/* ---- Sunrise: sky, paper & ink ---- */
+	--sky: linear-gradient(180deg, #e6ecfb 0%, #f1e6f3 30%, #fde4d6 60%, #ffe6b8 100%);
+	--ground: #fdf0ea; /* the page's representative tone (browser chrome, solid fills) */
+	--paper: #fffbf6; /* raised sheets: fields, popovers, buttons */
+	--wash: #fbe9dc; /* hover / pressed fill */
+	--ink: #2b2250; /* dawn violet: text, strong barlines, focus */
+	--ink-2: #574d78;
+	--ink-3: #645b84; /* hints, units (≥4.5:1 on every sky stop) */
+	--ink-4: #b3abc6; /* disabled + placeholder marks only */
+	--edge: #8a81a6; /* control borders */
+	--rule: #efdcd2; /* hairlines, the staff lines */
+	--shadow: rgb(43 34 80 / 0.14);
+	--danger: #c4203a;
+	/* A piano stays a piano whatever the light. */
+	--key-light: var(--paper);
+	--key-dark: var(--ink);
 
-	/* ---- Color: chord-quality palette (a bit more colour) ---- */
-	--c-major: #1fb6a6; /* teal */
-	--c-minor: #7b61ff; /* violet */
-	--c-dominant: #ff7b00; /* orange */
-	--c-diminished: #f0445a; /* red */
-	--c-augmented: #e255a1; /* pink */
-	--c-suspended: #2e9bf0; /* blue */
-	--c-other: #9a9ba0; /* grey */
+	/* ---- The sun: the play button, "on", and everything that makes music.
+	   Ink text sits on it. ---- */
+	--spot: #ff6a3d;
+	--on-spot: var(--ink);
+	--sun: #ffc233;
+	--sun-core: #ffcf5a;
+	--grass: #5aa65b;
+	--meadow-glow: 0;
 
-	/* Energetic gradient for the primary play action. */
-	--grad-play: linear-gradient(135deg, #ff7b00 0%, #e255a1 60%, #7b61ff 100%);
-	/* Wide warm→cool gradient that animates by sliding background-position: the
-	   left (0%) reads as the "play" colours, the right (100%) as the cool "playing"
-	   colours. Shared by the play button, the wordmark and the section chips so a
-	   single state change sweeps the same colours everywhere. */
-	--grad-flow: linear-gradient(135deg, #ff7b00 0%, #e255a1 16%, #7b61ff 36%, #1fb6a6 68%, #2e9bf0 100%);
+	/* How lit things sit on the page: a warm shadow by day, a glow at dusk. */
+	--lift: 0 4px 14px color-mix(in srgb, var(--spot) 30%, transparent);
+	--text-glow: 0 2px 14px color-mix(in srgb, var(--sun) 60%, transparent);
 
-	/* ---- Semantic ---- */
-	--color-bg: var(--color-white);
-	--color-text: var(--color-black);
-	--color-text-muted: var(--color-grey-600);
-	--color-text-faint: var(--color-grey-500);
-	--color-accent: var(--color-orange);
-	--color-border: var(--color-grey-200);
-	--color-divider: var(--color-black);
+	/* ---- Chord qualities as the colours of the light. Every chord sits on its
+	   --w- wash; the chord SOUNDING now is a solid block of its colour with
+	   --on-pigment text. The symbol always carries the quality as text too. ---- */
+	--c-major: #f2a900; /* gold */
+	--c-minor: #8b6fd6; /* lilac */
+	--c-dominant: #ff6a3d; /* coral */
+	--c-diminished: #e8456b; /* rose */
+	--c-augmented: #3d8fe0; /* sky */
+	--c-suspended: #1fa8a0; /* lagoon */
+	--c-other: #a39aa8; /* haze */
+	--on-pigment: var(--ink);
+
+	--w-major: #fff0c7;
+	--w-minor: #ece5fb;
+	--w-dominant: #ffe3d8;
+	--w-diminished: #fde0e7;
+	--w-augmented: #deecfb;
+	--w-suspended: #d8f2f0;
+	--w-other: #efebf0;
+	/* An outline of the chord's colour round its wash (0% = none by day). */
+	--ring: 0%;
+
+	/* A soft film grain over the sky. */
+	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .17 0 0 0 0 .13 0 0 0 0 .31 0 0 0 .3 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+	/* ---- Legacy names, mapped onto the sky ----
+	   Kept so older rules keep resolving; prefer the names above. */
+	--color-bg: var(--ground);
+	--color-white: var(--paper);
+	--color-black: var(--ink);
+	--color-text: var(--ink);
+	--color-text-muted: var(--ink-2);
+	--color-text-faint: var(--ink-3);
+	--color-grey-600: var(--ink-2);
+	--color-grey-500: var(--ink-3);
+	--color-grey-400: var(--ink-4);
+	--color-grey-200: var(--rule);
+	--color-grey-100: var(--wash);
+	--color-border: var(--rule);
+	--color-accent: var(--ink);
+	--color-orange: var(--ink);
 
 	/* ---- Typography ---- */
-	--font-primary: "Suisse Int'l", 'Helvetica Neue', Arial, system-ui, sans-serif;
+	--font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-hand: 'Petaluma Script', var(--font-ui);
+	--font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+	--font-primary: var(--font-ui);
 
-	/* ---- Spacing (4px Precision Matrix) ---- */
+	/* ---- Spacing (4px grid) ---- */
 	--space-1: 4px;
 	--space-2: 8px;
 	--space-3: 12px;
@@ -61,15 +105,81 @@
 	--space-24: 96px;
 
 	/* ---- Shape ---- */
-	--radius-none: 0px;
+	--radius: 8px;
+	--radius-sm: 5px;
 	--radius-pill: 999px;
-	--border-hairline: 1px solid var(--color-black);
+	--border-hairline: 1px solid var(--ink);
+	--tap: 44px; /* minimum touch target */
 
 	/* ---- Motion ---- */
 	--motion-fast: 120ms;
 	--motion-standard: 180ms;
 	--motion-grad: 650ms;
 	--motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
+	--motion-pop: cubic-bezier(0.34, 1.56, 0.64, 1); /* a small overshoot for things that bloom */
+}
+
+/* ---- Sunset: the same page as the light goes ---- */
+@mixin night {
+	color-scheme: dark;
+	--sky: linear-gradient(180deg, #1b1541 0%, #2c1a52 35%, #4a2160 62%, #5e2550 82%, #7a3048 100%);
+	--ground: #2a1a4f;
+	--paper: #2e2458;
+	--wash: #3a2e66;
+	--ink: #fff0e0;
+	--ink-2: #e6d3dc;
+	--ink-3: #cdb6c9;
+	--ink-4: #85709a;
+	--edge: #a58fb2;
+	--rule: #4a3b72;
+	--shadow: rgb(0 0 0 / 0.45);
+	--danger: #ff7a8c;
+	--key-light: #f3e6ee;
+	--key-dark: #160f30;
+
+	--spot: #ffb347;
+	--on-spot: #231a45;
+	--sun: #ffd166;
+	--sun-core: #ff9a4a;
+	--grass: #150f33; /* silhouettes against the glow */
+	--meadow-glow: 1;
+
+	--lift: 0 0 18px color-mix(in srgb, var(--spot) 45%, transparent);
+	--text-glow: 0 0 16px color-mix(in srgb, var(--sun) 45%, transparent);
+
+	--c-major: #ffc94d;
+	--c-minor: #c2a8ff;
+	--c-dominant: #ff9466;
+	--c-diminished: #ff7096;
+	--c-augmented: #7cb8ff;
+	--c-suspended: #5ed8cc;
+	--c-other: #bfb2c6;
+	--on-pigment: #231a45;
+
+	/* At dusk colour glows round the chords instead of filling them: a dark
+	   fill of any of these hues turns brown or grey. */
+	--w-major: var(--paper);
+	--w-minor: var(--paper);
+	--w-dominant: var(--paper);
+	--w-diminished: var(--paper);
+	--w-augmented: var(--paper);
+	--w-suspended: var(--paper);
+	--w-other: var(--paper);
+	--ring: 65%;
+
+	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .92 0 0 0 0 .88 0 0 0 .28 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Theme: Auto follows the system; Sunrise / Sunset are pinned per device by the
+   header switch (data-theme on <html>, set before first paint in app.html). */
+:root[data-theme='night'] {
+	@include night;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='day']) {
+		@include night;
+	}
 }
 
 *,
@@ -84,23 +194,47 @@ body {
 	padding: 0;
 }
 
+html {
+	background-color: var(--ground);
+}
+
 body {
-	background: var(--color-bg);
-	color: var(--color-text);
-	font-family: var(--font-primary);
+	color: var(--ink);
+	font-family: var(--font-ui);
 	font-weight: 400;
 	font-size: 1rem;
-	line-height: 1.4;
+	line-height: 1.45;
 	-webkit-font-smoothing: antialiased;
 	text-rendering: optimizeLegibility;
+	caret-color: var(--spot);
+	scrollbar-color: var(--edge) transparent;
+}
+
+/* The sky, fixed behind everything (a layer, not background-attachment: fixed,
+   which phones ignore), with the film grain over it. */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: var(--grain), var(--sky);
+	background-size:
+		180px 180px,
+		100% 100%;
+}
+
+::selection {
+	background: color-mix(in srgb, var(--sun) 55%, transparent);
+	color: var(--ink);
 }
 
 h1,
 h2,
 h3 {
-	font-weight: 300;
-	letter-spacing: -0.02em;
-	line-height: 1.05;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
 	margin: 0;
 }
 
@@ -109,101 +243,163 @@ button {
 	cursor: pointer;
 }
 
-/* Uppercase tracked label — used for metadata, codes, small headers. */
+a {
+	color: inherit;
+	text-underline-offset: 3px;
+	text-decoration-thickness: 1px;
+}
+
+/* One focus ring, everywhere: ink, offset, never removed without a replacement. */
+:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+}
+
+/* Small tracked label — field names and metadata. Never paragraph copy. */
 .label {
-	font-size: 0.6875rem;
-	font-weight: 400;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--color-text-muted);
-}
-
-/* The wordmark is the only Semi-Bold element. */
-.wordmark {
+	font-size: 0.75rem;
 	font-weight: 600;
-	letter-spacing: -0.02em;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
+	color: var(--ink-2);
 }
 
-/* Shared toolbar button (Undo/Redo, File, Share/export, …). */
-.bar-btn {
-	border: 1px solid var(--color-border);
-	background: transparent;
-	padding: var(--space-2) var(--space-3);
-	font-family: inherit;
-	font-size: 0.6875rem;
+/* Secondary sentence-case text: hints, statuses, metadata you read, not scan. */
+.hint {
+	font-size: 0.875rem;
 	font-weight: 400;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--color-text);
-	border-radius: 0;
+	line-height: 1.45;
+	color: var(--ink-3);
+}
+
+/* Hand-lettered display voice: wordmark, song title, chord symbols. */
+.hand {
+	font-family: var(--font-hand);
+	font-weight: 400;
+	letter-spacing: 0;
+}
+
+.wordmark {
+	font-family: var(--font-hand);
+	font-weight: 400;
+}
+
+/* Shared button (Undo/Redo, File, Share, compose tools, toggles). Sentence
+   case, a paper tab with a 3:1 edge; "on" is lit by the sun. */
+.bar-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	min-height: 36px;
+	border: 1px solid var(--edge);
+	border-radius: var(--radius);
+	background: var(--paper);
+	padding: 0 var(--space-3);
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--ink);
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		background-color var(--motion-fast) var(--motion-ease-out),
+		border-color var(--motion-fast) var(--motion-ease-out),
+		color var(--motion-fast) var(--motion-ease-out);
 
 	&:hover:not(:disabled) {
-		background: var(--color-black);
-		border-color: var(--color-black);
-		color: var(--color-white);
+		border-color: var(--ink);
+		background: var(--wash);
+	}
+
+	&:active:not(:disabled) {
+		background: var(--rule);
 	}
 
 	&:disabled {
-		color: var(--color-grey-400);
+		color: var(--ink-4);
+		border-color: var(--rule);
 		cursor: not-allowed;
 	}
 
-	&--on {
-		background: var(--c-major);
-		border-color: var(--c-major);
-		color: var(--color-white);
+	&--on,
+	&--on:hover:not(:disabled) {
+		background: var(--spot);
+		border-color: var(--spot);
+		color: var(--on-spot);
+		box-shadow: var(--lift);
+	}
+
+	@media (pointer: coarse) {
+		min-height: var(--tap);
 	}
 }
 
-/* Small colour chip on a section header (Band, Notation, Practice) — a light,
-   consistent "app-like" accent. Colour via `--ic` (defaults to neutral grey). */
-.sec-icon {
-	position: relative;
-	flex: 0 0 auto;
+/* Quiet variant: no box until you reach for it. */
+.bar-btn--quiet {
+	border-color: transparent;
+	background: transparent;
+}
+
+/* Collapsible section header: a real heading wrapping its disclosure button. */
+.sec-head {
+	margin: 0;
+	font-size: inherit;
+	font-weight: inherit;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.sec-toggle {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: var(--space-1) var(--space-3);
+	width: 100%;
+	min-height: var(--tap);
+	border: 0;
+	background: transparent;
+	padding: var(--space-2) 0;
+	font-family: inherit;
+	color: var(--ink);
+	text-align: left;
+}
+
+.sec-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.sec-hint {
+	font-size: 0.875rem;
+	color: var(--ink-3);
+}
+
+.chev {
+	display: inline-block;
+	width: 1em;
 	align-self: center;
-	width: 26px;
-	height: 26px;
-	border-radius: 7px;
-	display: grid;
-	place-items: center;
-	color: var(--color-white);
-	/* Smooth two-colour warm gradient (closed); the cool one cross-fades on top. */
-	background: linear-gradient(135deg, var(--c-dominant), var(--c-augmented));
+	color: var(--ink-2);
+	transition: transform var(--motion-standard) var(--motion-ease-out);
 }
 
-.sec-icon::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	z-index: 0;
-	border-radius: inherit;
-	background: linear-gradient(135deg, var(--c-major), var(--c-suspended));
-	opacity: 0;
-	transition: opacity var(--motion-grad) var(--motion-ease-out);
+.chev--open {
+	transform: rotate(90deg);
 }
 
-/* Keep the glyph above the cross-fading ::before overlay. */
-.sec-icon > svg {
-	position: relative;
-	z-index: 1;
-}
-
-/* Open section → fade in the cool gradient. */
-.sec-icon--open::before {
-	opacity: 1;
-}
-
-/* Shared dropdown menu (File, Share/export). */
+/* Shared dropdown sheet (File, Share/export, Examples, Presets, …). */
 .vmenu {
 	position: absolute;
 	top: 100%;
 	right: 0;
 	margin-top: var(--space-1);
 	min-width: 220px;
-	background: var(--color-white);
-	border: 1px solid var(--color-black);
-	box-shadow: 0 8px 24px rgba(28, 26, 31, 0.14);
+	background: var(--paper);
+	border: 1px solid var(--ink);
+	border-radius: var(--radius);
+	box-shadow: 0 10px 28px var(--shadow);
 	z-index: 50;
 	padding: var(--space-1);
 }
@@ -211,16 +407,18 @@ button {
 .vmenu__row {
 	display: block;
 	width: 100%;
+	min-height: 36px;
 	text-align: left;
 	border: 0;
+	border-radius: 2px;
 	background: transparent;
 	padding: var(--space-2) var(--space-3);
 	font-family: inherit;
-	font-size: 0.95rem;
-	color: var(--color-text);
+	font-size: 0.9375rem;
+	color: var(--ink);
 
 	&:hover {
-		background: var(--color-grey-100);
+		background: var(--wash);
 	}
 }
 
@@ -228,31 +426,50 @@ button {
 .field {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-2);
+	gap: var(--space-1);
 }
 
 .field__row {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: var(--space-2);
 }
 
 .field__input,
 .field__select {
+	min-height: 36px;
 	font-family: inherit;
-	font-size: 1.25rem;
-	font-weight: 300;
-	letter-spacing: -0.02em;
-	color: var(--color-text);
-	background: var(--color-white);
+	font-size: 1.125rem;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink);
+	background: transparent;
 	border: 0;
-	border-bottom: var(--border-hairline);
+	border-bottom: 1px solid var(--edge);
 	padding: var(--space-1) 0;
 	border-radius: 0;
 
+	&:hover {
+		border-bottom-color: var(--ink);
+	}
+
+	/* An underlined field's focus indicator is its underline, doubled in ink. */
 	&:focus {
 		outline: none;
-		border-bottom-color: var(--color-accent);
+		border-bottom-color: var(--ink);
+		box-shadow: inset 0 -1px 0 var(--ink);
+	}
+
+	option {
+		background: var(--paper);
+		color: var(--ink);
+	}
+}
+
+@media (pointer: coarse) {
+	.field__input,
+	.field__select {
+		min-height: var(--tap);
 	}
 }
 
@@ -266,273 +483,105 @@ button {
 }
 
 .field__unit {
-	color: var(--color-text-faint);
+	font-size: 0.875rem;
+	color: var(--ink-3);
+}
+
+/* Toasts ride above the play dock when it's out. */
+body:has(.dock--shown) .notice-host {
+	bottom: calc(var(--tap) + var(--space-12));
 }
 
 /* ----------------------------------------------------------------------------
-   Art mode — generative colour flourishes, gated entirely under `.frame.art`
-   (header toggle). Off = none of this applies. Uses layered low-opacity
-   background gradients (no overflow/z-index tricks) so nothing gets clipped.
+   Nature — always on. Three layers behind the content (weather, the sun, the
+   meadow), all driven by the music (see +layout.svelte), all still in silence.
    ---------------------------------------------------------------------------- */
+
+/* The sounding chord's colour, as a transitionable colour: registered so the
+   weather can crossfade over one beat instead of snapping. */
+@property --weather {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+
+:root {
+	transition: --weather var(--weather-ms, 600ms) ease-out;
+}
+
 .frame.art {
 	position: relative;
 	z-index: 0;
 	isolation: isolate;
 }
 
-/* Slow drifting aurora behind the app (shows through page margins + gaps). */
-.art-bg {
-	position: fixed;
-	inset: -12%;
-	z-index: 0;
-	pointer-events: none;
-	opacity: 0.2;
-	filter: blur(34px);
-	background:
-		radial-gradient(38% 38% at 22% 26%, color-mix(in srgb, var(--c-dominant) 70%, transparent), transparent 70%),
-		radial-gradient(42% 42% at 80% 22%, color-mix(in srgb, var(--c-augmented) 65%, transparent), transparent 70%),
-		radial-gradient(48% 48% at 66% 84%, color-mix(in srgb, var(--c-minor) 65%, transparent), transparent 70%),
-		radial-gradient(44% 44% at 24% 80%, color-mix(in srgb, var(--c-suspended) 60%, transparent), transparent 70%);
-	/* cursor parallax (JS sets --art-px/--art-py), layered over the drift + hue animations */
-	translate: var(--art-px, 0) var(--art-py, 0);
-	transition: translate 400ms var(--motion-ease-out);
-	animation:
-		art-drift 28s ease-in-out infinite alternate,
-		art-hue 64s linear infinite;
-}
-.art-bg::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(40% 40% at 70% 32%, color-mix(in srgb, var(--c-augmented) 55%, transparent), transparent 70%),
-		radial-gradient(46% 46% at 30% 62%, color-mix(in srgb, var(--c-major) 50%, transparent), transparent 70%);
-	animation: art-drift2 36s ease-in-out infinite alternate;
-}
-
-/* Generative geometric lattice (canvas): a grid of small squares that tilt in a
-   slow parametric field and turn around in order from the cursor. Crisp layer
-   painted over the blurred aurora, both behind content. Motion is all in JS. */
-.art-lattice {
+/* Harmonic weather: the light takes the chord family's colour — a wash from
+   high in the sky and a glow along the horizon, crossfading over a beat. */
+.art-weather {
 	position: fixed;
 	inset: 0;
 	z-index: 0;
-	width: 100vw;
-	height: 100vh;
 	pointer-events: none;
-	opacity: 0.2;
+	background:
+		radial-gradient(90% 50% at 50% -12%, color-mix(in srgb, var(--weather) 22%, transparent), transparent 70%),
+		radial-gradient(120% 40% at 50% 112%, color-mix(in srgb, var(--weather) 30%, transparent), transparent 70%);
 }
 
-/* App content sits above the aurora + lattice. */
+/* The sun on the horizon, behind the meadow. It rises when the band starts and
+   settles back when it stops — moved by play and stop, never by a clock. */
+.art-sun {
+	position: fixed;
+	left: 50%;
+	bottom: 0;
+	z-index: 0;
+	width: min(76vw, 460px);
+	aspect-ratio: 1;
+	border-radius: 50%;
+	pointer-events: none;
+	background: radial-gradient(
+		circle,
+		var(--sun-core) 0 33%,
+		color-mix(in srgb, var(--sun-core) 45%, transparent) 34%,
+		color-mix(in srgb, var(--sun) 16%, transparent) 50%,
+		transparent 70%
+	);
+	transform: translate(-50%, 62%);
+	transition: transform 1.8s var(--motion-ease-out);
+}
+
+.art-sun--up {
+	transform: translate(-50%, 44%);
+}
+
+/* The meadow strip along the bottom edge, fading up into the page. */
+.art-meadow {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 0;
+	width: 100%;
+	height: clamp(64px, 12vh, 124px);
+	pointer-events: none;
+	-webkit-mask-image: linear-gradient(to top, #000 55%, transparent);
+	mask-image: linear-gradient(to top, #000 55%, transparent);
+}
+
+/* App content sits above the art layers, and scrolls clear of the meadow. */
 .frame.art > .head,
-.frame.art > .editor {
+.frame.art > .editor,
+.frame.art > .practice-page {
 	position: relative;
 	z-index: 1;
 }
 
-/* Bar cards: faint animated colour wash (layered under the content); the playing
-   bar fills brighter. Per-bar --art-delay (seeded from the bar id) varies phase. */
-.frame.art .bar {
-	background:
-		linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--c-major) 12%, transparent),
-			color-mix(in srgb, var(--c-augmented) 12%, transparent) 50%,
-			color-mix(in srgb, var(--c-suspended) 12%, transparent)
-		),
-		var(--color-white);
-	background-size:
-		220% 220%,
-		auto;
-	background-position:
-		0% 50%,
-		0 0;
-	animation: art-wash 15s ease-in-out var(--art-delay, 0s) infinite alternate;
-}
-.frame.art .bar--playing {
-	background:
-		linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--c-major) 30%, transparent),
-			color-mix(in srgb, var(--c-augmented) 30%, transparent) 50%,
-			color-mix(in srgb, var(--c-suspended) 30%, transparent)
-		),
-		var(--color-white);
-	background-size:
-		220% 220%,
-		auto;
-	background-position:
-		0% 50%,
-		0 0;
-	animation: art-wash 15s ease-in-out var(--art-delay, 0s) infinite alternate;
+.frame.art > .editor,
+.frame.art > .practice-page {
+	padding-bottom: max(var(--space-24), calc(12vh + var(--space-12)));
 }
 
-/* Notation staff: gentle colour wash behind the score. */
-.frame.art .staff-wrap {
-	background:
-		linear-gradient(
-			120deg,
-			color-mix(in srgb, var(--c-augmented) 9%, transparent),
-			color-mix(in srgb, var(--c-minor) 9%, transparent) 50%,
-			color-mix(in srgb, var(--c-major) 9%, transparent)
-		),
-		var(--color-white);
-	background-size:
-		200% 200%,
-		auto;
-	background-position:
-		0% 50%,
-		0 0;
-	animation: art-wash 22s ease-in-out infinite alternate;
-}
-
-/* Gradient hovers + a continuous sweep on the main buttons. */
-.frame.art .bar-btn,
-.frame.art .add-bar,
-.frame.art .inspire,
-.frame.art .play {
-	transition:
-		transform var(--motion-fast) var(--motion-ease-out),
-		box-shadow var(--motion-standard) var(--motion-ease-out),
-		background-position var(--motion-grad) var(--motion-ease-out);
-}
-.frame.art .bar-btn:hover:not(:disabled),
-.frame.art .add-bar:hover,
-.frame.art .inspire:hover {
-	background-image: var(--grad-flow);
-	background-size: 300% 100%;
-	background-repeat: no-repeat;
-	border-color: transparent;
-	color: var(--color-white);
-	/* ping-pong within the gradient (no tiling seam) for a soft drift */
-	animation: art-sweep 5s ease-in-out infinite alternate;
-}
-.frame.art .bar-btn:active:not(:disabled),
-.frame.art .add-bar:active,
-.frame.art .inspire:active,
-.frame.art .play:active {
-	transform: scale(0.95);
-}
-
-/* Bar cards lift + glow on hover. */
-.frame.art .bar {
-	transition:
-		transform 200ms var(--motion-ease-out),
-		box-shadow 250ms var(--motion-ease-out);
-}
-.frame.art .bar:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 12px 28px color-mix(in srgb, var(--c-augmented) 24%, transparent);
-	z-index: 2;
-}
-
-/* Glowing animated outline on the focused chord slot (in its quality colour). */
-.frame.art .slot:focus-within {
-	box-shadow:
-		0 0 0 2px color-mix(in srgb, var(--q, var(--c-major)) 55%, transparent),
-		0 0 20px color-mix(in srgb, var(--q, var(--c-major)) 35%, transparent);
-}
-
-/* Playing: a breathing aura on the play button + flowing wordmark. */
-.frame.art .play--on {
-	animation: art-pulse 1.7s ease-in-out infinite;
-}
-.frame.art .head__mark--playing {
-	animation: art-wordflow 4.5s linear infinite;
-}
-
-@keyframes art-drift {
-	0% {
-		transform: translate3d(-1.5%, -1%, 0) scale(1.04) rotate(0deg);
-	}
-	100% {
-		transform: translate3d(1.5%, 1.5%, 0) scale(1.12) rotate(4deg);
-	}
-}
-@keyframes art-wash {
-	0% {
-		background-position:
-			0% 50%,
-			0 0;
-	}
-	100% {
-		background-position:
-			100% 50%,
-			0 0;
-	}
-}
-@keyframes art-hue {
-	0% {
-		filter: blur(34px) hue-rotate(0deg);
-	}
-	100% {
-		filter: blur(34px) hue-rotate(52deg);
-	}
-}
-@keyframes art-drift2 {
-	0% {
-		transform: translate3d(2%, 1%, 0) scale(1.1) rotate(0deg);
-	}
-	100% {
-		transform: translate3d(-2%, -1.5%, 0) scale(1.04) rotate(-5deg);
-	}
-}
-@keyframes art-sweep {
-	from {
-		background-position: 0% 0;
-	}
-	to {
-		background-position: 100% 0;
-	}
-}
-@keyframes art-pulse {
-	0%,
-	100% {
-		box-shadow:
-			0 0 0 4px color-mix(in srgb, var(--c-major) 28%, transparent),
-			0 6px 26px color-mix(in srgb, var(--c-suspended) 12%, transparent);
-	}
-	50% {
-		box-shadow:
-			0 0 0 9px color-mix(in srgb, var(--c-major) 16%, transparent),
-			0 8px 36px color-mix(in srgb, var(--c-suspended) 48%, transparent);
-	}
-}
-@keyframes art-wordflow {
-	from {
-		background-position: 55% 0;
-	}
-	to {
-		background-position: 255% 0;
-	}
-}
-
-/* Click ripple (spawned by JS only while art mode is on). */
-.art-ripple {
-	position: fixed;
-	z-index: 9999;
-	width: 16px;
-	height: 16px;
-	margin: -8px 0 0 -8px;
-	border-radius: 50%;
-	pointer-events: none;
-	background: var(--grad-flow);
-	background-size: 200% 100%;
-	animation: art-ripple-pop 600ms var(--motion-ease-out) forwards;
-}
-@keyframes art-ripple-pop {
-	0% {
-		transform: scale(0.35);
-		opacity: 0.5;
-	}
-	100% {
-		transform: scale(11);
-		opacity: 0;
-	}
-}
-
-/* Reduced motion: kill duration AND iteration count. Without the count, the
-   `infinite` art animations cycle every 0.01ms — each frame samples a random
+/* Reduced motion: kill duration AND iteration count. Without the count, an
+   `infinite` animation cycles every 0.01ms — each frame samples a random
    phase, i.e. strobing, delivered precisely to users who asked for no motion.
    `*` never matches pseudo-elements, so ::before/::after need naming too. */
 @media (prefers-reduced-motion: reduce) {

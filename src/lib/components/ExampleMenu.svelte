@@ -25,7 +25,7 @@
 </script>
 
 <div class="examples" onfocusout={onFocusOut} use:dismissable={{ open, close: () => (open = false) }}>
-	<button class="examples__btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>
+	<button class="bar-btn" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		Examples
 	</button>
 
@@ -44,14 +44,14 @@
 					<li>
 						<button class="item" type="button" onclick={() => load(example)}>
 							<span class="item__title">{example.title}</span>
-							<span class="item__origin label">{example.origin}</span>
+							<span class="item__origin hint">{example.origin}</span>
 						</button>
 					</li>
 				{:else}
-					<li class="menu__empty label">No songs match “{query}”.</li>
+					<li class="menu__empty hint">No songs match “{query}”.</li>
 				{/each}
 			</ul>
-			<p class="menu__note label">Public-domain · simplified</p>
+			<p class="menu__note hint">Public-domain · simplified</p>
 		</div>
 	{/if}
 </div>
@@ -62,22 +62,7 @@
 		display: inline-block;
 	}
 
-	.examples__btn {
-		border: 1px solid var(--color-black);
-		background: transparent;
-		padding: var(--space-2) var(--space-3);
-		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text);
-
-		&:hover {
-			background: var(--color-black);
-			color: var(--color-white);
-		}
-	}
+	
 
 	.menu {
 		position: absolute;
@@ -86,8 +71,9 @@
 		margin-top: var(--space-1);
 		min-width: 260px;
 		background: var(--color-white);
-		border: 1px solid var(--color-black);
-		box-shadow: 0 8px 24px rgba(28, 26, 31, 0.14);
+		border: 1px solid var(--ink);
+		border-radius: var(--radius);
+		box-shadow: 0 10px 28px var(--shadow);
 		z-index: 50;
 	}
 
@@ -103,7 +89,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 
@@ -122,20 +109,22 @@
 		width: 100%;
 		border: 0;
 		background: transparent;
+		border-radius: 2px;
 		padding: var(--space-2) var(--space-3);
 		text-align: left;
-		color: var(--color-text);
+		color: var(--ink);
 
-		&:hover {
-			background: var(--color-grey-100);
-			box-shadow: inset 3px 0 0 var(--c-major);
+		&:hover,
+		&:focus-visible {
+			background: var(--wash);
 		}
 	}
 
+	/* Tune names in the hand the chart is written in — a set list. */
 	.item__title {
-		font-size: 1rem;
-		font-weight: 300;
-		letter-spacing: -0.01em;
+		font-family: var(--font-hand);
+		font-size: 1.25rem;
+		line-height: 1.15;
 	}
 
 	.item__origin {

@@ -108,10 +108,17 @@ async function requestPersistence(): Promise<void> {
 	}
 }
 
-export async function saveProgression(progression: Progression): Promise<void> {
+/**
+ * Save by id (creates or overwrites). `restore` puts a just-deleted record back
+ * exactly as it was, keeping its timestamp — and so its place in the list.
+ */
+export async function saveProgression(
+	progression: Progression,
+	opts: { restore?: boolean } = {}
+): Promise<void> {
 	await requestPersistence();
 	const db = await getDb();
-	await db.put(STORE, { ...progression, updatedAt: Date.now() });
+	await db.put(STORE, opts.restore ? progression : { ...progression, updatedAt: Date.now() });
 }
 
 /** All saved progressions, newest-updated first, migrated to the current shape. */

@@ -76,13 +76,17 @@
 	<!-- scale tones -->
 	{#each dots as d, i (i)}
 		<circle
+			class="tone"
+			class:tone--root={d.root}
+			class:tone--open={d.open}
 			cx={d.x}
 			cy={d.y}
 			r={d.open ? 5.5 : 6.5}
-			fill={d.open ? 'transparent' : `var(--c-${d.root ? 'dominant' : 'major'})`}
-			stroke={`var(--c-${d.root ? 'dominant' : 'major'})`}
-			stroke-width={d.open ? 2 : 0}
 		/>
+		{#if d.root && !d.open}
+			<!-- The root carries a paper pip: shape, not colour, marks it. -->
+			<circle class="tone__pip" cx={d.x} cy={d.y} r="2.2" />
+		{/if}
 	{/each}
 </svg>
 
@@ -109,8 +113,24 @@
 		fill: var(--color-grey-200);
 	}
 	.fretnum {
-		fill: var(--color-text-faint);
+		fill: var(--ink-3);
 		font-family: inherit;
-		font-size: 9px;
+		font-size: 11px;
+	}
+	.tone {
+		fill: var(--ink-2);
+		stroke: var(--ink-2);
+		stroke-width: 0;
+	}
+	.tone--root {
+		fill: var(--ink);
+		stroke: var(--ink);
+	}
+	.tone--open {
+		fill: transparent;
+		stroke-width: 2;
+	}
+	.tone__pip {
+		fill: var(--paper);
 	}
 </style>

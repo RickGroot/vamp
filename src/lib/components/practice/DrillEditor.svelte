@@ -106,7 +106,7 @@
 		{:else}
 			<label class="label" for="d-quality">Quality</label>
 			<input id="d-quality" class="editor__quality" type="text" bind:value={quality} placeholder="maj7" />
-			<span class="label editor__hint">as in C{quality}</span>
+			<span class="hint editor__hint">as in C{quality}</span>
 		{/if}
 	</div>
 
@@ -120,7 +120,7 @@
 			placeholder="1 2 3 5"
 			aria-describedby="d-degrees-help"
 		/>
-		<span class="label editor__hint" id="d-degrees-help">
+		<span class="hint editor__hint" id="d-degrees-help">
 			Steps of the {kind === 'chord' ? 'chord' : 'scale'}, counting from 1. Go past the top and it
 			carries into the next octave; use 0 or negatives to go below.
 		</span>
@@ -129,7 +129,7 @@
 	<div class="editor__row">
 		<label class="label" for="d-rhythm">Beats each</label>
 		<input id="d-rhythm" class="editor__rhythm" type="text" bind:value={rhythm} placeholder="0.5" />
-		<span class="label editor__hint">Repeats across the cell. 1 = a beat, 0.5 = an eighth.</span>
+		<span class="hint editor__hint">Repeats across the cell. 1 = a beat, 0.5 = an eighth.</span>
 	</div>
 
 	<div class="editor__row">
@@ -139,11 +139,11 @@
 		<input id="d-cells" type="number" min="1" max="32" step="1" bind:value={cells} />
 	</div>
 
-	<p class="editor__preview label">
+	<p class="editor__preview hint">
 		Plays: {preview} · {draft.pattern.cell.length * cells} notes per key
 	</p>
 
-	{#if error}<p class="editor__error label" role="alert">{error}</p>{/if}
+	{#if error}<p class="editor__error hint" role="alert">{error}</p>{/if}
 
 	<div class="editor__actions">
 		<button class="bar-btn" type="button" onclick={onclose}>Cancel</button>
@@ -183,7 +183,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 
@@ -216,7 +217,7 @@
 
 	.editor__error {
 		margin: 0;
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 
 	.editor__actions {

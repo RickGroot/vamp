@@ -29,7 +29,7 @@
 
 	{#if open}
 		<div class="vmenu left">
-			<p class="label hint">In {keyInfo.tonic} {keyInfo.mode}</p>
+			<p class="hint">In {keyInfo.tonic} {keyInfo.mode}</p>
 			{#each chords as c (c.roman)}
 				<button class="vmenu__row chord" type="button" onclick={() => progression.appendChordBar(c.symbol)}>
 					<span class="rn">{c.roman}</span>

@@ -9,7 +9,8 @@ const KEY = 'vamp:scales';
 export type ScaleView = 'keyboard' | 'staff' | 'fretboard';
 
 class ScalesStore {
-	open = $state(true);
+	/** Collapsed on a first visit; remembered after that. A chord's scale shortcut opens it. */
+	open = $state(false);
 	root = $state('C');
 	type = $state('major');
 	/** Which visualisation is shown. */
@@ -27,6 +28,7 @@ class ScalesStore {
 				if (typeof p.root === 'string') this.root = p.root;
 				if (typeof p.type === 'string') this.type = p.type;
 				if (p.display === 'staff' || p.display === 'fretboard') this.display = p.display;
+				if (typeof p.open === 'boolean') this.open = p.open;
 			} catch {
 				/* defaults */
 			}
@@ -41,7 +43,7 @@ class ScalesStore {
 		if (browser)
 			localStorage.setItem(
 				KEY,
-				JSON.stringify({ root: this.root, type: this.type, display: this.display })
+				JSON.stringify({ root: this.root, type: this.type, display: this.display, open: this.open })
 			);
 	}
 
@@ -63,6 +65,7 @@ class ScalesStore {
 
 	setOpen(open: boolean): void {
 		this.open = open;
+		this.persist();
 	}
 
 	/** Open the section pre-loaded with scales that fit a chord. */

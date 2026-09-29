@@ -41,7 +41,7 @@
 			{/each}
 		</select>
 		{#if drills.steppingTempo}
-			<span class="sub label">every</span>
+			<span class="sub hint">every</span>
 			<select
 				class="sel sel--sm"
 				aria-label="Loops between tempo steps"
@@ -52,7 +52,7 @@
 					<option value={n}>{n}</option>
 				{/each}
 			</select>
-			<span class="sub label">loops · up to</span>
+			<span class="sub hint">loops · up to</span>
 			<input
 				class="num"
 				type="number"
@@ -63,7 +63,7 @@
 				value={drills.tempoMax}
 				onchange={(e) => drills.setTempoMax(Number((e.target as HTMLInputElement).value))}
 			/>
-			<span class="sub label">bpm</span>
+			<span class="sub hint">bpm</span>
 		{/if}
 	</div>
 
@@ -81,7 +81,7 @@
 			{/each}
 		</select>
 		{#if drills.cyclingKey}
-			<span class="sub label">every</span>
+			<span class="sub hint">every</span>
 			<select
 				class="sel sel--sm"
 				aria-label="Loops between key changes"
@@ -92,7 +92,7 @@
 					<option value={n}>{n}</option>
 				{/each}
 			</select>
-			<span class="sub label">loops</span>
+			<span class="sub hint">loops</span>
 		{/if}
 	</div>
 
@@ -136,7 +136,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 
@@ -156,7 +157,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 

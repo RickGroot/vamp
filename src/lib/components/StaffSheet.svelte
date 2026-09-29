@@ -385,7 +385,7 @@
 	}
 
 	.staff-error {
-		color: var(--c-diminished);
+		color: var(--danger);
 		padding: var(--space-2);
 	}
 
@@ -399,7 +399,7 @@
 		transition: fill 90ms var(--motion-ease-out);
 	}
 	.staff :global(.chord-active) {
-		fill: var(--c-major);
+		fill: var(--ink);
 		font-weight: 700;
 	}
 
@@ -413,7 +413,7 @@
 		transition: fill 90ms var(--motion-ease-out);
 	}
 	.staff :global(.slot-hl--on) {
-		fill: color-mix(in srgb, var(--c-major) 15%, transparent);
+		fill: color-mix(in srgb, var(--ink) 12%, transparent);
 	}
 
 	/* Chord-chart mode: hide the placeholder noteheads + stems, keep the chord names. */
@@ -426,7 +426,14 @@
 
 	/* Active (playing) chord highlight — colours the chord tones in helper-notes mode. */
 	.staff :global(.vf-active path) {
-		fill: var(--c-major);
-		stroke: var(--c-major);
+		fill: var(--ink);
+		stroke: var(--ink);
+	}
+
+	/* VexFlow draws in literal black on its SVG root; everything inherits from
+	   there, so inking the root makes the whole score follow the theme. */
+	.staff :global(svg) {
+		fill: var(--ink);
+		stroke: var(--ink);
 	}
 </style>

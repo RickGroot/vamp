@@ -13,6 +13,7 @@
 	// every note and was visibly rough at drilling tempos. Progress is reported in
 	// text instead, once per key.
 	import { untrack } from 'svelte';
+	import { view } from '$lib/stores/view.svelte';
 	import { beatsToVexDuration } from '$lib/notation/vex';
 	import { voicedToVexKey } from '$lib/notation/vex';
 	import type { DrillNote } from '$lib/practice/types';
@@ -54,10 +55,11 @@
 
 	const hasChords = $derived(notes.some((n) => n.chord));
 
-	// Re-layout only when the music changes. Everything draw() depends on belongs
-	// in here — it is the render effect's ONLY trigger (see the effect below).
+	// Re-layout only when the music changes — or the theme does, since the notes
+	// are inked with a colour resolved at draw time. Everything draw() depends on
+	// belongs in here — it is the render effect's ONLY trigger (see the effect below).
 	const signature = $derived(
-		JSON.stringify([maxPerRow, notes.map((n) => [n.midi, n.name, n.durQuarters, n.chord])])
+		JSON.stringify([view.night, maxPerRow, notes.map((n) => [n.midi, n.name, n.durQuarters, n.chord])])
 	);
 
 	function draw(VF: typeof import('vexflow')) {
@@ -262,7 +264,7 @@
 
 <style lang="scss">
 	.staff-error {
-		color: var(--c-diminished);
+		color: var(--danger);
 		padding: var(--space-2) 0;
 	}
 
@@ -273,8 +275,12 @@
 		border: 1px solid var(--color-border);
 	}
 
+	/* VexFlow draws staves and clefs in literal black from its SVG root; inking
+	   the root makes them follow the theme (black on plum was 1.29:1). */
 	.drill-staff__sheet :global(svg) {
 		display: block;
+		fill: var(--ink);
+		stroke: var(--ink);
 	}
 
 	.drill-staff__chord {

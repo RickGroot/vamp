@@ -70,11 +70,11 @@
 			{/each}
 		</div>
 		{#if practice.usesSong && practice.songIsEmpty}
-			<p class="group__warn label">
+			<p class="group__warn hint">
 				Your sketch has no chords yet — write some on the Sketch page and they’ll appear here.
 			</p>
 		{:else}
-			<p class="group__note label">
+			<p class="group__note hint">
 				Follows the sketch’s loop range and meter, and never changes it. Set “Then” to cycle the
 				whole progression through keys.
 			</p>
@@ -98,9 +98,9 @@
 		{/if}
 
 		{#if drillLibrary.error}
-			<p class="group__warn label" role="alert">{drillLibrary.error}</p>
+			<p class="group__warn hint" role="alert">{drillLibrary.error}</p>
 		{:else if practice.customDrills.length === 0}
-			<p class="group__note label">
+			<p class="group__note hint">
 				Nothing saved yet. Pick a drill above, then “Customise this drill” to change its notes,
 				rhythm or shape and keep it.
 			</p>
@@ -336,7 +336,7 @@
 		cursor: pointer;
 
 		&:hover {
-			color: var(--c-diminished);
+			color: var(--danger);
 		}
 
 		&:focus-visible {
@@ -356,7 +356,7 @@
 	}
 
 	.group__warn {
-		color: var(--c-diminished);
+		color: var(--danger);
 	}
 
 	.picker__drills {
@@ -390,7 +390,7 @@
 	/* The selected drill is marked by a bar and a border, never colour alone. */
 	.drill--on {
 		border-color: var(--color-black);
-		box-shadow: inset 3px 0 0 0 var(--c-dominant);
+		box-shadow: inset 0 0 0 1px var(--ink);
 	}
 
 	.drill__name {
@@ -430,7 +430,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 

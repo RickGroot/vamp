@@ -10,6 +10,10 @@
 	interface Props {
 		barIndex: number;
 		slotIndex: number;
+		/** Length in beats — the slot's share of the measure's width. */
+		beats?: number;
+		/** What an empty slot says (bar 1 of a blank song invites a first chord). */
+		placeholder?: string;
 		/** Concert-pitch chord symbol (the stored value). */
 		chord: string;
 		keyInfo: KeyInfo;
@@ -17,7 +21,16 @@
 		canRemove?: boolean;
 	}
 
-	let { barIndex, slotIndex, chord, keyInfo, active = false, canRemove = false }: Props = $props();
+	let {
+		barIndex,
+		slotIndex,
+		beats = 1,
+		placeholder = '–',
+		chord,
+		keyInfo,
+		active = false,
+		canRemove = false
+	}: Props = $props();
 
 	const roman = $derived(
 		view.showRoman && chord.trim() !== '' && isValidChordSymbol(chord)
@@ -121,7 +134,9 @@
 	class:slot--active={active}
 	class:slot--invalid={invalid}
 	class:slot--filled={!!family}
-	style={family ? `--q: var(--c-${family})` : undefined}
+	style:--q={family ? `var(--c-${family})` : undefined}
+	style:--wq={family ? `var(--w-${family})` : undefined}
+	style:flex-grow={beats}
 	onfocusout={onFocusOut}
 >
 	<input
@@ -136,7 +151,7 @@
 		autocapitalize="off"
 		spellcheck="false"
 		value={shown}
-		placeholder="–"
+		{placeholder}
 		aria-label={`Chord, bar ${barIndex + 1}, position ${slotIndex + 1}`}
 		oninput={onInput}
 		onfocus={onFocus}
@@ -197,102 +212,170 @@
 </div>
 
 <style lang="scss">
+	/* A chord written into the measure on a wash of its colour (at dusk a glowing
+	   outline instead — a dark fill of any hue turns brown), the symbol
+	   hand-lettered on top, a stroke of the colour beneath. */
 	.slot {
 		position: relative;
 		flex: 1 1 0;
 		min-width: 0;
-		border: 1px solid var(--color-border);
-		background: var(--color-white);
+		border-radius: var(--radius);
 		transition:
-			border-color var(--motion-fast) var(--motion-ease-out),
-			box-shadow var(--motion-fast) var(--motion-ease-out),
-			background-color var(--motion-fast) var(--motion-ease-out);
+			background-color var(--motion-fast) var(--motion-ease-out),
+			transform var(--motion-fast) var(--motion-ease-out);
+
+		&:hover {
+			background-color: var(--wash);
+		}
 
 		&--filled {
-			border-left: 3px solid var(--q, var(--color-border));
+			background: var(--wq);
+			box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--q) var(--ring), transparent);
+
+			&:hover {
+				background: color-mix(in oklab, var(--wq) 80%, var(--q));
+			}
 		}
 
-		&--active {
-			border-color: var(--q, var(--color-orange));
-			background: color-mix(in srgb, var(--q, var(--color-orange)) 12%, white);
-			box-shadow: 0 0 0 2px color-mix(in srgb, var(--q, var(--color-orange)) 38%, transparent);
+		/* The stroke of full ink under a recognised chord. */
+		&--filled::after {
+			content: '';
+			position: absolute;
+			left: 20%;
+			right: 20%;
+			bottom: 5px;
+			height: 4px;
+			border-radius: 2px;
+			background: var(--q);
+			pointer-events: none;
 		}
 
-		&--invalid .slot__input {
-			color: var(--c-diminished);
+		/* Sounding now: a solid block of its colour, glowing, with a small pop as
+		   it lands — the lantern you can read from the stand. */
+		&--active,
+		&--active:hover {
+			background: var(--q, var(--spot));
+			box-shadow: 0 0 18px color-mix(in srgb, var(--q, var(--spot)) 55%, transparent);
+			animation: slot-pop 240ms var(--motion-pop);
+
+			.slot__input,
+			.slot__roman {
+				color: var(--on-pigment);
+			}
+
+			&::after {
+				background: var(--on-pigment);
+				opacity: 0.5;
+			}
+		}
+	}
+
+	@keyframes slot-pop {
+		from {
+			transform: scale(0.94);
 		}
 	}
 
 	.slot__input {
 		width: 100%;
+		min-height: 52px;
 		border: 0;
+		border-radius: var(--radius);
 		background: transparent;
-		padding: var(--space-4) var(--space-3);
-		font-family: inherit;
-		font-size: 1.25rem;
-		font-weight: 300;
-		letter-spacing: -0.02em;
-		color: var(--color-text);
+		padding: var(--space-2) var(--space-2) var(--space-4);
+		font-family: var(--font-hand);
+		font-size: 1.75rem;
+		line-height: 1.1;
+		color: var(--ink);
 		text-align: center;
+		text-overflow: ellipsis;
 
 		&::placeholder {
-			color: var(--color-grey-400);
+			color: var(--ink-4);
 		}
 
 		&:focus {
-			outline: 2px solid var(--q, var(--color-accent));
+			outline: 2px solid var(--ink);
 			outline-offset: -2px;
 		}
+	}
+
+	/* The invitation in bar 1 of a blank song is readable text, not a mark. */
+	.slot__input:placeholder-shown:not(:focus) {
+		font-size: 1.375rem;
+	}
+
+	/* Not a chord we can read: danger ink and a wavy underline, like a typo. */
+	.slot--invalid .slot__input {
+		color: var(--danger);
+		text-decoration: underline wavy var(--danger);
+		text-decoration-thickness: 1px;
+		text-underline-offset: 5px;
 	}
 
 	.slot__roman {
 		display: block;
 		text-align: center;
-		font-size: 0.75rem;
-		letter-spacing: 0.04em;
-		color: var(--color-text-faint);
-		padding: 0 0 var(--space-2);
-		margin-top: -6px;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		color: var(--ink-2);
+		padding: 0 0 var(--space-4);
+		margin-top: -10px;
 	}
 
-	.slot__scale {
+	.slot__scale,
+	.slot__remove {
 		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 22px;
-		height: 20px;
+		top: 0;
+		width: 24px;
+		height: 24px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		border: 0;
+		border-radius: var(--radius-sm);
 		background: transparent;
-		color: var(--q, var(--color-grey-400));
-		opacity: 0.6;
+		color: var(--ink-2);
 		cursor: pointer;
-		transition: opacity var(--motion-fast) var(--motion-ease-out);
+		z-index: 1;
+		transition:
+			opacity var(--motion-fast) var(--motion-ease-out),
+			color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			opacity: 1;
+			color: var(--ink);
+			background: var(--paper);
 		}
 	}
 
+	.slot__scale {
+		left: 0;
+	}
+
+	.slot--active .slot__scale,
+	.slot--active .slot__remove {
+		color: var(--on-pigment);
+	}
+
 	.slot__remove {
-		position: absolute;
-		top: 2px;
-		right: 2px;
-		width: 20px;
-		height: 20px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: 0;
-		background: transparent;
-		color: var(--color-grey-400);
+		right: 0;
 		font-size: 1rem;
 		line-height: 1;
+	}
 
-		&:hover {
-			color: var(--color-black);
+	/* Slot tools appear with the slot on hover-capable devices. */
+	@media (hover: hover) and (pointer: fine) {
+		.slot__scale,
+		.slot__remove {
+			opacity: 0;
+		}
+
+		.slot:hover .slot__scale,
+		.slot:hover .slot__remove,
+		.slot:focus-within .slot__scale,
+		.slot:focus-within .slot__remove {
+			opacity: 1;
 		}
 	}
 
@@ -300,15 +383,16 @@
 		position: absolute;
 		top: 100%;
 		left: 0;
-		right: 0;
-		margin: 2px 0 0;
+		min-width: max(100%, 180px);
+		margin: 4px 0 0;
 		padding: var(--space-1);
-		max-height: 240px;
+		max-height: 260px;
 		overflow-y: auto;
 		list-style: none;
-		background: var(--color-white);
-		border: 1px solid var(--color-black);
-		box-shadow: 0 8px 24px rgba(28, 26, 31, 0.14);
+		background: var(--paper);
+		border: 1px solid var(--ink);
+		border-radius: var(--radius);
+		box-shadow: 0 10px 28px var(--shadow);
 		z-index: 50;
 	}
 
@@ -317,31 +401,29 @@
 		align-items: center;
 		gap: var(--space-2);
 		width: 100%;
+		min-height: 36px;
 		border: 0;
+		border-radius: var(--radius-sm);
 		background: transparent;
-		padding: var(--space-2) var(--space-3);
-		font-family: inherit;
-		font-size: 1rem;
+		padding: var(--space-1) var(--space-3);
+		font-family: var(--font-hand);
+		font-size: 1.25rem;
 		text-align: left;
-		color: var(--color-text);
+		color: var(--ink);
 
 		&:hover,
 		&--hl {
-			background: color-mix(in srgb, var(--q) 12%, var(--color-grey-100));
-			box-shadow: inset 3px 0 0 var(--q);
+			background: color-mix(in srgb, var(--q) 20%, var(--paper));
 		}
 	}
 
+	/* A dab of the chord's ink beside each suggestion. */
 	.dot {
-		width: 9px;
-		height: 9px;
-		border-radius: var(--radius-pill);
+		width: 11px;
+		height: 11px;
+		border-radius: 50% 45% 55% 40%;
 		background: var(--q);
+		box-shadow: 0 0 6px color-mix(in srgb, var(--q) 50%, transparent);
 		flex: 0 0 auto;
-	}
-
-	.opt__name {
-		font-weight: 300;
-		letter-spacing: -0.01em;
 	}
 </style>

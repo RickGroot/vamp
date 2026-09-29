@@ -1,34 +1,30 @@
 <script lang="ts">
+	import { view } from '$lib/stores/view.svelte';
 	import StaffSheet from './StaffSheet.svelte';
 	import NotationExportMenu from './NotationExportMenu.svelte';
 
 	// Open by default (consistent with the Band / Practice sections). VexFlow is
 	// still fetched lazily via StaffSheet's dynamic import when this mounts.
-	let open = $state(true);
+	const open = $derived(view.sections.notation);
 	// Off = chords-only chart; on = chord tones written on the staff.
 	let showNotes = $state(false);
 </script>
 
 <section class="notation" aria-label="Notation">
 	<div class="notation__head">
-		<button class="notation__toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-			<span class="chev" class:chev--open={open} aria-hidden="true">▸</span>
-			<span class="sec-icon" class:sec-icon--open={open} aria-hidden="true">
-				<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-					<path d="M9 17V5l9-2v12" />
-					<circle cx="6.5" cy="17" r="2.6" fill="currentColor" stroke="none" />
-					<circle cx="15.5" cy="15" r="2.6" fill="currentColor" stroke="none" />
-				</svg>
-			</span>
-			<span class="wordmark notation__title">Notation</span>
-			<span class="label notation__hint">{showNotes ? 'Chord tones on the staff' : 'Chord chart'}</span>
-		</button>
+		<h2 class="sec-head">
+			<button class="sec-toggle" type="button" aria-expanded={open} onclick={() => view.setSectionOpen('notation', !open)}>
+				<svg class="chev" class:chev--open={open} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+				<span class="sec-title">Notation</span>
+				<span class="sec-hint">{showNotes ? 'Chord tones on the staff' : 'Chord chart'}</span>
+			</button>
+		</h2>
 
 		{#if open}
 			<div class="notation__actions">
 				<button
-					class="toggle"
-					class:toggle--on={showNotes}
+					class="bar-btn"
+					class:bar-btn--on={showNotes}
 					type="button"
 					aria-pressed={showNotes}
 					onclick={() => (showNotes = !showNotes)}>Helper notes</button
@@ -47,87 +43,27 @@
 
 <style lang="scss">
 	.notation {
-		margin-top: var(--space-8);
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-6);
+		margin-top: var(--space-12);
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-4);
 	}
 
 	.notation__head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: var(--space-4);
+		flex-wrap: wrap;
+		gap: var(--space-2) var(--space-4);
 	}
 
 	.notation__actions {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
+		gap: var(--space-2);
 		flex: 0 0 auto;
-	}
-
-	.notation__toggle {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-3);
-		flex: 1 1 auto;
-		min-width: 0;
-		border: 0;
-		background: transparent;
-		padding: 0;
-		text-align: left;
-		color: var(--color-text);
-	}
-
-	.chev {
-		font-size: 0.8rem;
-		color: var(--color-text-faint);
-		transition: transform var(--motion-fast) var(--motion-ease-out);
-	}
-	.chev--open {
-		transform: rotate(90deg);
-	}
-
-	.notation__title {
-		font-size: 1.1rem;
-	}
-	.notation__hint {
-		color: var(--color-text-faint);
-		text-transform: none;
-		letter-spacing: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.toggle {
-		flex: 0 0 auto;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		padding: var(--space-1) var(--space-3);
-		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text-muted);
-		transition:
-			background-color var(--motion-fast) var(--motion-ease-out),
-			border-color var(--motion-fast) var(--motion-ease-out),
-			color var(--motion-fast) var(--motion-ease-out);
-
-		&:hover {
-			border-color: var(--color-black);
-			color: var(--color-black);
-		}
-		&--on {
-			background: var(--c-major);
-			border-color: var(--c-major);
-			color: var(--color-white);
-		}
 	}
 
 	.notation__body {
-		margin-top: var(--space-6);
+		margin-top: var(--space-4);
 	}
 </style>

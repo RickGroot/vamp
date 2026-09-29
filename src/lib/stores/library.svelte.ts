@@ -37,11 +37,26 @@ class LibraryStore {
 		await this.refresh();
 	}
 
-	async remove(id: string): Promise<void> {
+	/** Delete by id. Resolves to the removed record (for an undo), or null when
+	 *  nothing was removed. */
+	async remove(id: string): Promise<Progression | null> {
+		const record = this.items.find((p) => p.id === id);
 		try {
 			await deleteProgression(id);
 		} catch {
 			this.error = 'Could not delete — storage is unavailable.';
+			return null;
+		}
+		await this.refresh();
+		return record ? ($state.snapshot(record) as Progression) : null;
+	}
+
+	/** Put a just-deleted record back unchanged (same id, same timestamps). */
+	async restore(record: Progression): Promise<void> {
+		try {
+			await saveProgression(record, { restore: true });
+		} catch {
+			this.error = 'Could not restore — storage is unavailable.';
 			return;
 		}
 		await this.refresh();

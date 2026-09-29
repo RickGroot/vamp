@@ -63,26 +63,27 @@
 	let sectionEl = $state<HTMLElement>();
 	// Scroll into view when a chord shortcut requests it.
 	$effect(() => {
-		if (scales.pulse > 0) sectionEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		if (scales.pulse > 0)
+			sectionEl?.scrollIntoView({
+				behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+				block: 'start'
+			});
 	});
 </script>
 
 <section class="scales" aria-label="Scales" bind:this={sectionEl}>
-	<button
-		class="scales__toggle"
-		type="button"
-		aria-expanded={scales.open}
-		onclick={() => scales.setOpen(!scales.open)}
-	>
-		<span class="chev" class:chev--open={scales.open} aria-hidden="true">▸</span>
-		<span class="sec-icon" class:sec-icon--open={scales.open} aria-hidden="true">
-			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M3 20h4v-5h4V9h4V4h5" />
-			</svg>
-		</span>
-		<span class="wordmark scales__title">Scales</span>
-		<span class="label scales__hint">{displayInfo.name}</span>
-	</button>
+	<h2 class="sec-head">
+		<button
+			class="sec-toggle"
+			type="button"
+			aria-expanded={scales.open}
+			onclick={() => scales.setOpen(!scales.open)}
+		>
+			<svg class="chev" class:chev--open={scales.open} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+			<span class="sec-title">Scales</span>
+			<span class="sec-hint">{displayInfo.name}</span>
+		</button>
+	</h2>
 
 	{#if scales.open}
 		<div class="scales__body">
@@ -162,19 +163,19 @@
 					{#each whiteKeys as k (k.x)}
 						<rect class="wkey" x={k.x + 0.5} y="0" width={W - 1} height={H} rx="3" />
 						{#if k.inScale}
-							<circle cx={k.x + W / 2} cy={H - 13} r="5.5" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
+							<circle class="dot" class:dot--root={k.isRoot} cx={k.x + W / 2} cy={H - 13} r="5.5" />
 						{/if}
 					{/each}
 					{#each blackKeys as k (k.x)}
 						<rect class="bkey" x={k.x} y="0" width={BW} height={BH} rx="2.5" />
 						{#if k.inScale}
-							<circle cx={k.x + BW / 2} cy={BH - 9} r="4" fill="var(--c-{k.isRoot ? 'dominant' : 'major'})" />
+							<circle class="dot dot--on-dark" class:dot--root={k.isRoot} cx={k.x + BW / 2} cy={BH - 9} r="4" />
 						{/if}
 					{/each}
 				</svg>
 			{/if}
 
-			<p class="legend label">
+			<p class="legend hint">
 				<span class="legend__dot legend__dot--root"></span> root
 				<span class="legend__dot legend__dot--scale"></span> scale tone
 			</p>
@@ -184,43 +185,13 @@
 
 <style lang="scss">
 	.scales {
-		margin-top: var(--space-8);
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-6);
-	}
-
-	.scales__toggle {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-3);
-		width: 100%;
-		border: 0;
-		background: transparent;
-		padding: 0;
-		text-align: left;
-		color: var(--color-text);
-	}
-
-	.chev {
-		font-size: 0.8rem;
-		color: var(--color-text-faint);
-		transition: transform var(--motion-fast) var(--motion-ease-out);
-	}
-	.chev--open {
-		transform: rotate(90deg);
-	}
-
-	.scales__title {
-		font-size: 1.1rem;
-	}
-	.scales__hint {
-		color: var(--color-text-faint);
-		text-transform: none;
-		letter-spacing: 0;
+		margin-top: var(--space-12);
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-4);
 	}
 
 	.scales__body {
-		margin-top: var(--space-6);
+		margin-top: var(--space-4);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
@@ -245,7 +216,8 @@
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--color-accent);
+			border-bottom-color: var(--ink);
+			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 	.sel--wide {
@@ -256,48 +228,52 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
-		border: 1px solid var(--color-black);
-		background: transparent;
-		padding: var(--space-2) var(--space-4);
+		min-height: 36px;
+		border: 1px solid var(--edge);
+		border-radius: var(--radius);
+		background: var(--paper);
+		padding: 0 var(--space-4);
 		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text);
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--ink);
 
 		&:hover {
-			background: var(--color-black);
-			color: var(--color-white);
+			border-color: var(--ink);
+			background: var(--wash);
 		}
 	}
 
+	/* Segmented control: one pressed tab, inked in. */
 	.viewtoggle {
 		display: inline-flex;
 		align-self: flex-start;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--edge);
+		border-radius: var(--radius);
+		overflow: hidden;
 	}
 	.vt {
+		min-height: 36px;
 		border: 0;
-		border-right: 1px solid var(--color-border);
-		background: transparent;
-		padding: var(--space-1) var(--space-3);
+		border-right: 1px solid var(--edge);
+		background: var(--paper);
+		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--color-text-muted);
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--ink-2);
 
 		&:last-child {
 			border-right: 0;
 		}
 		&:hover {
-			color: var(--color-black);
+			color: var(--ink);
+			background: var(--wash);
 		}
-		&--on {
-			background: var(--c-major);
-			color: var(--color-white);
+		&--on,
+		&--on:hover {
+			background: var(--spot);
+			color: var(--on-spot);
 		}
 	}
 
@@ -325,9 +301,9 @@
 			color: var(--color-black);
 		}
 		&--on {
-			background: var(--c-major);
-			border-color: var(--c-major);
-			color: var(--color-white);
+			background: var(--spot);
+			border-color: var(--spot);
+			color: var(--on-spot);
 		}
 	}
 
@@ -336,18 +312,22 @@
 		gap: var(--space-2);
 		flex-wrap: wrap;
 	}
+	/* The scale spelled out, hand-lettered like the chords above it. */
 	.note {
-		min-width: 2.2rem;
+		min-width: 2.4rem;
 		text-align: center;
 		padding: var(--space-1) var(--space-2);
-		border: 1px solid var(--color-border);
-		font-size: 0.95rem;
-		color: var(--color-text);
+		border: 1px solid var(--rule);
+		border-radius: var(--radius);
+		background: var(--paper);
+		font-family: var(--font-hand);
+		font-size: 1.25rem;
+		line-height: 1.2;
+		color: var(--ink);
 	}
 	.note--root {
-		background: var(--c-dominant);
-		border-color: var(--c-dominant);
-		color: var(--color-white);
+		border-color: var(--spot);
+		box-shadow: inset 0 0 0 1px var(--ink);
 	}
 
 	.kbd {
@@ -357,12 +337,29 @@
 		height: auto;
 	}
 	.wkey {
-		fill: var(--color-white);
-		stroke: var(--color-grey-200);
+		fill: var(--key-light);
+		stroke: var(--edge);
 		stroke-width: 1;
 	}
 	.bkey {
-		fill: var(--color-black);
+		fill: var(--key-dark);
+	}
+
+	/* Scale tones are ink dots; the root is a ring — shape, not colour. */
+	.dot {
+		fill: var(--key-dark);
+	}
+	.dot--root {
+		fill: var(--key-light);
+		stroke: var(--key-dark);
+		stroke-width: 2;
+	}
+	.dot--on-dark {
+		fill: var(--key-light);
+	}
+	.dot--on-dark.dot--root {
+		fill: var(--key-dark);
+		stroke: var(--key-light);
 	}
 
 	.legend {
@@ -379,10 +376,10 @@
 		margin-left: var(--space-3);
 	}
 	.legend__dot--root {
-		background: var(--c-dominant);
+		border: 2px solid var(--ink);
 		margin-left: 0;
 	}
 	.legend__dot--scale {
-		background: var(--c-major);
+		background: var(--ink);
 	}
 </style>
