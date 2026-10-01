@@ -132,7 +132,16 @@
 				const vi = p.slotStart + i;
 				const dur = beatsToVexDuration(slot.beats, ts);
 				const voiced = voicings[vi];
-				if (!showNotes) return { note: new StaveNote({ keys: ['b/4'], duration: dur }), vi };
+				if (!showNotes) {
+					// Chart mode: a placeholder that spaces the bar and is never drawn.
+					// Hiding parts of it with CSS missed the stem (and an eighth's flag),
+					// which VexFlow nests in groups of their own: every half- or
+					// quarter-bar slot showed a stray line. Layout reads VexFlow's own
+					// geometry, so an undrawn note still places its chord name.
+					const note = new StaveNote({ keys: ['b/4'], duration: dur });
+					note.renderOptions.draw = false;
+					return { note, vi };
+				}
 				if (!voiced || voiced.length === 0) {
 					return { note: new StaveNote({ keys: ['b/4'], duration: `${dur}r` }), vi };
 				}
@@ -369,7 +378,7 @@
 
 <div class="staff-wrap">
 	{#if error}<p class="staff-error label">{error}</p>{/if}
-	<div class="staff" class:chart={!showNotes} bind:this={container}></div>
+	<div class="staff" bind:this={container}></div>
 </div>
 
 <style lang="scss">
@@ -414,14 +423,6 @@
 	}
 	.staff :global(.slot-hl--on) {
 		fill: color-mix(in srgb, var(--ink) 12%, transparent);
-	}
-
-	/* Chord-chart mode: hide the placeholder noteheads + stems, keep the chord names. */
-	.staff.chart :global(.vf-notehead > text) {
-		display: none;
-	}
-	.staff.chart :global(.vf-stavenote > path) {
-		display: none;
 	}
 
 	/* Active (playing) chord highlight — colours the chord tones in helper-notes mode. */

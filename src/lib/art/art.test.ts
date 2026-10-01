@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { IDLE_CLOCK, TENSION, beatPhase, beatPosition, beatPulse, loopFraction, type MusicClock } from './music';
-import { bloomStep, flowerFamilies, gustBend, layoutBlades, layoutFlowers, lcg, settleAmp, swayAngle } from './meadow';
+import {
+	bloomStep,
+	flowerFamilies,
+	gustBend,
+	layoutBlades,
+	layoutFlowers,
+	lcg,
+	settleAmp,
+	stemSpan,
+	swayAngle
+} from './meadow';
 import { barArcs, ringOffset, ringPath, sessionSummary, tensionsOf } from './rings';
 import {
 	chordChroma,
@@ -91,6 +101,28 @@ describe('meadow', () => {
 	it('gusts harder on a dominant than on the tonic', () => {
 		expect(gustBend(0.3, 156, TENSION.dominant)).toBeGreaterThan(gustBend(0.3, 156, TENSION.major));
 		expect(gustBend(0.3, 156, 0)).toBe(0);
+	});
+
+	it('stands on the bottom edge — no blade or stem starts in mid-air', () => {
+		// Rooting far blades higher up (perspective with no ground under it) left
+		// the bottom of the strip bare and the meadow hovering above the screen's edge.
+		const flowers = layoutFlowers(40, lcg(7));
+		for (const h of [64, 97, 124]) {
+			for (const b of blades) {
+				const s = stemSpan(b, h, 'blade');
+				expect(s.baseY).toBeGreaterThanOrEqual(h);
+				expect(s.baseY - s.len).toBeLessThan(h); // and still shows above it
+			}
+			for (const f of flowers) {
+				const s = stemSpan(f, h, 'flower');
+				expect(s.baseY).toBeGreaterThanOrEqual(h);
+				expect(s.baseY - s.len).toBeGreaterThan(0); // the head stays in the strip
+			}
+			// Far is shorter than near, at the same height.
+			const far = stemSpan({ ...blades[0], depth: 0, height: 0.8 }, h, 'blade');
+			const near = stemSpan({ ...blades[0], depth: 1, height: 0.8 }, h, 'blade');
+			expect(far.len).toBeLessThan(near.len);
+		}
 	});
 
 	it('settles to stillness after a stop', () => {

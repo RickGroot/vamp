@@ -68,7 +68,7 @@ working on, saved or not.
 
 ## Practice mode
 
-A separate **Practice** workspace (top-right of the header, or `/practice`) with *generated*
+A separate **Practice** workspace (the Sketch · Practice switch in the header, or `/practice`) with *generated*
 drills to play on your instrument — as opposed to the Sketch page's drill controls, which
 modify playback of your own song.
 

@@ -2,8 +2,10 @@
 	// The Practice workspace. The shared chrome (header, nav, shortcuts, art)
 	// comes from +layout.svelte, so this page owns only its own <main>.
 	import { onDestroy, onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { practice } from '$lib/stores/practice.svelte';
+	import { progression } from '$lib/stores/progression.svelte';
 	import { drillLibrary } from '$lib/stores/drillLibrary.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { drillById } from '$lib/practice/patterns';
@@ -36,6 +38,25 @@
 </svelte:head>
 
 <main class="practice-page">
+	<!-- The way back to the song. Sketch's "Practise this" brings you here, and an
+	     installed app has no browser Back button, so the return trip is spelled
+	     out too. A link: it is navigation. -->
+	<a class="bar-btn back" href="{base}/">
+		<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
+			><path
+				d="M9.5 3.5 5 8l4.5 4.5"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.6"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/></svg
+		>
+		Back to Sketch
+		{#if !progression.isBlank}
+			<span class="back__song">{practice.songName}</span>
+		{/if}
+	</a>
 	<DrillRunner />
 	<details class="settings" open>
 		<summary class="settings__toggle">
@@ -56,6 +77,38 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-6);
+	}
+
+	/* The page's first thing, so it reads as the way back rather than a control. */
+	.back {
+		align-self: flex-start;
+		max-width: 100%;
+		/* Pull the drill title up under it; the column gap is for sections. */
+		margin-bottom: calc(var(--space-2) - var(--space-6));
+		padding-left: var(--space-2);
+	}
+
+	/* The tune's name, in its own hand, after a quiet separator. */
+	.back__song {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-family: var(--font-hand);
+		font-size: 1rem;
+		color: var(--ink-2);
+
+		&::before {
+			content: '·';
+			margin-right: var(--space-2);
+			font-family: var(--font-ui);
+			color: var(--ink-3);
+		}
+	}
+
+	@media (pointer: coarse) {
+		.back {
+			min-height: var(--tap);
+		}
 	}
 
 	.settings {

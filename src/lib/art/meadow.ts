@@ -78,6 +78,9 @@ const DENSITY = 5; // px of width per blade
 const MAX_BLADES = 420;
 const FLOWER_SPACING = 30; // px of width per flower
 const MAX_FLOWERS = 64;
+const ROOT_DROP = 2; // px below the bottom edge that every stem grows from
+const TURF = 0.26; // the ground band's height, as a fraction of the strip
+const TURF_ALPHA = 0.55;
 
 const ALL_FAMILIES: ChordFamily[] = ['major', 'minor', 'dominant', 'suspended', 'augmented', 'diminished'];
 
@@ -160,6 +163,18 @@ export function bloomStep(open: number, target: number, dtMs: number, beatMs: nu
 	const tau = target > open ? beatMs * 0.5 : beatMs * 2;
 	const k = 1 - Math.exp(-Math.max(0, dtMs) / Math.max(1, tau));
 	return open + (target - open) * k;
+}
+
+/**
+ * Where a grass blade or flower stem grows from, and how tall it stands (px),
+ * in a strip `h` tall. Depth makes it shorter, thinner and fainter — never
+ * rooted higher up. Rooting far blades above the edge (perspective with no
+ * ground drawn under it) left the bottom of the strip as bare sky, so the
+ * whole meadow hovered over the bottom of the screen. Everything stands on it.
+ */
+export function stemSpan(b: Blade, h: number, kind: 'blade' | 'flower'): { baseY: number; len: number } {
+	const len = kind === 'blade' ? b.height * h * (0.45 + 0.55 * b.depth) : b.height * h * (0.5 + 0.5 * b.depth);
+	return { baseY: h + ROOT_DROP, len };
 }
 
 /**
@@ -283,11 +298,18 @@ export function createMeadow(canvas: HTMLCanvasElement, getSignal: () => MeadowS
 			return amp * Math.sign(dx) * gustBend(ageS, Math.abs(dx), tension) * (0.5 + 0.5 * depth);
 		};
 
+		// The ground it all stands on: the grass's own colour, thickest at the
+		// bottom edge, so the field meets the bottom of the screen.
+		const turf = ctx.createLinearGradient(0, h, 0, h * (1 - TURF));
+		turf.addColorStop(0, rgba(grass, TURF_ALPHA));
+		turf.addColorStop(1, rgba(grass, 0));
+		ctx.fillStyle = turf;
+		ctx.fillRect(0, h * (1 - TURF), w, h * TURF);
+
 		// Grass: green by day, silhouettes at dusk; a few blades catch the sounding chord's colour.
 		for (const b of blades) {
 			const x = b.u * w;
-			const baseY = h - (1 - b.depth) * h * 0.3;
-			const len = b.height * h * (0.45 + 0.55 * b.depth);
+			const { baseY, len } = stemSpan(b, h, 'blade');
 			const a = swayAngle(beatPos, x, b, amp) + bend(x, b.depth);
 			const g = stemGeometry(b, x, baseY, len, a);
 			ctx.strokeStyle = b.accent ? rgba(tint, 0.35 + 0.45 * b.depth) : rgba(grass, 0.2 + 0.5 * b.depth);
@@ -303,8 +325,7 @@ export function createMeadow(canvas: HTMLCanvasElement, getSignal: () => MeadowS
 			const family = families[f.slot % Math.max(1, families.length)] ?? 'major';
 			const ink = pigments.get(family) ?? grass;
 			const x = f.u * w;
-			const baseY = h - (1 - f.depth) * h * 0.22;
-			const len = f.height * h * (0.5 + 0.5 * f.depth);
+			const { baseY, len } = stemSpan(f, h, 'flower');
 			const a = swayAngle(beatPos, x, f, amp) + bend(x, f.depth);
 			const g = stemGeometry(f, x, baseY, len, a);
 			ctx.strokeStyle = rgba(grass, 0.45 + 0.4 * f.depth);

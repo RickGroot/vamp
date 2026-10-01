@@ -12,6 +12,11 @@ Tokens live in `src/app.scss` and nowhere else. Components use `var(--…)`.
 
 ## Theme
 
+The header's other switch is the workspace: **Sketch · Practice**, one pill with
+the page you're on inked solid (ink, not the sun — it's a place, not an "on").
+Practice opens with a **Back to Sketch** button naming the tune: Sketch's
+"Practise this" sends you there, and an installed app has no Back button.
+
 Sunrise · Auto · Sunset, switched in the header (three radio segments). Auto
 follows the system; a pinned choice lives in `vamp:theme` (`'day'` / `'night'`)
 and is applied **before first paint** by the inline script in `app.html`
@@ -114,7 +119,9 @@ The pieces:
 - **Wildflower meadow:** grass sways once per two beats and gusts from the
   sounding bar; the flowers are your song's garden — shares by chord family,
   buds at rest, blooming when their family sounds. At sunset the grass is a
-  silhouette and the flowers glow.
+  silhouette and the flowers glow. Every stem stands on the bottom edge, over a
+  band of turf in the grass's colour; depth makes things shorter and fainter,
+  never rooted higher (that left bare sky under the field, and it floated).
 - **Growth rings** round the play button: one arc per looped bar, one ring per
   chorus, and a session summary on stop.
 

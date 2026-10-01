@@ -318,9 +318,34 @@
 	<header class="head">
 		<div class="head__left">
 			<span class="wordmark head__mark">Vamp</span>
+			<!-- Two workspaces, one switch: where you are is the filled segment. -->
 			<nav class="nav" aria-label="Workspace">
-				<a class="nav__link" class:nav__link--on={!onPractice} aria-current={!onPractice ? 'page' : undefined} href={SKETCH}>Sketch</a>
-				<a class="nav__link" class:nav__link--on={onPractice} aria-current={onPractice ? 'page' : undefined} href={PRACTICE}>Practice</a>
+				<a class="nav__link" class:nav__link--on={!onPractice} aria-current={!onPractice ? 'page' : undefined} href={SKETCH}>
+					<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+						><path
+							d="M10.6 2.9l2.5 2.5-7.4 7.4-3.2.7.7-3.2zM9.2 4.3l2.5 2.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							stroke-linejoin="round"
+						/></svg
+					>
+					Sketch
+				</a>
+				<a class="nav__link" class:nav__link--on={onPractice} aria-current={onPractice ? 'page' : undefined} href={PRACTICE}>
+					<!-- A metronome. -->
+					<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+						><path
+							d="M6 2.5h4l2.6 11H3.4zM3.9 11.2h8.2M8 11.2l3.4-6.4"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/></svg
+					>
+					Practice
+				</a>
 			</nav>
 		</div>
 		<div class="head__right">
@@ -522,35 +547,47 @@
 		transform: translateY(2px);
 	}
 
+	/* Sketch · Practice: one pill, like the theme switch beside it. An underline
+	   alone was too quiet to tell the two pages apart at a glance. */
 	.nav {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
+		display: inline-flex;
+		padding: 2px;
+		border: 1px solid var(--edge);
+		border-radius: var(--radius-pill);
+		background: var(--paper);
 	}
 
 	.nav__link {
 		display: inline-flex;
 		align-items: center;
-		min-height: var(--tap);
-		padding: 0 var(--space-2);
+		gap: 6px;
+		min-height: 34px;
+		padding: 0 var(--space-3) 0 10px;
+		border-radius: var(--radius-pill);
 		font-size: 0.9375rem;
 		font-weight: 500;
-		color: var(--ink-2); /* stays ≥4.5:1 under the strongest weather */
+		color: var(--ink-2);
 		text-decoration: none;
-		transition: color var(--motion-fast) var(--motion-ease-out);
+		transition:
+			background-color var(--motion-fast) var(--motion-ease-out),
+			color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
 			color: var(--ink);
+			background: var(--wash);
+		}
+
+		@media (pointer: coarse) {
+			min-height: 40px;
 		}
 	}
 
-	/* The current workspace: ink, underlined in the spot pink. */
-	.nav__link--on {
-		color: var(--ink);
-		text-decoration: underline;
-		text-decoration-color: var(--spot);
-		text-decoration-thickness: 3px;
-		text-underline-offset: 6px;
+	/* You are here: the page inked solid. Ink, not the sun — the sun means
+	   "makes music / switched on", and this is a place, not a switch. */
+	.nav__link--on,
+	.nav__link--on:hover {
+		background: var(--ink);
+		color: var(--paper);
 	}
 
 	.head__right {

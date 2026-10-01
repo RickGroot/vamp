@@ -159,10 +159,10 @@ async function renderNotationCanvas(
 			const dur = beatsToVexDuration(slot.beats, ts);
 			const voiced = voicings[vi];
 			if (!o.showNotes) {
-				// Chart mode: an invisible placeholder keeps the bar spacing (the live
-				// view hides these via CSS, which doesn't exist on canvas).
+				// Chart mode: a placeholder that keeps the bar spacing and is never
+				// drawn — the same mechanism as the live view (StaffSheet).
 				const n = new StaveNote({ keys: ['b/4'], duration: dur });
-				n.setStyle({ fillStyle: 'transparent', strokeStyle: 'transparent' });
+				n.renderOptions.draw = false;
 				return n;
 			}
 			if (!voiced || voiced.length === 0) {
