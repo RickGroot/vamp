@@ -22,20 +22,26 @@
 	import { beatsToVexDuration } from '$lib/notation/vex';
 	import { voicedToVexKey } from '$lib/notation/vex';
 	import { ensureMusicFont } from '$lib/notation/font';
-	import { toMeasures, type Piece } from '$lib/practice/measures';
+	import { placeLabels } from '$lib/notation/labels';
+	import { beamGroupQuarters, beamGroups, toMeasures, type Piece } from '$lib/practice/measures';
+	import { barBeats, beatsToQuarters } from '$lib/model/time';
 	import type { DrillNote } from '$lib/practice/types';
+	import type { TimeSignature } from '$lib/model/types';
 	import type { StaveNote as VexStaveNote } from 'vexflow';
 
 	interface Props {
 		notes: DrillNote[];
-		/** Bar length in quarter notes (the click's bar), for the barlines. */
-		quartersPerBar?: number;
+		/** The meter the click plays: where the barlines fall and how eighths are beamed. */
+		meter?: TimeSignature;
 		/** The last key of the run: closes with a final barline instead of a double one. */
 		final?: boolean;
 		/** Upper bound on notes per row; the real figure is fitted to the width. */
 		maxPerRow?: number;
 	}
-	let { notes, quartersPerBar = 4, final = false, maxPerRow = 16 }: Props = $props();
+	let { notes, meter = { numerator: 4, denominator: 4 }, final = false, maxPerRow = 16 }: Props = $props();
+
+	const quartersPerBar = $derived(beatsToQuarters(barBeats(meter), meter));
+	const beamSpan = $derived(beamGroupQuarters(meter));
 
 	let container = $state<HTMLDivElement>();
 	let error = $state<string | null>(null);
@@ -49,6 +55,7 @@
 	const CLEF_W = 40;
 	const PROV_Y = 150;
 	const CHORD_ROOM = 20; // vertical room reserved for chord names above the staff
+	const LABEL_REM = 0.85; // the chord names' font size (matches .drill-staff__chord)
 	/**
 	 * VexFlow's own minimum spacing per note, measured (~64–66px for eighths with
 	 * accidentals). The formatter OVERFLOWS the stave rather than compressing
@@ -78,6 +85,7 @@
 			view.night,
 			maxPerRow,
 			quartersPerBar,
+			beamSpan,
 			final,
 			notes.map((n) => [n.midi, n.name, n.atQuarters, n.durQuarters, n.chord])
 		])
@@ -87,7 +95,8 @@
 	type Item = { kind: 'piece'; piece: Piece } | { kind: 'bar' };
 
 	function draw(VF: typeof import('vexflow')) {
-		const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, BarNote, StaveTie, BarlineType } = VF;
+		const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, BarNote, StaveTie, BarlineType, Beam } =
+			VF;
 		const el = container;
 		if (!el || notes.length === 0) return;
 		el.innerHTML = '';
@@ -142,7 +151,9 @@
 				return rest;
 			}
 			const key = voicedToVexKey({ midi: n.midi, name: n.name });
-			const note = new StaveNote({ keys: [key.key], duration });
+			// Stems follow the staff (up below the middle line, down above it); a beam
+			// then settles one direction for its whole group.
+			const note = new StaveNote({ keys: [key.key], duration, autoStem: true });
 			note.setStyle(inked);
 			const accidental = shownAccidental.get(piece);
 			if (accidental) {
@@ -284,6 +295,12 @@
 		// wrote again — a loop that froze the page on every drill with chord labels
 		// (i.e. every drill over your own changes).
 		const labels: { x: number; y: number; text: string }[] = [];
+		// The chord names' real width, in CSS px, in the font they are drawn in.
+		const measureCtx = document.createElement('canvas').getContext('2d');
+		const labelPx = parseFloat(getComputedStyle(document.documentElement).fontSize || '16') * LABEL_REM;
+		if (measureCtx) measureCtx.font = `400 ${labelPx}px ${getComputedStyle(el).fontFamily}`;
+		const measureLabel = (text: string) =>
+			measureCtx ? measureCtx.measureText(text).width : text.length * labelPx * 0.55;
 		const logicalHeight = rowHeight * rows.length + PAD * 2;
 		const renderer = new Renderer(el, Renderer.Backends.SVG);
 		// The canvas is sized in CSS pixels; the context is scaled so the logical
@@ -313,10 +330,28 @@
 			stave.setContext(context).draw();
 
 			const { tickables, placed } = makeRow(body);
+			// Beams are made BEFORE the notes draw, so beamed notes drop their flags.
+			const beams = beamGroups(
+				placed.map((p) => p.piece),
+				(piece) => notes[piece.note].midi === null,
+				quartersPerBar,
+				beamSpan
+			).map((group) => {
+				const beam = new Beam(
+					group.map((i) => placed[i].note),
+					true
+				);
+				beam.setStyle(inked);
+				// A gentle, engraved slope: the default followed every leap of a cell.
+				beam.renderOptions.maxSlope = 0.12;
+				beam.renderOptions.minSlope = -0.12;
+				return beam;
+			});
 			const voice = new Voice({ numBeats: tickables.length, beatValue: 4 }).setMode(Voice.Mode.SOFT);
 			voice.addTickables(tickables);
 			new Formatter().joinVoices([voice]).format([voice], noteRoom);
 			voice.draw(context, stave);
+			for (const beam of beams) beam.setContext(context).draw();
 
 			// Ties over the barlines. One that runs off the end of a row is drawn to
 			// the stave's edge and picked up again at the start of the next.
@@ -342,6 +377,7 @@
 			// StaffSheet, and it keeps them out of the formatter's spacing.
 			if (hasChords) {
 				const top = stave.getYForLine(0) - Math.max(above, 14);
+				const row: { x: number; text: string }[] = [];
 				for (const { piece, note } of placed) {
 					const chord = notes[piece.note].chord;
 					if (!piece.first || !chord || chord === lastChord) continue;
@@ -351,10 +387,24 @@
 					} catch {
 						/* fall back to the clef edge */
 					}
-					// HTML overlay, so these are CSS pixels — scale them to match.
-					labels.push({ x: (x - 4) * scale, y: (top - chordRoom) * scale, text: chord });
+					row.push({ x: x - 4, text: chord });
 					lastChord = chord;
 				}
+				// Placed by MEASURED width (the Sketch notation's rule): starting at the
+				// note, but never into the previous name — two half-bar chords on a
+				// narrow staff read "Gm7C7" — nor past the clef or the staff's end.
+				const lefts = placeLabels(
+					row.map((l) => {
+						const w = measureLabel(l.text) / scale;
+						return { x: l.x + w / 2, w, min: stave.getNoteStartX() };
+					}),
+					width - PAD,
+					8
+				);
+				// HTML overlay, so these are CSS pixels — scale them to match.
+				row.forEach((l, i) =>
+					labels.push({ x: lefts[i] * scale, y: (top - chordRoom) * scale, text: l.text })
+				);
 			}
 		});
 		chordLabels = labels;

@@ -121,6 +121,8 @@
 	.settings__toggle {
 		display: flex;
 		align-items: baseline;
+		min-height: var(--tap);
+		padding-top: var(--space-1);
 		gap: var(--space-3);
 		cursor: pointer;
 		list-style: none;

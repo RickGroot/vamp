@@ -209,7 +209,6 @@
 		font-weight: 900;
 		font-size: 2rem;
 		line-height: 1;
-		text-transform: uppercase;
 	}
 
 	.stand__meta {

@@ -299,7 +299,7 @@
 		}
 	}
 
-	/* The tune's name, set like the title on a sleeve: condensed, black, capitals. */
+	/* The tune's name, set like the title on a sleeve: condensed and black. */
 	.title {
 		min-width: 0;
 		width: 100%;
@@ -313,7 +313,8 @@
 		   between words) averages about half an em. */
 		font-size: max(1.75rem, min(4.75rem, calc(100cqi / (var(--len) * 0.5))));
 		line-height: 0.95;
-		text-transform: uppercase;
+		/* Its own case: a preset names a tune "Jazz ii–V–I in C", and capitals
+		   would turn the ii into II — a different chord. */
 		color: var(--ink);
 		padding: 0 0 var(--space-1);
 		text-overflow: ellipsis;

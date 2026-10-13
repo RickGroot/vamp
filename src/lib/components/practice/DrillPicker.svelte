@@ -133,155 +133,171 @@
 		{/if}
 	</div>
 
+	<!-- Every setting is one unit — its label above its control — on a grid, so a
+	     phone gets tidy columns instead of labels wrapping away from their fields. -->
 	<div class="picker__rows">
-		<div class="row">
+		<div class="row" role="group" aria-label="Keys">
 			<!-- A song-sourced drill starts on the changes as written, so there is no
 			     start key to choose — only whether to cycle them afterwards. -->
 			{#if !practice.usesSong}
-				<label class="label" for="p-root">Start key</label>
-				<select
-					id="p-root"
-					value={displayRoot}
-					onchange={(e) => practice.setRoot(concertFromDisplay(select(e), practice.offset))}
-				>
-					{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
-					{#each SCALE_ROOTS as root (root)}<option value={root}>{root}</option>{/each}
-				</select>
+				<div class="opt">
+					<label class="label" for="p-root">Start key</label>
+					<select
+						id="p-root"
+						value={displayRoot}
+						onchange={(e) => practice.setRoot(concertFromDisplay(select(e), practice.offset))}
+					>
+						{#if customRoot}<option value={customRoot}>{customRoot}</option>{/if}
+						{#each SCALE_ROOTS as root (root)}<option value={root}>{root}</option>{/each}
+					</select>
+				</div>
 			{/if}
 
-			<label class="label" for="p-keymode">{practice.usesSong ? 'Move the changes' : 'Then'}</label>
-			<select
-				id="p-keymode"
-				value={practice.keyMode}
-				onchange={(e) => practice.setKeyMode(select(e) as never)}
-			>
-				{#each KEY_MODES as mode (mode.id)}<option value={mode.id}>{mode.label}</option>{/each}
-			</select>
+			<div class="opt">
+				<label class="label" for="p-keymode">{practice.usesSong ? 'Move the changes' : 'Then'}</label>
+				<select
+					id="p-keymode"
+					value={practice.keyMode}
+					onchange={(e) => practice.setKeyMode(select(e) as never)}
+				>
+					{#each KEY_MODES as mode (mode.id)}<option value={mode.id}>{mode.label}</option>{/each}
+				</select>
+			</div>
 
-			<label class="label" for="p-reps">Keys</label>
-			<select id="p-reps" value={practice.reps} onchange={(e) => practice.setReps(Number(select(e)))}>
-				{#each REP_OPTIONS as n (n)}<option value={n}>{n}</option>{/each}
-			</select>
+			<div class="opt">
+				<label class="label" for="p-reps">Keys</label>
+				<select id="p-reps" value={practice.reps} onchange={(e) => practice.setReps(Number(select(e)))}>
+					{#each REP_OPTIONS as n (n)}<option value={n}>{n}</option>{/each}
+				</select>
+			</div>
 		</div>
 
-		<div class="row">
-			<label class="label" for="p-range">Range</label>
-			<select
-				id="p-range"
-				value={practice.rangeId}
-				onchange={(e) => practice.setRangeId(select(e))}
-			>
-				{#each INSTRUMENT_RANGES as r (r.id)}<option value={r.id}>{r.label}</option>{/each}
-			</select>
+		<div class="row" role="group" aria-label="Range">
+			<div class="opt">
+				<label class="label" for="p-range">Range</label>
+				<select id="p-range" value={practice.rangeId} onchange={(e) => practice.setRangeId(select(e))}>
+					{#each INSTRUMENT_RANGES as r (r.id)}<option value={r.id}>{r.label}</option>{/each}
+				</select>
+			</div>
 
-			<label class="label" for="p-register">Register</label>
-			<select
-				id="p-register"
-				value={practice.register}
-				onchange={(e) => practice.setRegister(select(e) as never)}
-			>
-				{#each REGISTERS as r (r.id)}<option value={r.id}>{r.label}</option>{/each}
-			</select>
+			<div class="opt">
+				<label class="label" for="p-register">Register</label>
+				<select
+					id="p-register"
+					value={practice.register}
+					onchange={(e) => practice.setRegister(select(e) as never)}
+				>
+					{#each REGISTERS as r (r.id)}<option value={r.id}>{r.label}</option>{/each}
+				</select>
+			</div>
 
 			<!-- Direction is meaningless for a line that follows the changes. -->
 			{#if !practice.usesSong}
-				<label class="label" for="p-direction">Direction</label>
-				<select
-					id="p-direction"
-					value={practice.direction}
-					onchange={(e) => practice.setDirection(select(e) as never)}
-				>
-					<option value="">As written</option>
-					{#each DIRECTIONS as d (d.id)}<option value={d.id}>{d.label}</option>{/each}
-				</select>
+				<div class="opt">
+					<label class="label" for="p-direction">Direction</label>
+					<select
+						id="p-direction"
+						value={practice.direction}
+						onchange={(e) => practice.setDirection(select(e) as never)}
+					>
+						<option value="">As written</option>
+						{#each DIRECTIONS as d (d.id)}<option value={d.id}>{d.label}</option>{/each}
+					</select>
+				</div>
 			{/if}
 		</div>
 
-		<div class="row">
-			<label class="label" for="p-tempo">Tempo</label>
-			<input
-				id="p-tempo"
-				type="number"
-				min={TEMPO_MIN}
-				max={TEMPO_MAX}
-				step="1"
-				value={practice.tempo}
-				onchange={(e) => practice.setTempo(Number((e.target as HTMLInputElement).value))}
-			/>
-
-			<label class="label" for="p-step">Step up</label>
-			<select
-				id="p-step"
-				value={practice.tempoStep}
-				onchange={(e) => practice.setTempoStep(Number(select(e)))}
-			>
-				{#each TEMPO_STEPS as step (step)}
-					<option value={step}>{step === 0 ? 'Off' : `+${step} bpm`}</option>
-				{/each}
-			</select>
-
-			{#if practice.tempoStep > 0}
-				<label class="label" for="p-tmax">up to</label>
+		<div class="row" role="group" aria-label="Tempo">
+			<div class="opt">
+				<label class="label" for="p-tempo">Tempo</label>
 				<input
-					id="p-tmax"
+					id="p-tempo"
 					type="number"
+					inputmode="numeric"
 					min={TEMPO_MIN}
 					max={TEMPO_MAX}
-					step="5"
-					value={practice.tempoMax}
-					onchange={(e) => practice.setTempoMax(Number((e.target as HTMLInputElement).value))}
+					step="1"
+					value={practice.tempo}
+					onchange={(e) => practice.setTempo(Number((e.target as HTMLInputElement).value))}
 				/>
+			</div>
+
+			<div class="opt">
+				<label class="label" for="p-step">Step up</label>
+				<select
+					id="p-step"
+					value={practice.tempoStep}
+					onchange={(e) => practice.setTempoStep(Number(select(e)))}
+				>
+					{#each TEMPO_STEPS as step (step)}
+						<option value={step}>{step === 0 ? 'Off' : `+${step} bpm`}</option>
+					{/each}
+				</select>
+			</div>
+
+			{#if practice.tempoStep > 0}
+				<div class="opt">
+					<label class="label" for="p-tmax">Up to</label>
+					<input
+						id="p-tmax"
+						type="number"
+						inputmode="numeric"
+						min={TEMPO_MIN}
+						max={TEMPO_MAX}
+						step="5"
+						value={practice.tempoMax}
+						onchange={(e) => practice.setTempoMax(Number((e.target as HTMLInputElement).value))}
+					/>
+				</div>
 			{/if}
 
-			<label class="label" for="p-rest">Rest</label>
-			<select
-				id="p-rest"
-				value={practice.restBars}
-				onchange={(e) => practice.setRestBars(Number(select(e)))}
-			>
-				{#each REST_OPTIONS as bars (bars)}
-					<option value={bars}>{bars === 0 ? 'None' : `${bars} bar${bars > 1 ? 's' : ''}`}</option>
-				{/each}
-			</select>
+			<div class="opt">
+				<label class="label" for="p-rest">Rest</label>
+				<select id="p-rest" value={practice.restBars} onchange={(e) => practice.setRestBars(Number(select(e)))}>
+					{#each REST_OPTIONS as bars (bars)}
+						<option value={bars}>{bars === 0 ? 'None' : `${bars} bar${bars > 1 ? 's' : ''}`}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 
-		<div class="row">
-			<label class="label" for="p-backing">Backing</label>
-			<select
-				id="p-backing"
-				value={practice.backing}
-				onchange={(e) => practice.setBacking(select(e) as never)}
-			>
-				{#each BACKINGS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
-			</select>
+		<div class="row" role="group" aria-label="Sound">
+			<div class="opt">
+				<label class="label" for="p-backing">Backing</label>
+				<select id="p-backing" value={practice.backing} onchange={(e) => practice.setBacking(select(e) as never)}>
+					{#each BACKINGS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
+				</select>
+			</div>
 
 			{#if practice.backing === 'click'}
-				<label class="label" for="p-feel">Feel</label>
-				<select
-					id="p-feel"
-					value={practice.clickFeel}
-					onchange={(e) => practice.setClickFeel(select(e) as never)}
-				>
-					{#each CLICK_FEELS as f (f.id)}<option value={f.id}>{f.label}</option>{/each}
-				</select>
+				<div class="opt">
+					<label class="label" for="p-feel">Feel</label>
+					<select
+						id="p-feel"
+						value={practice.clickFeel}
+						onchange={(e) => practice.setClickFeel(select(e) as never)}
+					>
+						{#each CLICK_FEELS as f (f.id)}<option value={f.id}>{f.label}</option>{/each}
+					</select>
+				</div>
 			{/if}
 
-			<label class="label" for="p-inst">Line sound</label>
-			<select
-				id="p-inst"
-				value={practice.instrument}
-				onchange={(e) => practice.setInstrument(select(e) as never)}
-			>
-				{#each INSTRUMENT_ORDER as id (id)}<option value={id}>{INSTRUMENT_LABELS[id]}</option>{/each}
-			</select>
+			<div class="opt">
+				<label class="label" for="p-inst">Line sound</label>
+				<select id="p-inst" value={practice.instrument} onchange={(e) => practice.setInstrument(select(e) as never)}>
+					{#each INSTRUMENT_ORDER as id (id)}<option value={id}>{INSTRUMENT_LABELS[id]}</option>{/each}
+				</select>
+			</div>
 
-			<button
-				class="bar-btn"
-				class:bar-btn--on={practice.countIn}
-				type="button"
-				aria-pressed={practice.countIn}
-				onclick={() => practice.setCountIn(!practice.countIn)}>Count-in</button
-			>
+			<div class="opt opt--button">
+				<button
+					class="bar-btn"
+					class:bar-btn--on={practice.countIn}
+					type="button"
+					aria-pressed={practice.countIn}
+					onclick={() => practice.setCountIn(!practice.countIn)}>Count-in</button
+				>
+			</div>
 		</div>
 	</div>
 </section>
@@ -326,17 +342,30 @@
 		position: absolute;
 		top: var(--space-1);
 		right: var(--space-1);
+		display: grid;
+		place-items: center;
+		width: 32px;
+		height: 32px;
 		border: 0;
 		background: transparent;
 		font-family: inherit;
-		font-size: 1rem;
+		font-size: 1.125rem;
+		font-weight: 800;
 		line-height: 1;
-		padding: var(--space-1);
-		color: var(--color-text-faint);
+		padding: 0;
+		color: var(--ink-3);
 		cursor: pointer;
 
 		&:hover {
 			color: var(--danger);
+			background: var(--wash);
+		}
+
+		@media (pointer: coarse) {
+			width: var(--tap);
+			height: var(--tap);
+			top: 0;
+			right: 0;
 		}
 
 		&:focus-visible {
@@ -405,9 +434,8 @@
 		font-family: var(--font-display);
 		font-stretch: var(--display-stretch);
 		font-weight: 900;
-		font-size: 1.25rem;
+		font-size: 1.375rem;
 		line-height: 1;
-		text-transform: uppercase;
 		color: var(--ink);
 	}
 
@@ -420,35 +448,60 @@
 	.picker__rows {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: var(--space-4);
 	}
 
+	/* Each group of settings is a grid of label-over-control units: columns on a
+	   desktop, two to a row on a phone, never a label stranded from its field. */
 	.row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: var(--space-3) var(--space-4);
+		align-items: end;
 	}
 
-	.row select,
-	.row input {
+	.opt {
+		display: grid;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+
+	.opt--button {
+		justify-items: start;
+	}
+
+	/* Printed fields: the value on a heavy ink underline. */
+	.opt select,
+	.opt input {
+		width: 100%;
+		min-height: 40px;
 		font-family: inherit;
-		font-size: 0.8rem;
-		color: var(--color-text);
-		background: var(--color-white);
+		font-size: 1rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink);
+		background: transparent;
 		border: 0;
-		border-bottom: 1px solid var(--color-border);
-		padding: var(--space-1) 0;
+		border-bottom: var(--rule-heavy) solid var(--ink);
 		border-radius: 0;
+		padding: 0 2px;
+
+		&:hover {
+			background: var(--wash);
+		}
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
+		}
+
+		@media (pointer: coarse) {
+			min-height: var(--tap);
 		}
 	}
 
-	.row input[type='number'] {
-		width: 4.5rem;
+	.opt option {
+		background: var(--paper);
+		color: var(--ink);
 	}
 </style>

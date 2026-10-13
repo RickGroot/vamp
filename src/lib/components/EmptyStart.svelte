@@ -140,7 +140,6 @@
 		font-weight: 900;
 		font-size: 1.5rem;
 		line-height: 1;
-		text-transform: uppercase;
 	}
 
 	.sketch__chords {

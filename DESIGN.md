@@ -90,9 +90,10 @@ always carries the quality as text too.
 
 One family, **Archivo** (variable, self-hosted, SIL OFL), at two widths:
 - **Normal width** for everything you operate.
-- **Display:** `--font-display` at `--display-stretch` (62%), weight 900, in
-  capitals. Used for the wordmark, the tune title, big numbers (tempo, time,
-  loop), the key name, section titles, drill and tune names.
+- **Display:** `--font-display` at `--display-stretch` (62%), weight 900. In
+  capitals for interface words: the wordmark, section titles, big numbers (tempo,
+  time, loop) and the key name. **Names keep their own case:** the tune title, drill
+  names and sketch names, because a capitalised "Jazz ii–V–I in C" reads II.
 - **Chords** go through `ChordSymbol`, which sets the same condensed face without
   capitals, Real Book style: a big root, a small raised quality, a slash bass back
   at full size. `model/symbol.ts` does the split. It is display only, and the stored
@@ -122,8 +123,8 @@ One family, **Archivo** (variable, self-hosted, SIL OFL), at two widths:
 ## The top of Sketch
 
 Laid out by the editor's own width (container queries), never by ragged wrapping:
-- **Title:** the tune's name on its own line, huge, condensed, in capitals,
-  sized to fit its length on one line (from 4.75rem down to 1.75rem).
+- **Title:** the tune's name on its own line, huge and condensed, in its own
+  case, sized to fit its length on one line (from 4.75rem down to 1.75rem).
 - **Toolbar:** history (undo/redo as two joined boxes), File and Share on the
   left; Stand and **Practise this** (primary) on the right. On a phone: history +
   File + Share, then Stand and Practise as equal halves.
@@ -196,3 +197,15 @@ transport: **Start** as a block of the key's colour (it turns to an ink-bordered
 **Stop** while running), and **HEAR IT | PLAY IT**, a two-segment switch for whether
 the line plays or you play it over the backing. Drill cards are printed boxes; the
 chosen one is inked solid.
+
+The drill staff reads like a part:
+- barlines fall where the click's bars fall, and rows hold whole bars;
+- notes crossing a barline are tied;
+- eighths are beamed by half a bar in 4/4, a beat in other simple meters, and a
+  dotted quarter in compound meters, never across a barline or a rest;
+- accidentals follow the bar rule;
+- each key ends on a double barline, the last on a final barline;
+- chord names sit over their notes without colliding.
+
+The settings are label-over-field units on a grid: columns on a desktop, two to a row
+on a phone, every field 44px tall to the touch.

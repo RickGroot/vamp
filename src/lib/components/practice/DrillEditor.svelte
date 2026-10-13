@@ -170,22 +170,38 @@
 		flex-wrap: wrap;
 	}
 
+	/* Printed fields, like the drill settings: the value on a heavy ink underline. */
 	.editor input,
 	.editor select {
+		min-height: 40px;
 		font-family: inherit;
-		font-size: 0.8rem;
-		color: var(--color-text);
-		background: var(--color-white);
+		font-size: 1rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink);
+		background: transparent;
 		border: 0;
-		border-bottom: 1px solid var(--color-border);
-		padding: var(--space-1) 0;
+		border-bottom: var(--rule-heavy) solid var(--ink);
+		padding: 0 2px;
 		border-radius: 0;
+
+		&:hover {
+			background: var(--wash);
+		}
 
 		&:focus {
 			outline: none;
-			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
+
+		@media (pointer: coarse) {
+			min-height: var(--tap);
+		}
+	}
+
+	.editor option {
+		background: var(--paper);
+		color: var(--ink);
 	}
 
 	.editor input[type='number'] {
@@ -206,7 +222,9 @@
 	}
 
 	.editor__hint {
-		color: var(--color-text-faint);
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--ink-3);
 		flex: 1 1 16rem;
 	}
 
@@ -222,6 +240,7 @@
 
 	.editor__actions {
 		display: flex;
+		flex-wrap: wrap;
 		gap: var(--space-2);
 		justify-content: flex-end;
 	}
