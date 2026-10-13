@@ -4,9 +4,14 @@
 	import { practice } from '$lib/stores/practice.svelte';
 	import DrillStaff from './DrillStaff.svelte';
 	import KeyCompass from '../KeyCompass.svelte';
+	import { runMeter } from '$lib/practice/plan';
+	import { barBeats, beatsToQuarters } from '$lib/model/time';
 
 	const run = $derived(practice.run);
 	const total = $derived(run.phrases.length);
+	// The bar the click plays, so the staff's barlines land where you hear them.
+	const meter = $derived(runMeter(run));
+	const quartersPerBar = $derived(beatsToQuarters(barBeats(meter), meter));
 	// Before playback starts, show the first key rather than an empty slot.
 	const rep = $derived(practice.rep ?? 0);
 	const shown = $derived(run.phrases.find((p) => p.rep === rep) ?? run.phrases[0] ?? null);
@@ -87,7 +92,7 @@
 			different register, or a wider range.
 		</p>
 	{:else}
-		<DrillStaff notes={phraseNotes} />
+		<DrillStaff notes={phraseNotes} {quartersPerBar} final={!next} />
 		{#if next}
 			<p class="runner__next hint">Next up · {next.writtenRoot} at {next.tempo} bpm</p>
 		{/if}

@@ -16,9 +16,19 @@ import { buildCompEvents, type CompEvent } from '$lib/audio/comp';
 import { countInFor, type PlaybackPlan } from '$lib/audio/plan';
 import { barBeats, beatsToQuarters } from '$lib/model/time';
 import type { ClickFeel } from '$lib/audio/drills';
-import type { DrumStyle, Groove, InstrumentId } from '$lib/model/types';
+import type { DrumStyle, Groove, InstrumentId, TimeSignature } from '$lib/model/types';
 import { concertMidi } from './resolve';
 import type { DrillRun } from './types';
+
+/**
+ * The meter the run was RESOLVED in: a drill over your own changes takes the
+ * song's meter (`options.timeSignature`), not the definition's default 4/4. The
+ * click, the bar length and the staff's barlines must all follow it, or a 3/4
+ * song is drilled over a 4/4 click.
+ */
+export function runMeter(run: DrillRun): TimeSignature {
+	return run.options.timeSignature ?? run.definition.timeSignature;
+}
 
 /** What plays underneath the drill line. */
 export type DrillBacking = 'none' | 'click' | 'drums';
@@ -50,11 +60,11 @@ function backingEvents(
 		drums: opts.backing === 'drums' ? opts.drumStyle : 'none'
 	};
 	if (opts.backing === 'none') return [];
-	return buildCompEvents([], totalQuarters, run.definition.timeSignature, groove, opts.clickFeel);
+	return buildCompEvents([], totalQuarters, runMeter(run), groove, opts.clickFeel);
 }
 
 export function drillPlan(run: DrillRun, opts: DrillPlanOptions): PlaybackPlan {
-	const ts = run.definition.timeSignature;
+	const ts = runMeter(run);
 	const offset = run.options.offset;
 
 	// The drill line. Notes are WRITTEN pitch, so playback converts back to

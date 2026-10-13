@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Note } from 'tonal';
-import { drillPlan, type DrillPlanOptions } from './plan';
+import { drillPlan, runMeter, type DrillPlanOptions } from './plan';
 import { resolveDrill } from './resolve';
 import { drillById } from './patterns';
 import { rangeFor } from './range';
@@ -125,6 +125,13 @@ describe('drillPlan', () => {
 		const lead = plan.events.filter((e) => e.kind === 'lead');
 		const last = lead[lead.length - 1];
 		expect(last.atQuarters + last.durQuarters).toBeCloseTo(plan.totalQuarters, 10);
+	});
+
+	it('follows the meter the run was resolved in (a drill over a 3/4 song)', () => {
+		const ts = { numerator: 3, denominator: 4 };
+		const run = resolveDrill(drillById('scale-1235')!, runOpts({ timeSignature: ts }));
+		expect(runMeter(run)).toEqual(ts);
+		expect(drillPlan(run, planOpts()).quartersPerBar).toBe(3);
 	});
 
 	it('reports the bar length for the trade-fours windows', () => {

@@ -29,3 +29,19 @@ export function ensureJazzFont(): Promise<void> {
 		});
 	return loading;
 }
+
+/**
+ * Wait for VexFlow's own music fonts (Bravura glyphs, Academico text). Importing
+ * `vexflow` registers them asynchronously, so a layout measured straight after
+ * the import used fallback metrics on a cold load — the drill staff then packed
+ * rows at the worst-case spacing (one bar per row) until the next re-render.
+ * Call after `await import('vexflow')`. Never rejects.
+ */
+export async function ensureMusicFont(): Promise<void> {
+	if (typeof document === 'undefined' || !document.fonts) return;
+	try {
+		await Promise.all(['Bravura', 'Academico'].map((family) => document.fonts.load(`30px "${family}"`)));
+	} catch {
+		/* measure with whatever is available */
+	}
+}
