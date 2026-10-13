@@ -63,6 +63,7 @@ Layering: **model / practice → storage / audio(pure) → stores → components
 | `src/lib/audio/drone.ts` | Singleton `DroneEngine`: sustained root(+fifth), click-free ramps |
 | `src/lib/audio/{recorder,drills,scalePlayer,transpose,tapTempo}.ts` | MicRecorder; pure drill logic; scale preview; transposeChordSymbol + display/concert offset; pure tap-tempo |
 | `src/lib/notation/vex.ts` | notationVoicing, voicedToVexKey/midiToVexKey, beatsToVexDuration |
+| `src/lib/notation/labels.ts` | `placeLabels`: where StaffSheet draws each chord name — centred on its note, but never left of its bar's note area (the clef at a row start, which a centred name ran over on phones), into a neighbour, or off the right edge. Widths are MEASURED (`getComputedTextLength`). PURE + tested |
 | `src/lib/notation/font.ts` | Self-hosted Petaluma Script jazz font via FontFace (awaitable) |
 | `src/lib/midi/input.ts` | `MidiInput` + `detectChordSymbol` (Chromium Web-MIDI only) |
 | `src/lib/art/music.ts` | PURE music signal the art reads: `MusicClock` (produced by `engine.clock()`), `TENSION` per chord family, beat/loop helpers. No free-running clock anywhere in the art |

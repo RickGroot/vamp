@@ -5,6 +5,7 @@
 	import { displayChord } from '$lib/audio/transpose';
 	import { voicedToVexKey, beatsToVexDuration, notationVoicing } from '$lib/notation/vex';
 	import { ensureJazzFont, JAZZ_FONT } from '$lib/notation/font';
+	import { placeLabels } from '$lib/notation/labels';
 	import type { Bar, TimeSignature } from '$lib/model/types';
 	import type { RenderContext } from 'vexflow';
 
@@ -265,19 +266,38 @@
 		// Chord names: our own SVG text, a fixed gap above each row's highest note / top line.
 		const svg2 = el.querySelector('svg');
 		const NS = 'http://www.w3.org/2000/svg';
+		const named: { lab: Label; t: SVGTextElement }[] = [];
 		for (const lab of labels) {
 			if (!lab.symbol.trim() || !svg2) continue;
 			const baseline = topLine[lab.row] - clamp0(noteAbove[lab.row]) - LABEL_GAP;
 			const t = document.createElementNS(NS, 'text');
 			t.setAttribute('x', String(Math.round(lab.x)));
 			t.setAttribute('y', String(Math.round(baseline)));
-			t.setAttribute('text-anchor', 'middle');
+			t.setAttribute('text-anchor', 'start');
 			t.setAttribute('font-family', JAZZ_FONT);
 			t.setAttribute('font-size', String(CHORD_FONT_SIZE));
 			t.setAttribute('class', 'chord-name');
 			t.setAttribute('data-slot', String(lab.slot));
 			t.textContent = lab.symbol.trim();
 			svg2.appendChild(t);
+			named.push({ lab, t });
+		}
+		// Then place them by their MEASURED widths: centred on the note, but never
+		// over the clef at a row start (or a barline), into a neighbour, or off the edge.
+		const rows = new Map<number, { lab: Label; t: SVGTextElement }[]>();
+		for (const n of named) rows.set(n.lab.row, [...(rows.get(n.lab.row) ?? []), n]);
+		for (const row of rows.values()) {
+			row.sort((a, b) => a.lab.x - b.lab.x);
+			const lefts = placeLabels(
+				row.map(({ lab, t }) => ({
+					x: lab.x,
+					w: t.getComputedTextLength() || lab.symbol.trim().length * CHORD_FONT_SIZE * 0.5,
+					// A little air after the clef / barline, not flush against it.
+					min: lab.barLeft + 4
+				})),
+				available - 2
+			);
+			row.forEach(({ t }, i) => t.setAttribute('x', String(Math.round(lefts[i]))));
 		}
 
 		// A translucent "playhead" box per slot, behind the staff, keyed by global
