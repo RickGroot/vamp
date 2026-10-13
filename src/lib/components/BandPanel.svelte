@@ -222,8 +222,8 @@
 
 <style lang="scss">
 	.band {
-		margin-top: var(--space-12);
-		border-top: 1px solid var(--rule);
+		margin-top: var(--space-8);
+		border-top: var(--rule-heavy) solid var(--ink);
 		padding-top: var(--space-4);
 	}
 
@@ -299,7 +299,7 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 	}
 

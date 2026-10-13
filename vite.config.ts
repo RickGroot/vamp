@@ -53,12 +53,13 @@ export default defineConfig(({ command }) => {
 					scope: `${BASE_PATH}/`,
 					display: 'standalone',
 					orientation: 'any',
-					background_color: '#fff6ea',
-					theme_color: '#fff6ea',
+					background_color: '#ffffff',
+					theme_color: '#ffffff',
 					icons: [
 						{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
 						{ src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-						// The mark sits inside the central safe zone, so it doubles as maskable.
+						// The record sits inside the central safe zone on a full-bleed field, so it
+						// doubles as maskable.
 						{ src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 						// Scalable source for browsers that prefer SVG app icons.
 						{ src: 'vamp-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
@@ -70,19 +71,20 @@ export default defineConfig(({ command }) => {
 							sizes: '1280x720',
 							type: 'image/png',
 							form_factor: 'wide',
-							label: 'Vamp — sketch chord progressions and loop backing tracks to improvise over'
+							label: 'Sketch: the tune, the deck (play, tempo, time, loop, key) and the chord chart'
 						},
 						{
 							src: 'screenshot-narrow.png',
 							sizes: '720x1280',
 							type: 'image/png',
 							form_factor: 'narrow',
-							label: 'Vamp — a local-first chord sketchpad and improv trainer'
+							label: 'Vamp on a phone, in the dark theme'
 						}
 					]
 				},
 				workbox: {
-					// Precache the app shell (incl. PNG icons + the jazz chord font).
+					// Precache the app shell (incl. PNG icons, the Archivo UI font and the
+					// jazz chord font for the notation).
 					// Samples are runtime-cached below.
 					globPatterns: ['**/*.{js,css,html,svg,png,woff2,ico,webmanifest}'],
 					// The share image + install screenshots are only fetched online by

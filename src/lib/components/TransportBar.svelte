@@ -5,9 +5,11 @@
 	import { flattenSlots } from '$lib/model/slots';
 	import { inferKey } from '$lib/model/key';
 	import { displayChord } from '$lib/audio/transpose';
+	import { resolveLoopRange } from '$lib/model/time';
 	import LoopControl from './LoopControl.svelte';
 	import LoopRings from './LoopRings.svelte';
 	import KeyCompass from './KeyCompass.svelte';
+	import ChordSymbol from './ChordSymbol.svelte';
 	import { engine } from '$lib/audio/engine';
 
 	const TIME_SIGNATURES = [
@@ -30,9 +32,34 @@
 		return songChords[i] ?? '';
 	});
 	let session = $state('');
-	const keyName = $derived(
-		progression.isBlank ? '—' : `${displayChord(keyInfo.tonic, view.offset)} ${keyInfo.mode}`
+	// The key's root goes through ChordSymbol: an uppercased "Bb" reads "BB".
+	const keyRoot = $derived(progression.isBlank ? '' : displayChord(keyInfo.tonic, view.offset));
+
+	// What the field says. Playing: the chord sounding now, big enough to read
+	// from the stand, and where you are. Stopped: the chord the band will start on.
+	const flat = $derived(flattenSlots(progression.current.bars));
+	const loopStart = $derived(resolveLoopRange(progression.current).start);
+	const nowSlot = $derived.by(() => {
+		const i = progression.activeSlot;
+		if (i === null || !progression.isPlaying || engine.source !== 'progression') return null;
+		return flat[i] ?? null;
+	});
+	const startChord = $derived(
+		flat.find((f) => f.barIndex >= loopStart && f.slot.chord.trim() !== '')?.slot.chord ?? ''
 	);
+	const fieldChord = $derived(
+		nowSlot ? nowSlot.slot.chord.trim() : progression.isPlaying || progression.isLoading ? '' : startChord
+	);
+	const fieldLabel = $derived(
+		progression.isLoading
+			? 'Starting the band'
+			: nowSlot
+				? 'Now'
+				: progression.isBlank
+					? 'Ready'
+					: `From bar ${loopStart + 1}`
+	);
+	const position = $derived(nowSlot ? `Bar ${nowSlot.barIndex + 1} of ${progression.current.bars.length}` : '');
 
 	const currentTs = $derived(
 		`${progression.current.timeSignature.numerator}/${progression.current.timeSignature.denominator}`
@@ -77,293 +104,237 @@
 	}
 </script>
 
-<!-- The transport deck: the sun (play) on the left, the sunflower (key) on the
-     right, the controls you touch while playing between them. One panel whose
-     grid regroups at each width rather than wrapping raggedly: a single row on
-     a desktop, two on a tablet, three on a phone. -->
+<!-- The deck: one printed band between two heavy rules. The field on the left
+     is the page's one block of colour — the chord sounding now (at rest, your
+     tune's colour) — with the play disc cut into it; tempo, time and loop, and
+     the key's record follow, each in its own panel. The grid regroups at each
+     width rather than wrapping raggedly. -->
 <div class="deck-host">
-<div class="deck">
-	<div class="deck__play">
-		<LoopRings bind:caption={session}>
-			<!-- The label says what a press will do; no aria-pressed as well, or it
-			     announces "Stop, pressed". -->
-			<button
-				class="play"
-				class:play--on={progression.isPlaying}
-				type="button"
-				aria-label={progression.isPlaying || progression.isLoading ? 'Stop' : 'Play'}
-				onclick={() => progression.toggle()}
-			>
-				{#if progression.isLoading}
-					<span class="play__loading" aria-hidden="true"></span>
-				{:else if progression.isPlaying}
-					<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"
-						><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" /></svg
-					>
-				{:else}
-					<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"
-						><path d="M8 5l11 7-11 7z" fill="currentColor" /></svg
-					>
-				{/if}
-			</button>
-		</LoopRings>
-		<!-- What you've played this session, under the rings. -->
-		<p class="session" aria-live="polite">{session}</p>
-	</div>
+	<div class="deck">
+		<div class="deck__field">
+			<LoopRings bind:caption={session} disc={60}>
+				<!-- The label says what a press will do; no aria-pressed as well, or it
+				     announces "Stop, pressed". -->
+				<button
+					class="play"
+					type="button"
+					aria-label={progression.isPlaying || progression.isLoading ? 'Stop' : 'Play'}
+					onclick={() => progression.toggle()}
+				>
+					{#if progression.isLoading}
+						<span class="play__loading" aria-hidden="true"></span>
+					{:else if progression.isPlaying}
+						<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"
+							><rect x="6" y="6" width="12" height="12" fill="currentColor" /></svg
+						>
+					{:else}
+						<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"
+							><path d="M8 5l11 7-11 7z" fill="currentColor" /></svg
+						>
+					{/if}
+				</button>
+			</LoopRings>
+			<div class="now">
+				<span class="label now__label">{fieldLabel}</span>
+				<span class="now__chord">
+					{#if fieldChord}<ChordSymbol symbol={displayChord(fieldChord, view.offset)} />{:else}—{/if}
+				</span>
+				<span class="now__sub"
+					>{position}{#if position && session}&nbsp;·&nbsp;{/if}<span aria-live="polite">{session}</span
+					>{#if !position && !session && !progression.isBlank}<span class="now__keys">Space to play</span
+						>{/if}</span
+				>
+			</div>
+		</div>
 
-	<div class="deck__tempo">
-		<label class="label" for="tempo">Tempo</label>
-		<div class="stepper" role="group" aria-label="Tempo">
-			<button
-				class="stepper__btn"
-				type="button"
-				aria-label="Slower"
-				onclick={() => progression.setTempo(progression.current.tempo - 1)}>−</button
-			>
-			<input
-				id="tempo"
-				class="stepper__value"
-				type="text"
-				inputmode="numeric"
-				value={progression.current.tempo}
-				oninput={onTempoInput}
-				onchange={onTempoChange}
+		<div class="deck__tempo">
+			<label class="label" for="tempo">Tempo</label>
+			<div class="tempo">
+				<input
+					id="tempo"
+					class="tempo__value"
+					type="text"
+					inputmode="numeric"
+					value={progression.current.tempo}
+					oninput={onTempoInput}
+					onchange={onTempoChange}
+				/>
+				<span class="tempo__unit" aria-hidden="true">BPM</span>
+			</div>
+			<div class="deck__tempo-tools">
+				<div class="steps" role="group" aria-label="Tempo">
+					<button
+						class="bar-btn step"
+						type="button"
+						aria-label="Slower"
+						onclick={() => progression.setTempo(progression.current.tempo - 1)}>−</button
+					>
+					<button
+						class="bar-btn step"
+						type="button"
+						aria-label="Faster"
+						onclick={() => progression.setTempo(progression.current.tempo + 1)}>+</button
+					>
+				</div>
+				<button
+					class="bar-btn"
+					class:bar-btn--on={pulse}
+					type="button"
+					title="Tap repeatedly to set the tempo"
+					onclick={onTap}>Tap</button
+				>
+				<button
+					class="bar-btn"
+					class:bar-btn--on={view.countIn}
+					type="button"
+					aria-pressed={view.countIn}
+					title="Play a one-bar count-in before the loop"
+					onclick={() => view.setCountIn(!view.countIn)}>Count-in</button
+				>
+			</div>
+		</div>
+
+		<!-- Track-wide settings. (Instrument / groove / mix live in the Band panel.) -->
+		<div class="deck__settings">
+			<div class="field">
+				<label class="label" for="timesig">Time</label>
+				<select id="timesig" class="field__select" value={currentTs} onchange={onTimeSignature}>
+					{#if customTs}
+						<option value={customTs}>{customTs} (custom)</option>
+					{/if}
+					{#each TIME_SIGNATURES as ts (ts.label)}
+						<option value={ts.label}>{ts.label}</option>
+					{/each}
+				</select>
+			</div>
+			<LoopControl />
+		</div>
+
+		<div class="deck__key" role="group" aria-labelledby="key-label">
+			<KeyCompass
+				tonic={progression.isBlank ? '' : keyInfo.tonic}
+				chords={songChords}
+				{sounding}
+				offset={view.offset}
+				mode={keyInfo.mode}
+				size={96}
 			/>
-			<button
-				class="stepper__btn"
-				type="button"
-				aria-label="Faster"
-				onclick={() => progression.setTempo(progression.current.tempo + 1)}>+</button
-			>
-		</div>
-		<div class="deck__tempo-tools">
-			<button
-				class="bar-btn"
-				class:bar-btn--on={pulse}
-				type="button"
-				title="Tap repeatedly to set the tempo"
-				onclick={onTap}>Tap</button
-			>
-			<button
-				class="bar-btn"
-				class:bar-btn--on={view.countIn}
-				type="button"
-				aria-pressed={view.countIn}
-				title="Play a one-bar count-in before the loop"
-				onclick={() => view.setCountIn(!view.countIn)}>Count-in</button
-			>
-		</div>
-	</div>
-
-	<!-- Track-wide settings. (Instrument / groove / mix live in the Band panel.) -->
-	<div class="deck__settings">
-		<div class="field">
-			<label class="label" for="timesig">Time</label>
-			<select id="timesig" class="field__select" value={currentTs} onchange={onTimeSignature}>
-				{#if customTs}
-					<option value={customTs}>{customTs} (custom)</option>
-				{/if}
-				{#each TIME_SIGNATURES as ts (ts.label)}
-					<option value={ts.label}>{ts.label}</option>
-				{/each}
-			</select>
-		</div>
-		<LoopControl />
-	</div>
-
-	<div class="deck__key" role="group" aria-labelledby="key-label">
-		<KeyCompass
-			tonic={progression.isBlank ? '' : keyInfo.tonic}
-			chords={songChords}
-			{sounding}
-			offset={view.offset}
-		/>
-		<div class="deck__key-text">
-			<span class="label" id="key-label">Key</span>
-			<span class="key__name" aria-live="polite">{keyName}</span>
-			<div class="key__steps">
-				<button
-					class="step"
-					type="button"
-					aria-label="Transpose down a semitone"
-					title="Transpose down a semitone"
-					onclick={() => progression.transpose(-1)}>−</button
+			<div class="deck__key-text">
+				<span class="label" id="key-label">Key</span>
+				<span class="key__name" aria-live="polite"
+					>{#if keyRoot}<ChordSymbol symbol={keyRoot} />&nbsp;{keyInfo.mode}{:else}—{/if}</span
 				>
-				<button
-					class="step"
-					type="button"
-					aria-label="Transpose up a semitone"
-					title="Transpose up a semitone"
-					onclick={() => progression.transpose(1)}>+</button
-				>
+				<div class="steps">
+					<button
+						class="bar-btn step"
+						type="button"
+						aria-label="Transpose down a semitone"
+						title="Transpose down a semitone"
+						onclick={() => progression.transpose(-1)}>−</button
+					>
+					<button
+						class="bar-btn step"
+						type="button"
+						aria-label="Transpose up a semitone"
+						title="Transpose up a semitone"
+						onclick={() => progression.transpose(1)}>+</button
+					>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
-</div>
 
 <style lang="scss">
-	/* One panel of paper floating on the sky. The grid names its regions so each
-	   width can arrange them deliberately. */
 	/* The host is the size container (a container can't query itself). */
 	.deck-host {
 		container: deck / inline-size;
+		margin-top: var(--space-6);
 	}
 
+	/* The rules between panels are the grid's gaps showing the ink behind, so
+	   they stay exact whichever way the panels regroup. */
 	.deck {
 		display: grid;
-		grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto;
-		grid-template-areas: 'play tempo settings key';
-		align-items: center;
-		gap: var(--space-4) var(--space-8);
-		margin-top: var(--space-4);
-		padding: var(--space-4) var(--space-6);
-		border: 1px solid var(--rule);
-		border-radius: 18px;
-		background: color-mix(in srgb, var(--paper) 88%, transparent);
-		box-shadow: 0 10px 30px var(--shadow);
+		grid-template-columns: minmax(300px, 1.35fr) auto auto minmax(0, 1fr);
+		grid-template-areas: 'field tempo settings key';
+		gap: var(--rule-heavy);
+		background: var(--ink);
+		border-block: var(--rule-heavy) solid var(--ink);
+
+		> * {
+			background: var(--ground);
+			min-width: 0;
+		}
 	}
 
-	.deck__play {
-		grid-area: play;
-		position: relative;
-		display: grid;
-		justify-items: center;
-		min-width: 120px;
-	}
-
-	.deck__tempo {
-		grid-area: tempo;
-		display: grid;
-		gap: var(--space-2);
-		justify-items: start;
-	}
-
-	.deck__tempo-tools {
-		display: flex;
-		gap: var(--space-2);
-	}
-
-	.deck__settings {
-		grid-area: settings;
-		display: flex;
-		align-items: flex-end;
-		gap: var(--space-6);
-		flex-wrap: wrap;
-	}
-
-	.deck__key {
-		grid-area: key;
+	/* ---- The field ---- */
+	.deck__field {
+		grid-area: field;
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
+		gap: 0 var(--space-2);
+		padding: var(--space-4) var(--space-6) var(--space-4) var(--space-2);
+		background: var(--field);
+		color: var(--on-field);
 	}
 
-	.deck__key-text {
+	.now {
 		display: grid;
-		gap: 2px;
+		gap: var(--space-1);
+		min-width: 0;
 	}
 
-	.key__steps {
-		display: flex;
-		gap: var(--space-2);
-		margin-top: var(--space-1);
+	.now__label {
+		color: var(--on-field);
 	}
 
-	/* Tablet-ish: the controls stack between the sun and the sunflower. */
-	@container deck (max-width: 860px) {
-		.deck {
-			grid-template-columns: auto minmax(0, 1fr) auto;
-			grid-template-areas:
-				'play tempo key'
-				'play settings key';
-			gap: var(--space-4) var(--space-6);
-		}
+	.now__chord {
+		--cs-stretch: 62%;
+		--cs-weight: 900;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 5.25rem;
+		line-height: 0.95;
+		min-height: 0.95em;
+		overflow: hidden;
 	}
 
-	/* Phone: sun beside tempo, then the key, then time and loop. */
-	@container deck (max-width: 520px) {
-		.deck {
-			grid-template-columns: auto minmax(0, 1fr);
-			grid-template-areas:
-				'play tempo'
-				'key key'
-				'settings settings';
-			gap: var(--space-3) var(--space-4);
-			padding: var(--space-3) var(--space-4);
-			border-radius: 14px;
-		}
-
-		.deck__play {
-			min-width: 96px;
-		}
-
-		.deck__key {
-			padding-top: var(--space-3);
-			border-top: 1px solid var(--rule);
-		}
-
-		.deck__key-text {
-			grid-template-columns: auto auto;
-			align-items: center;
-			column-gap: var(--space-4);
-		}
-
-		.deck__key-text .label {
-			grid-column: 1 / -1;
-		}
-
-		.key__steps {
-			margin-top: 0;
-		}
-
-		.deck__settings {
-			padding-top: var(--space-3);
-			border-top: 1px solid var(--rule);
-			gap: var(--space-4);
-		}
-
-		.deck__key :global(.flower) {
-			width: 72px;
-			height: 72px;
-		}
+	.now__sub {
+		min-height: 1.2em;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
 
-	/* The play button is the sun: the one thing you press to make music. */
+	/* The play disc: cut out of the field in its ink. */
 	.play {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 56px;
-		height: 56px;
+		display: grid;
+		place-items: center;
+		width: 60px;
+		height: 60px;
 		border: 0;
-		border-radius: var(--radius-pill);
-		background: radial-gradient(circle at 35% 30%, var(--sun) 0%, var(--spot) 78%);
-		color: var(--on-spot);
+		border-radius: 50%;
+		background: var(--on-field);
+		color: var(--field);
 		flex: 0 0 auto;
-		box-shadow: var(--lift);
-		transition:
-			transform var(--motion-fast) var(--motion-pop),
-			box-shadow var(--motion-fast) var(--motion-ease-out);
+		transition: transform var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			transform: scale(1.05);
+			transform: scale(1.06);
 		}
 
 		&:active {
-			transform: scale(0.95);
+			transform: scale(0.96);
 		}
 
 		&:focus-visible {
+			outline-color: var(--on-field);
 			outline-offset: 4px;
-		}
-
-		/* Playing: a ring of light round the sun. */
-		&--on {
-			box-shadow:
-				var(--lift),
-				0 0 0 3px var(--paper),
-				0 0 0 5px var(--spot);
 		}
 
 		svg {
@@ -376,7 +347,7 @@
 		height: 18px;
 		border: 2px solid currentColor;
 		border-top-color: transparent;
-		border-radius: var(--radius-pill);
+		border-radius: 50%;
 		animation: spin 700ms linear infinite;
 	}
 
@@ -394,94 +365,245 @@
 		}
 	}
 
-	.session {
-		min-height: 1.2em;
-		margin: 2px 0 0;
-		text-align: center;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-		color: var(--ink-2);
-		white-space: nowrap;
+	/* ---- Tempo: the number is the control ---- */
+	.deck__tempo {
+		grid-area: tempo;
+		display: grid;
+		align-content: start;
+		gap: var(--space-2);
+		padding: var(--space-4) var(--space-6);
 	}
 
-	/* − 100 + : big targets either side of a number you can also type. */
-	.stepper {
-		display: inline-flex;
-		align-items: stretch;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
-		overflow: hidden;
+	.tempo {
+		display: flex;
+		align-items: flex-end;
+		gap: var(--space-1);
 	}
 
-	.stepper__btn {
-		width: var(--tap);
-		min-height: 40px;
+	.tempo__value {
+		width: 3.1ch;
+		padding: 0;
 		border: 0;
+		border-bottom: var(--rule-heavy) solid transparent;
 		background: transparent;
-		font-family: inherit;
-		font-size: 1.25rem;
-		line-height: 1;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 5.25rem;
+		line-height: 0.88;
+		font-variant-numeric: tabular-nums;
 		color: var(--ink);
 
 		&:hover {
-			background: var(--wash);
+			border-bottom-color: var(--rule);
 		}
-	}
-
-	.stepper__value {
-		width: 4ch;
-		border: 0;
-		border-inline: 1px solid var(--rule);
-		background: transparent;
-		font-family: inherit;
-		font-size: 1.25rem;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-		text-align: center;
-		color: var(--ink);
 
 		&:focus {
 			outline: none;
-			background: var(--wash);
+			border-bottom-color: var(--ink);
 		}
 	}
 
-	.stepper:has(.stepper__value:focus-visible) {
-		outline: 2px solid var(--ink);
-		outline-offset: 2px;
+	.tempo__unit {
+		padding-bottom: 0.4rem;
+		font-size: 0.875rem;
+		font-weight: 900;
+		letter-spacing: 0.06em;
 	}
 
-	.key__name {
-		font-size: 1.125rem;
-		font-weight: 600;
-		white-space: nowrap;
-		color: var(--ink);
+	.deck__tempo-tools {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.steps {
+		display: flex;
 	}
 
 	.step {
-		width: 36px;
-		height: 36px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
-		font-family: inherit;
+		width: 38px;
+		padding: 0;
 		font-size: 1.125rem;
-		line-height: 1;
-		color: var(--ink);
 
-		&:hover {
-			border-color: var(--ink);
-			background: var(--wash);
+		& + & {
+			border-left: 0;
 		}
 
 		@media (pointer: coarse) {
 			width: var(--tap);
-			height: var(--tap);
+		}
+	}
+
+	/* ---- Time and loop: printed values you can change ---- */
+	.deck__settings {
+		grid-area: settings;
+		display: grid;
+		grid-template-rows: 1fr 1fr;
+		gap: var(--rule-heavy);
+		padding: 0;
+		background: var(--ink);
+
+		> :global(*) {
+			padding: var(--space-3) var(--space-6);
+			background: var(--ground);
+		}
+	}
+
+	/* A resting hairline under each value says it can be changed. */
+	.deck__settings :global(.field__select) {
+		min-width: 0;
+		padding: 0 2px;
+		border-bottom-color: var(--rule);
+		appearance: none;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 2.5rem;
+		line-height: 1;
+		cursor: pointer;
+
+		&:hover {
+			background: transparent;
+			border-bottom-color: var(--ink-3);
+		}
+
+		&:focus-visible {
+			border-bottom-color: var(--ink);
+		}
+	}
+
+	/* ---- The key ---- */
+	.deck__key {
+		grid-area: key;
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		padding: var(--space-4) var(--space-6);
+	}
+
+	.deck__key-text {
+		display: grid;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+
+	.key__name {
+		--cs-stretch: 62%;
+		--cs-weight: 900;
+		display: flex;
+		align-items: flex-start;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 2rem;
+		line-height: 0.95;
+		text-transform: uppercase;
+		white-space: nowrap;
+		color: var(--ink);
+		margin-bottom: var(--space-2);
+	}
+
+	/* No space bar on a phone. */
+	@media (pointer: coarse) {
+		.now__keys {
+			display: none;
+		}
+	}
+
+	/* Tablet-ish: the field across the top, the controls beneath. */
+	@container deck (max-width: 900px) {
+		.deck {
+			grid-template-columns: auto auto minmax(0, 1fr);
+			grid-template-areas:
+				'field field field'
+				'tempo settings key';
+		}
+	}
+
+	/* Phone: four compact full-width bands — the field; tempo with its tools
+	   beside the number; time | loop; the key. */
+	@container deck (max-width: 560px) {
+		.deck {
+			grid-template-columns: minmax(0, 1fr);
+			grid-template-areas:
+				'field'
+				'tempo'
+				'settings'
+				'key';
+		}
+
+		.deck__field {
+			padding: var(--space-3) var(--space-4) var(--space-3) 0;
+		}
+
+		.now__chord {
+			font-size: 4rem;
+		}
+
+		.deck__tempo {
+			grid-template-columns: auto minmax(0, 1fr);
+			align-items: center;
+			column-gap: var(--space-4);
+			padding: var(--space-3) var(--space-4);
+		}
+
+		.deck__tempo .label {
+			grid-column: 1 / -1;
+		}
+
+		.tempo__value {
+			font-size: 3.5rem;
+		}
+
+		/* A tidy 2×2 block, not a ragged wrap: −/+ beside Tap, Count-in beneath. */
+		.deck__tempo-tools {
+			display: grid;
+			grid-template-columns: auto auto;
+			justify-content: end;
+		}
+
+		.deck__tempo-tools > :last-child {
+			grid-column: 1 / -1;
+		}
+
+		.deck__settings {
+			grid-template-rows: none;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		}
+
+		.deck__settings > :global(*) {
+			padding: var(--space-3) var(--space-4);
+		}
+
+		.deck__settings :global(.field__select) {
+			font-size: 1.875rem;
+		}
+
+		.deck__key {
+			gap: var(--space-3);
+			padding: var(--space-2) var(--space-4);
+		}
+
+		.deck__key :global(.record) {
+			width: 56px;
+			height: 56px;
+		}
+
+		.deck__key-text {
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			flex: 1 1 auto;
+		}
+
+		.deck__key-text .label {
+			grid-column: 1 / -1;
+		}
+
+		.key__name {
+			font-size: 1.75rem;
+			margin-bottom: 0;
 		}
 	}
 </style>
+

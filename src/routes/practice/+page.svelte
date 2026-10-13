@@ -60,7 +60,7 @@
 	<DrillRunner />
 	<details class="settings" open>
 		<summary class="settings__toggle">
-			<span class="wordmark settings__title">Set up</span>
+			<span class="settings__title">Set up</span>
 			<span class="hint settings__hint">Drill · key · range · tempo · backing</span>
 		</summary>
 		<div class="settings__body">
@@ -88,12 +88,14 @@
 		padding-left: var(--space-2);
 	}
 
-	/* The tune's name, in its own hand, after a quiet separator. */
+	/* The tune's name, set like its title, after a quiet separator. */
 	.back__song {
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		font-family: var(--font-hand);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
 		font-size: 1rem;
 		color: var(--ink-2);
 
@@ -112,8 +114,8 @@
 	}
 
 	.settings {
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-4);
+		border-top: var(--rule-heavy) solid var(--ink);
+		padding-top: var(--space-3);
 	}
 
 	.settings__toggle {
@@ -134,7 +136,12 @@
 	}
 
 	.settings__title {
-		font-size: 1rem;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.75rem;
+		line-height: 1;
+		text-transform: uppercase;
 	}
 
 	.settings__hint {

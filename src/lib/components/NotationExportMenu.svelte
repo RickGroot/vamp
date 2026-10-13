@@ -81,20 +81,24 @@
 
 	/* Matches NotationView's "Helper notes" toggle so the two sit as a pair. */
 	.toggle {
-		border: 1px solid var(--color-border);
+		min-height: 38px;
+		border: var(--rule-heavy) solid var(--ink);
 		background: transparent;
-		padding: var(--space-1) var(--space-3);
+		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.8125rem;
-		font-weight: 400;
-		color: var(--color-text-muted);
-		transition:
-			border-color var(--motion-fast) var(--motion-ease-out),
-			color var(--motion-fast) var(--motion-ease-out);
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--ink);
+		transition: background-color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			border-color: var(--color-black);
-			color: var(--color-black);
+			background: var(--wash);
+		}
+
+		@media (pointer: coarse) {
+			min-height: var(--tap);
 		}
 	}
 

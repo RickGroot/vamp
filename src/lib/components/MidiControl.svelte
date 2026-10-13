@@ -40,7 +40,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
-		border: 1px solid var(--color-black);
+		border: var(--rule-heavy) solid var(--ink);
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
@@ -72,7 +72,7 @@
 	.dot {
 		width: 9px;
 		height: 9px;
-		border-radius: var(--radius-pill);
+		border-radius: 50%;
 		background: var(--spot);
 		animation: pulse 1.2s ease-in-out infinite;
 	}

@@ -240,12 +240,13 @@
 		line-height: 1.4;
 		color: var(--color-text);
 		background: var(--color-white);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm, 4px);
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
 		padding: var(--space-2);
 
 		&:focus {
-			border-color: var(--ink);
+			outline: var(--rule-heavy) solid var(--ink);
+			outline-offset: 0;
 		}
 	}
 

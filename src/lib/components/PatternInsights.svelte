@@ -124,19 +124,23 @@
 		align-items: center;
 		gap: var(--space-2);
 		min-height: 32px;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius);
-		background: var(--paper);
+		border: 0;
+		border-radius: 0;
+		background: var(--wash);
 		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.875rem;
-		font-weight: 500;
+		font-size: 0.8125rem;
+		font-weight: 700;
 		color: var(--ink);
 
 		&:hover,
 		&[aria-expanded='true'] {
-			border-color: var(--ink);
-			background: var(--wash);
+			background: var(--ink);
+			color: var(--ground);
+
+			.chip__bars {
+				color: inherit;
+			}
 		}
 
 		@media (pointer: coarse) {
@@ -145,14 +149,11 @@
 	}
 
 	.chip__dot {
-		width: 6px;
-		height: 6px;
-		border-radius: var(--radius-pill);
-		background: var(--ink-3);
+		display: none;
 	}
 
 	.chip__bars {
-		font-weight: 400;
+		font-weight: 500;
 		font-variant-numeric: tabular-nums;
 		color: var(--ink-3);
 	}
@@ -168,22 +169,24 @@
 
 	.info__formula {
 		margin: 0;
-		padding: 0 var(--space-3);
-		font-family: var(--font-hand);
-		font-size: 1.375rem;
-		line-height: 1.2;
+		padding: 0 var(--space-4);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.5rem;
+		line-height: 1.05;
 		color: var(--ink);
 	}
 
 	.info__relation {
 		margin: var(--space-1) 0 0;
-		padding: 0 var(--space-3);
+		padding: 0 var(--space-4);
 		color: var(--color-text-faint);
 	}
 
 	.info__text {
 		margin: var(--space-2) 0 0;
-		padding: 0 var(--space-3);
+		padding: 0 var(--space-4);
 		font-size: 0.875rem;
 		line-height: 1.5;
 		color: var(--color-text);
@@ -195,7 +198,7 @@
 
 	.info__actions {
 		margin-top: var(--space-3);
-		border-top: 1px solid var(--color-border);
+		border-top: var(--rule-heavy) solid var(--ink);
 		padding-top: var(--space-1);
 		padding-bottom: var(--space-1);
 	}

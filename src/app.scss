@@ -1,11 +1,22 @@
-/* Vamp global styles — golden hour.
-   The app is a sky: SUNRISE (the light theme) is a pale morning blue warming to
-   peach and gold at the horizon; SUNSET (the dark theme) is indigo deepening
-   through plum to a rose glow. The sun sits on the horizon behind the meadow and
-   rises when the band starts. Chord qualities are the colours of the light; the
-   chart is hand-lettered in Petaluma Script; the play button is the sun.
+/* Vamp global styles — Sleeve.
+   The app is a jazz record sleeve: hard edges, heavy condensed type, black and
+   white doing most of the work, and ONE flat field of colour — the deck's — that
+   takes the colour of the chord sounding now (at rest, the colour of your tune).
+   Chord qualities are flat printing inks; chords are set the way a Real Book
+   prints them (big root, small raised quality). Light and Dark are the same
+   sleeve printed on white board and on black.
    Tokens are the single source of truth; components use var(--…), never raw hex. */
 
+@font-face {
+	font-family: 'Archivo';
+	src: url('./lib/assets/archivo-latin-var.woff2') format('woff2');
+	font-weight: 100 900;
+	font-stretch: 62% 125%;
+	font-display: swap;
+}
+
+/* The hand-copied jazz font now lives ONLY in the notation (the lead sheet and
+   its exports), where a chart is expected to look written. */
 @font-face {
 	font-family: 'Petaluma Script';
 	src: url('./lib/assets/petalumascript.woff2') format('woff2');
@@ -15,62 +26,57 @@
 :root {
 	color-scheme: light;
 
-	/* ---- Sunrise: sky, paper & ink ---- */
-	--sky: linear-gradient(180deg, #e6ecfb 0%, #f1e6f3 30%, #fde4d6 60%, #ffe6b8 100%);
-	--ground: #fdf0ea; /* the page's representative tone (browser chrome, solid fills) */
-	--paper: #fffbf6; /* raised sheets: fields, popovers, buttons */
-	--wash: #fbe9dc; /* hover / pressed fill */
-	--ink: #2b2250; /* dawn violet: text, strong barlines, focus */
-	--ink-2: #574d78;
-	--ink-3: #645b84; /* hints, units (≥4.5:1 on every sky stop) */
-	--ink-4: #b3abc6; /* disabled + placeholder marks only */
-	--edge: #8a81a6; /* control borders */
-	--rule: #efdcd2; /* hairlines, the staff lines */
-	--shadow: rgb(43 34 80 / 0.14);
-	--danger: #c4203a;
-	/* A piano stays a piano whatever the light. */
+	/* ---- Light: white board & black ink ---- */
+	--ground: #ffffff; /* the page (and the browser chrome) */
+	--paper: #ffffff; /* raised things: popovers, menus, the dock */
+	--wash: #f0f0ed; /* hover / pressed fill, chips, quiet panels */
+	--ink: #0e0e0f; /* text, rules, borders, focus, "on" */
+	--ink-2: #3f3f43; /* secondary text */
+	--ink-3: #5c5c60; /* hints, units, placeholders (≥4.5:1 on ground) */
+	--ink-4: #b3b3ae; /* disabled marks only */
+	--edge: var(--ink); /* control borders: printed in ink */
+	--rule: #dadad6; /* hairlines, staff lines, quiet dividers */
+	--shadow: rgb(14 14 15 / 0.16);
+	--danger: #d4102c;
+	/* A piano stays a piano whatever the board. */
 	--key-light: var(--paper);
 	--key-dark: var(--ink);
 
-	/* ---- The sun: the play button, "on", and everything that makes music.
-	   Ink text sits on it. ---- */
-	--spot: #ff6a3d;
-	--on-spot: var(--ink);
-	--sun: #ffc233;
-	--sun-core: #ffcf5a;
-	--grass: #5aa65b;
-	--meadow-glow: 0;
+	/* ---- "On": anything switched on, pressed, or chosen is inked solid. ---- */
+	--spot: var(--ink);
+	--on-spot: var(--ground);
 
-	/* How lit things sit on the page: a warm shadow by day, a glow at dusk. */
-	--lift: 0 4px 14px color-mix(in srgb, var(--spot) 30%, transparent);
-	--text-glow: 0 2px 14px color-mix(in srgb, var(--sun) 60%, transparent);
+	/* ---- The field: the one block of colour on the page. At rest it is the
+	   tune's colour (or this), while playing the sounding chord's. The layout
+	   writes --field / --on-field; these are the fallbacks. ---- */
+	--field-rest: #0e0e0f;
+	--on-field-rest: #ffffff;
 
-	/* ---- Chord qualities as the colours of the light. Every chord sits on its
-	   --w- wash; the chord SOUNDING now is a solid block of its colour with
-	   --on-pigment text. The symbol always carries the quality as text too. ---- */
-	--c-major: #f2a900; /* gold */
-	--c-minor: #8b6fd6; /* lilac */
-	--c-dominant: #ff6a3d; /* coral */
-	--c-diminished: #e8456b; /* rose */
-	--c-augmented: #3d8fe0; /* sky */
-	--c-suspended: #1fa8a0; /* lagoon */
-	--c-other: #a39aa8; /* haze */
-	--on-pigment: var(--ink);
+	/* ---- Chord qualities as flat printing inks. A chord sits under a tab of
+	   its ink; the chord SOUNDING now is a solid block of it with --on-pigment
+	   text. Every ink takes black text at ≥5:1, in both themes. The symbol
+	   always carries the quality as text too. ---- */
+	--c-major: #ffbd1a; /* yellow */
+	--c-minor: #4f7dff; /* blue */
+	--c-dominant: #ff5c1c; /* orange */
+	--c-diminished: #ff4583; /* magenta */
+	--c-augmented: #19c17a; /* green */
+	--c-suspended: #22b5d7; /* cyan */
+	--c-other: #aaaaa5; /* grey */
+	--on-pigment: #0e0e0f;
 
-	--w-major: #fff0c7;
-	--w-minor: #ece5fb;
-	--w-dominant: #ffe3d8;
-	--w-diminished: #fde0e7;
-	--w-augmented: #deecfb;
-	--w-suspended: #d8f2f0;
-	--w-other: #efebf0;
-	/* An outline of the chord's colour round its wash (0% = none by day). */
-	--ring: 0%;
+	/* ---- The record (the key compass and the play disc's grooves): vinyl is
+	   black on either board. ---- */
+	--vinyl: #0e0e0f;
+	--vinyl-groove: #2c2c30;
+	--vinyl-rim: var(--rule);
+	--on-vinyl: #ffffff;
 
-	/* A soft film grain over the sky. */
-	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .17 0 0 0 0 .13 0 0 0 0 .31 0 0 0 .3 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	/* Print grain: none on white board; the dark sleeve sets its own. */
+	--grain: none;
+	--grain-opacity: 0;
 
-	/* ---- Legacy names, mapped onto the sky ----
+	/* ---- Legacy names, mapped onto the sleeve ----
 	   Kept so older rules keep resolving; prefer the names above. */
 	--color-bg: var(--ground);
 	--color-white: var(--paper);
@@ -87,9 +93,13 @@
 	--color-accent: var(--ink);
 	--color-orange: var(--ink);
 
-	/* ---- Typography ---- */
-	--font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-	--font-hand: 'Petaluma Script', var(--font-ui);
+	/* ---- Typography: one family, two widths ----
+	   Archivo at normal width for everything you operate; at its narrowest and
+	   heaviest (--display-stretch, weight 900) for titles, numbers and chords. */
+	--font-ui: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-display: 'Archivo', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+	--display-stretch: 62%;
+	--font-hand: 'Petaluma Script', var(--font-ui); /* notation only */
 	--font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
 	--font-primary: var(--font-ui);
 
@@ -104,73 +114,61 @@
 	--space-16: 64px;
 	--space-24: 96px;
 
-	/* ---- Shape ---- */
-	--radius: 8px;
-	--radius-sm: 5px;
-	--radius-pill: 999px;
+	/* ---- Shape: printed, so square. Round things (the play disc, the record)
+	   are circles; nothing else is rounded. ---- */
+	--radius: 0px;
+	--radius-sm: 0px;
+	--radius-pill: 0px;
+	--rule-heavy: 2px; /* the sleeve's printed rules and control borders */
 	--border-hairline: 1px solid var(--ink);
 	--tap: 44px; /* minimum touch target */
 
-	/* ---- Motion ---- */
+	/* ---- Motion: print cuts, it doesn't bounce ---- */
 	--motion-fast: 120ms;
 	--motion-standard: 180ms;
-	--motion-grad: 650ms;
-	--motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
-	--motion-pop: cubic-bezier(0.34, 1.56, 0.64, 1); /* a small overshoot for things that bloom */
+	--motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--motion-pop: var(--motion-ease-out);
 }
 
-/* ---- Sunset: the same page as the light goes ---- */
+/* ---- Dark: an old black sleeve ----
+   Never digital #000: black ink printed on board is warm and a little worn, the
+   type is the off-white of aged paper, the inks print slightly muted, and a
+   faint grain of the print sits over everything. */
 @mixin night {
 	color-scheme: dark;
-	--sky: linear-gradient(180deg, #1b1541 0%, #2c1a52 35%, #4a2160 62%, #5e2550 82%, #7a3048 100%);
-	--ground: #2a1a4f;
-	--paper: #2e2458;
-	--wash: #3a2e66;
-	--ink: #fff0e0;
-	--ink-2: #e6d3dc;
-	--ink-3: #cdb6c9;
-	--ink-4: #85709a;
-	--edge: #a58fb2;
-	--rule: #4a3b72;
-	--shadow: rgb(0 0 0 / 0.45);
-	--danger: #ff7a8c;
-	--key-light: #f3e6ee;
-	--key-dark: #160f30;
+	--ground: #1c1915; /* warm charcoal board */
+	--paper: #26221c;
+	--wash: #2c2821;
+	--ink: #ede4d3; /* aged paper white */
+	--ink-2: #d3c9b6;
+	--ink-3: #aaa08d;
+	--ink-4: #5f584c;
+	--rule: #3b362e;
+	--shadow: rgb(8 6 4 / 0.55);
+	--danger: #ff7b6b;
+	--key-light: #ede4d3;
+	--key-dark: #1c1915;
 
-	--spot: #ffb347;
-	--on-spot: #231a45;
-	--sun: #ffd166;
-	--sun-core: #ff9a4a;
-	--grass: #150f33; /* silhouettes against the glow */
-	--meadow-glow: 1;
+	--field-rest: #2e2a23;
+	--on-field-rest: #ede4d3;
+	--vinyl-rim: #4d473c;
 
-	--lift: 0 0 18px color-mix(in srgb, var(--spot) 45%, transparent);
-	--text-glow: 0 0 16px color-mix(in srgb, var(--sun) 45%, transparent);
+	/* Printing inks on dark board: the same hues, a little less fluorescent. */
+	--c-major: #f0b43a;
+	--c-minor: #6a8ef0;
+	--c-dominant: #f0703a;
+	--c-diminished: #ec5c88;
+	--c-augmented: #3db87f;
+	--c-suspended: #3fb3cc;
+	--c-other: #a8a194;
+	--on-pigment: #1a1713;
 
-	--c-major: #ffc94d;
-	--c-minor: #c2a8ff;
-	--c-dominant: #ff9466;
-	--c-diminished: #ff7096;
-	--c-augmented: #7cb8ff;
-	--c-suspended: #5ed8cc;
-	--c-other: #bfb2c6;
-	--on-pigment: #231a45;
-
-	/* At dusk colour glows round the chords instead of filling them: a dark
-	   fill of any of these hues turns brown or grey. */
-	--w-major: var(--paper);
-	--w-minor: var(--paper);
-	--w-dominant: var(--paper);
-	--w-diminished: var(--paper);
-	--w-augmented: var(--paper);
-	--w-suspended: var(--paper);
-	--w-other: var(--paper);
-	--ring: 65%;
-
-	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .92 0 0 0 0 .88 0 0 0 .28 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	/* The print's grain: fine warm noise, laid over the whole page. */
+	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	--grain-opacity: 0.28;
 }
 
-/* Theme: Auto follows the system; Sunrise / Sunset are pinned per device by the
+/* Theme: Auto follows the system; Light / Dark are pinned per device by the
    header switch (data-theme on <html>, set before first paint in app.html). */
 :root[data-theme='night'] {
 	@include night;
@@ -180,6 +178,13 @@
 	:root:not([data-theme='day']) {
 		@include night;
 	}
+}
+
+/* The field changes on the chord change as a CUT, like a print: no fade, so
+   the field and the ink printed on it can never disagree mid-way. */
+:root {
+	--field: var(--field-rest);
+	--on-field: var(--on-field-rest);
 }
 
 *,
@@ -199,6 +204,7 @@ html {
 }
 
 body {
+	background-color: var(--ground);
 	color: var(--ink);
 	font-family: var(--font-ui);
 	font-weight: 400;
@@ -206,35 +212,36 @@ body {
 	line-height: 1.45;
 	-webkit-font-smoothing: antialiased;
 	text-rendering: optimizeLegibility;
-	caret-color: var(--spot);
-	scrollbar-color: var(--edge) transparent;
+	caret-color: var(--ink);
+	accent-color: var(--ink); /* native ranges, checkboxes, radios */
+	scrollbar-color: var(--ink-3) transparent;
 }
 
-/* The sky, fixed behind everything (a layer, not background-attachment: fixed,
-   which phones ignore), with the film grain over it. */
-body::before {
-	content: '';
+/* The print's grain over everything (dark board only): a fixed layer that
+   never takes a click. */
+body::after {
+	content: "";
 	position: fixed;
 	inset: 0;
-	z-index: -1;
+	z-index: 1000;
 	pointer-events: none;
-	background: var(--grain), var(--sky);
-	background-size:
-		180px 180px,
-		100% 100%;
+	background: var(--grain);
+	background-size: 160px 160px;
+	opacity: var(--grain-opacity);
+	mix-blend-mode: overlay;
 }
 
 ::selection {
-	background: color-mix(in srgb, var(--sun) 55%, transparent);
-	color: var(--ink);
+	background: var(--c-major);
+	color: var(--on-pigment);
 }
 
 h1,
 h2,
 h3 {
-	font-weight: 600;
-	letter-spacing: -0.01em;
-	line-height: 1.15;
+	font-weight: 800;
+	letter-spacing: 0;
+	line-height: 1.1;
 	margin: 0;
 }
 
@@ -246,7 +253,7 @@ button {
 a {
 	color: inherit;
 	text-underline-offset: 3px;
-	text-decoration-thickness: 1px;
+	text-decoration-thickness: 2px;
 }
 
 /* One focus ring, everywhere: ink, offset, never removed without a replacement. */
@@ -255,11 +262,11 @@ a {
 	outline-offset: 2px;
 }
 
-/* Small tracked label — field names and metadata. Never paragraph copy. */
+/* Small caps label — field names and group titles. Never paragraph copy. */
 .label {
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.06em;
+	font-size: 0.6875rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--ink-2);
 }
@@ -272,44 +279,58 @@ a {
 	color: var(--ink-3);
 }
 
-/* Hand-lettered display voice: wordmark, song title, chord symbols. */
-.hand {
-	font-family: var(--font-hand);
-	font-weight: 400;
+/* The display voice: Archivo at its narrowest and heaviest, in capitals.
+   Titles, big numbers, section names. Chords use ChordSymbol, which sets the
+   same face without the capitals. */
+.display {
+	font-family: var(--font-display);
+	font-stretch: var(--display-stretch);
+	font-weight: 900;
+	text-transform: uppercase;
 	letter-spacing: 0;
+	line-height: 0.9;
 }
 
+/* The name on the spine: VAMP, reversed out of an ink block. */
 .wordmark {
-	font-family: var(--font-hand);
-	font-weight: 400;
+	display: inline-block;
+	background: var(--ink);
+	color: var(--ground);
+	font-family: var(--font-display);
+	font-stretch: var(--display-stretch);
+	font-weight: 900;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	line-height: 1.1;
+	padding: 2px 9px 1px;
 }
 
-/* Shared button (Undo/Redo, File, Share, compose tools, toggles). Sentence
-   case, a paper tab with a 3:1 edge; "on" is lit by the sun. */
+/* Shared button (File, Share, compose tools, toggles): a printed box with a
+   heavy ink border, labelled in small caps. "On" is inked solid. */
 .bar-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-2);
-	min-height: 36px;
-	border: 1px solid var(--edge);
-	border-radius: var(--radius);
-	background: var(--paper);
+	min-height: 38px;
+	border: var(--rule-heavy) solid var(--ink);
+	border-radius: 0;
+	background: transparent;
 	padding: 0 var(--space-3);
 	font-family: inherit;
-	font-size: 0.875rem;
-	font-weight: 500;
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	line-height: 1;
 	color: var(--ink);
 	text-decoration: none;
 	white-space: nowrap;
 	transition:
 		background-color var(--motion-fast) var(--motion-ease-out),
-		border-color var(--motion-fast) var(--motion-ease-out),
 		color var(--motion-fast) var(--motion-ease-out);
 
 	&:hover:not(:disabled) {
-		border-color: var(--ink);
 		background: var(--wash);
 	}
 
@@ -319,16 +340,25 @@ a {
 
 	&:disabled {
 		color: var(--ink-4);
-		border-color: var(--rule);
+		border-color: var(--ink-4);
 		cursor: not-allowed;
 	}
 
 	&--on,
-	&--on:hover:not(:disabled) {
-		background: var(--spot);
-		border-color: var(--spot);
-		color: var(--on-spot);
-		box-shadow: var(--lift);
+	&--on:hover:not(:disabled),
+	&--primary,
+	&--primary:hover:not(:disabled) {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: var(--ground);
+	}
+
+	&--primary:active:not(:disabled) {
+		background: var(--ink-2);
+	}
+
+	svg {
+		flex: 0 0 auto;
 	}
 
 	@media (pointer: coarse) {
@@ -342,7 +372,8 @@ a {
 	background: transparent;
 }
 
-/* Collapsible section header: a real heading wrapping its disclosure button. */
+/* Collapsible section header: a real heading wrapping its disclosure button.
+   The section around it carries the heavy printed rule above. */
 .sec-head {
 	margin: 0;
 	font-size: inherit;
@@ -360,16 +391,25 @@ a {
 	min-height: var(--tap);
 	border: 0;
 	background: transparent;
-	padding: var(--space-2) 0;
+	padding: var(--space-3) 0 var(--space-2);
 	font-family: inherit;
 	color: var(--ink);
 	text-align: left;
+
+	&:hover .sec-title {
+		text-decoration: underline;
+		text-decoration-thickness: 3px;
+		text-underline-offset: 4px;
+	}
 }
 
 .sec-title {
-	font-size: 1.25rem;
-	font-weight: 600;
-	letter-spacing: -0.01em;
+	font-family: var(--font-display);
+	font-stretch: var(--display-stretch);
+	font-weight: 900;
+	font-size: 1.75rem;
+	line-height: 1;
+	text-transform: uppercase;
 }
 
 .sec-hint {
@@ -381,7 +421,8 @@ a {
 	display: inline-block;
 	width: 1em;
 	align-self: center;
-	color: var(--ink-2);
+	color: var(--ink);
+	stroke-width: 2.4;
 	transition: transform var(--motion-standard) var(--motion-ease-out);
 }
 
@@ -397,24 +438,25 @@ a {
 	margin-top: var(--space-1);
 	min-width: 220px;
 	background: var(--paper);
-	border: 1px solid var(--ink);
-	border-radius: var(--radius);
-	box-shadow: 0 10px 28px var(--shadow);
+	border: var(--rule-heavy) solid var(--ink);
+	border-radius: 0;
+	box-shadow: 0 14px 32px var(--shadow);
 	z-index: 50;
-	padding: var(--space-1);
+	padding: var(--space-1) 0;
 }
 
 .vmenu__row {
 	display: block;
 	width: 100%;
-	min-height: 36px;
+	min-height: 38px;
 	text-align: left;
 	border: 0;
-	border-radius: 2px;
+	border-radius: 0;
 	background: transparent;
-	padding: var(--space-2) var(--space-3);
+	padding: var(--space-2) var(--space-4);
 	font-family: inherit;
 	font-size: 0.9375rem;
+	font-weight: 600;
 	color: var(--ink);
 
 	&:hover {
@@ -439,25 +481,24 @@ a {
 .field__select {
 	min-height: 36px;
 	font-family: inherit;
-	font-size: 1.125rem;
-	font-weight: 500;
+	font-size: 1.0625rem;
+	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 	color: var(--ink);
 	background: transparent;
 	border: 0;
-	border-bottom: 1px solid var(--edge);
+	border-bottom: var(--rule-heavy) solid var(--ink);
 	padding: var(--space-1) 0;
 	border-radius: 0;
 
 	&:hover {
-		border-bottom-color: var(--ink);
+		background: var(--wash);
 	}
 
-	/* An underlined field's focus indicator is its underline, doubled in ink. */
+	/* An underlined field's focus indicator is its underline, doubled. */
 	&:focus {
 		outline: none;
-		border-bottom-color: var(--ink);
-		box-shadow: inset 0 -1px 0 var(--ink);
+		box-shadow: inset 0 -2px 0 var(--ink);
 	}
 
 	option {
@@ -489,95 +530,7 @@ a {
 
 /* Toasts ride above the play dock when it's out. */
 body:has(.dock--shown) .notice-host {
-	bottom: calc(var(--tap) + var(--space-12));
-}
-
-/* ----------------------------------------------------------------------------
-   Nature — always on. Three layers behind the content (weather, the sun, the
-   meadow), all driven by the music (see +layout.svelte), all still in silence.
-   ---------------------------------------------------------------------------- */
-
-/* The sounding chord's colour, as a transitionable colour: registered so the
-   weather can crossfade over one beat instead of snapping. */
-@property --weather {
-	syntax: '<color>';
-	inherits: true;
-	initial-value: transparent;
-}
-
-:root {
-	transition: --weather var(--weather-ms, 600ms) ease-out;
-}
-
-.frame.art {
-	position: relative;
-	z-index: 0;
-	isolation: isolate;
-}
-
-/* Harmonic weather: the light takes the chord family's colour — a wash from
-   high in the sky and a glow along the horizon, crossfading over a beat. */
-.art-weather {
-	position: fixed;
-	inset: 0;
-	z-index: 0;
-	pointer-events: none;
-	background:
-		radial-gradient(90% 50% at 50% -12%, color-mix(in srgb, var(--weather) 22%, transparent), transparent 70%),
-		radial-gradient(120% 40% at 50% 112%, color-mix(in srgb, var(--weather) 30%, transparent), transparent 70%);
-}
-
-/* The sun on the horizon, behind the meadow. It rises when the band starts and
-   settles back when it stops — moved by play and stop, never by a clock. */
-.art-sun {
-	position: fixed;
-	left: 50%;
-	bottom: 0;
-	z-index: 0;
-	width: min(76vw, 460px);
-	aspect-ratio: 1;
-	border-radius: 50%;
-	pointer-events: none;
-	background: radial-gradient(
-		circle,
-		var(--sun-core) 0 33%,
-		color-mix(in srgb, var(--sun-core) 45%, transparent) 34%,
-		color-mix(in srgb, var(--sun) 16%, transparent) 50%,
-		transparent 70%
-	);
-	transform: translate(-50%, 62%);
-	transition: transform 1.8s var(--motion-ease-out);
-}
-
-.art-sun--up {
-	transform: translate(-50%, 44%);
-}
-
-/* The meadow strip along the bottom edge, fading up into the page. */
-.art-meadow {
-	position: fixed;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 0;
-	width: 100%;
-	height: clamp(64px, 12vh, 124px);
-	pointer-events: none;
-	-webkit-mask-image: linear-gradient(to top, #000 55%, transparent);
-	mask-image: linear-gradient(to top, #000 55%, transparent);
-}
-
-/* App content sits above the art layers, and scrolls clear of the meadow. */
-.frame.art > .head,
-.frame.art > .editor,
-.frame.art > .practice-page {
-	position: relative;
-	z-index: 1;
-}
-
-.frame.art > .editor,
-.frame.art > .practice-page {
-	padding-bottom: max(var(--space-24), calc(12vh + var(--space-12)));
+	bottom: calc(60px + var(--space-6) + env(safe-area-inset-bottom));
 }
 
 /* Reduced motion: kill duration AND iteration count. Without the count, an

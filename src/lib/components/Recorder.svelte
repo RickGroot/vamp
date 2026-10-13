@@ -109,7 +109,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
-		border: 1px solid var(--color-black);
+		border: var(--rule-heavy) solid var(--ink);
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
@@ -132,7 +132,7 @@
 		&__dot {
 			width: 10px;
 			height: 10px;
-			border-radius: var(--radius-pill);
+			border-radius: 50%;
 			background: var(--danger);
 		}
 
@@ -147,7 +147,7 @@
 
 			.recbtn__dot {
 				background: currentColor;
-				border-radius: 2px;
+				border-radius: 0;
 				animation: pulse 1s ease-in-out infinite;
 			}
 		}

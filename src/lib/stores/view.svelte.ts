@@ -28,12 +28,12 @@ const SECTIONS_KEY = 'vamp:sections';
 // Read before first paint by the inline script in app.html — keep the two in step.
 const THEME_KEY = 'vamp:theme';
 
-/** Auto follows the system; Sunrise (light) / Sunset (dark) pin it on this device. */
+/** Auto follows the system; Light ('day') / Dark ('night') pin it on this device. */
 export type ThemePref = 'auto' | 'day' | 'night';
-export const THEME_OPTIONS: { id: ThemePref; label: string }[] = [
-	{ id: 'day', label: 'Sunrise' },
-	{ id: 'auto', label: 'Match system' },
-	{ id: 'night', label: 'Sunset' }
+export const THEME_OPTIONS: { id: ThemePref; label: string; title: string }[] = [
+	{ id: 'day', label: 'Light', title: 'Light' },
+	{ id: 'auto', label: 'Auto', title: 'Match the system' },
+	{ id: 'night', label: 'Dark', title: 'Dark' }
 ];
 
 /** The collapsible Sketch sections whose open/closed state is remembered. */
@@ -67,11 +67,7 @@ class ViewStore {
 	mix = $state<MixState>(defaultMix());
 	/** "Trade fours" block length in bars (0 = off). */
 	tradeBars = $state(0);
-	/** Nature (weather, sun, meadow) is always on: it is still whenever nothing
-	 *  plays, so it costs nothing at rest. Kept as a field so the layout reads one
-	 *  switch if it ever needs gating again. */
-	readonly artMode = true;
-	/** Day / Night / Auto (remembered per device). */
+	/** Light / Dark / Auto (remembered per device). */
 	themePref = $state<ThemePref>('auto');
 	private systemDark = new MediaQuery('(prefers-color-scheme: dark)');
 

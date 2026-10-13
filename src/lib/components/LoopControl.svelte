@@ -50,29 +50,52 @@
 	}
 
 	.loop .field__select {
-		min-width: 3.5ch;
+		min-width: 1.4ch;
+		field-sizing: content;
 		text-align: center;
 	}
 
+	/* The first number reads up to the dash, not centred away from it. */
+	.loop .field__select:first-of-type {
+		text-align: right;
+		text-align-last: right;
+	}
+
 	.all {
-		color: var(--color-text-faint);
+		color: var(--ink-3);
 	}
 
 	.loop__dash {
-		color: var(--color-text-faint);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.75rem;
+		line-height: 1;
+		color: var(--ink);
 	}
 
 	.loop__clear {
-		margin-left: var(--space-1);
-		border: 0;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		margin-left: var(--space-2);
+		border: var(--rule-heavy) solid var(--ink);
 		background: transparent;
-		color: var(--color-grey-400);
-		font-size: 1.1rem;
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
 		line-height: 1;
-		padding: 0 var(--space-1);
+		padding: 0;
 
 		&:hover {
-			color: var(--color-black);
+			background: var(--ink);
+			color: var(--ground);
+		}
+
+		@media (pointer: coarse) {
+			width: var(--tap);
+			height: var(--tap);
 		}
 	}
 </style>

@@ -83,6 +83,7 @@
 	<div class="songbar">
 		<input
 			class="title"
+			style:--len={Math.max(8, (progression.current.name || 'Name this tune').length)}
 			type="text"
 			value={progression.current.name}
 			placeholder="Name this tune"
@@ -150,7 +151,7 @@
 				</button>
 				<!-- Takes the current changes straight into a guide-tone drill. A link,
 				     not a button: it is navigation, and it should middle-click. -->
-				<a class="bar-btn" href="{base}/practice?drill=guide-tones">Practise this</a>
+				<a class="bar-btn bar-btn--primary" href="{base}/practice?drill=guide-tones">Practise this</a>
 			</div>
 		</div>
 	</div>
@@ -238,17 +239,24 @@
 	}
 
 	/* ---- The song bar ---------------------------------------------------- */
+	/* The title takes the whole line, like the name across the top of a sleeve;
+	   the actions run beneath it as one toolbar — the file on the left, the two
+	   ways to play along on the right. */
 	.songbar {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		align-items: center;
-		gap: var(--space-2) var(--space-6);
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-3);
 	}
 
 	.songbar__actions {
 		display: flex;
 		align-items: center;
-		gap: var(--space-4);
+		flex-wrap: wrap;
+		gap: var(--space-2) var(--space-3);
+	}
+
+	.songbar__modes {
+		margin-left: auto;
 	}
 
 	.songbar__docs,
@@ -257,26 +265,23 @@
 		gap: var(--space-2);
 	}
 
-	/* Undo / redo: two icons in one pill. */
+	/* Undo / redo: two printed boxes sharing a rule. */
 	.history {
 		display: inline-flex;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
-		overflow: hidden;
+		border: var(--rule-heavy) solid var(--ink);
 	}
 
 	.history__btn {
 		display: grid;
 		place-items: center;
-		width: 40px;
-		height: 36px;
+		width: 38px;
+		height: 34px;
 		border: 0;
 		background: transparent;
 		color: var(--ink);
 
 		& + & {
-			border-left: 1px solid var(--rule);
+			border-left: var(--rule-heavy) solid var(--ink);
 		}
 
 		&:hover:not(:disabled) {
@@ -290,26 +295,32 @@
 
 		@media (pointer: coarse) {
 			width: var(--tap);
-			height: var(--tap);
+			height: calc(var(--tap) - 2 * var(--rule-heavy));
 		}
 	}
 
-	/* The tune's name, lettered at the top of the chart like a lead sheet. */
+	/* The tune's name, set like the title on a sleeve: condensed, black, capitals. */
 	.title {
 		min-width: 0;
+		width: 100%;
 		border: 0;
-		border-bottom: 1px solid transparent;
+		border-bottom: var(--rule-heavy) solid transparent;
 		background: transparent;
-		font-family: var(--font-hand);
-		font-size: 2.25rem;
-		line-height: 1.2;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		/* Sized to fit the name on one line: a condensed capital (and the spaces
+		   between words) averages about half an em. */
+		font-size: max(1.75rem, min(4.75rem, calc(100cqi / (var(--len) * 0.5))));
+		line-height: 0.95;
+		text-transform: uppercase;
 		color: var(--ink);
 		padding: 0 0 var(--space-1);
-		text-shadow: var(--text-glow);
+		text-overflow: ellipsis;
 		transition: border-color var(--motion-fast) var(--motion-ease-out);
 
 		&::placeholder {
-			color: var(--ink-3);
+			color: var(--ink-4);
 		}
 
 		&:hover {
@@ -319,7 +330,6 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
 		}
 	}
 
@@ -329,7 +339,7 @@
 		align-items: center;
 		gap: var(--space-2) var(--space-4);
 		flex-wrap: wrap;
-		margin-top: var(--space-6);
+		margin-top: var(--space-4);
 	}
 
 	.tools__grid {
@@ -357,9 +367,12 @@
 	}
 
 	.chart-head__numeral {
-		font-family: var(--font-hand);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
 		font-size: 1rem;
 		line-height: 1;
+		letter-spacing: 0;
 	}
 
 	/* The chart: four measures to a line, like a lead sheet — phrases read as
@@ -368,7 +381,8 @@
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		row-gap: var(--space-6);
-		margin-top: var(--space-6);
+		margin-top: var(--space-4);
+		padding-bottom: var(--space-8);
 	}
 
 	@media (max-width: 640px) {
@@ -385,14 +399,16 @@
 		justify-content: center;
 		gap: var(--space-2);
 		align-self: stretch;
-		min-height: 88px;
+		min-height: 96px;
 		margin-left: var(--space-2);
-		border: 1px dashed var(--edge);
-		border-radius: var(--radius);
+		border: var(--rule-heavy) dashed var(--ink-4);
+		border-radius: 0;
 		background: transparent;
 		font-family: inherit;
-		font-size: 0.875rem;
-		font-weight: 500;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 		color: var(--ink-2);
 		transition:
 			border-color var(--motion-fast) var(--motion-ease-out),
@@ -412,23 +428,10 @@
 		container: editor / inline-size;
 	}
 
-	/* Narrower than a full desktop: the title gets its own line, actions below. */
-	@container editor (max-width: 820px) {
-		.songbar {
-			grid-template-columns: minmax(0, 1fr);
-		}
-
-		.songbar__actions {
-			flex-wrap: wrap;
-		}
-	}
-
 	/* Phone: a tidy grid, not a strip — history + the file on one row, the two
 	   ways to play along as equal halves on the next; the chord tools in one row. */
 	@container editor (max-width: 540px) {
-		.title {
-			font-size: 1.875rem;
-		}
+
 
 		.songbar__actions {
 			display: grid;
@@ -449,6 +452,7 @@
 
 		.songbar__modes {
 			grid-area: modes;
+			margin-left: 0;
 		}
 
 		.songbar__docs,
@@ -479,7 +483,8 @@
 
 		.tools__grid :global(.bar-btn) {
 			padding: 0 var(--space-1);
-			font-size: 0.8125rem;
+			font-size: 0.6875rem;
+			letter-spacing: 0.03em;
 		}
 
 		.tools__long {

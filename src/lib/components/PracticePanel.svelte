@@ -93,8 +93,8 @@
 
 <style lang="scss">
 	.practice {
-		margin-top: var(--space-12);
-		border-top: 1px solid var(--rule);
+		margin-top: var(--space-8);
+		border-top: var(--rule-heavy) solid var(--ink);
 		padding-top: var(--space-4);
 	}
 

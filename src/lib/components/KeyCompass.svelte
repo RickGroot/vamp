@@ -1,13 +1,14 @@
 <script lang="ts">
-	// The key as a sunflower: the circle of fifths grown as a seedhead, turned so
-	// the tonic sits at the top, with a ring of petals printed in two inks.
+	// The key as a record: the circle of fifths printed round the label, the
+	// record turned so the tonic sits at 12 o'clock.
 	//
-	//   • at rest, every note your song uses is lit in the ink of the chord
-	//     family that uses it most — your song, as a flower;
-	//   • the tonic's florets are ink;
-	//   • the chord sounding now swells its florets in its own ink, and the
-	//     petals take a breath on each change;
-	//   • transposing turns the flower. A song's shape is the same in every key.
+	//   • every note your song uses is a dot on the vinyl, in the ink of the
+	//     chord family that uses it most — your song, pressed into the record;
+	//   • the label is the key's colour (minor blue, major yellow), with the
+	//     tonic's name reversed out of an ink spot;
+	//   • the chord sounding now swells its dots;
+	//   • transposing turns the record the short way round, and the note names
+	//     turn back as it goes, so they always read upright.
 	//
 	// Event-driven: it redraws when the song, key or sounding chord changes and
 	// never animates on its own. Decorative — the key name beside it is the text.
@@ -15,7 +16,7 @@
 	import { Note } from 'tonal';
 	import { isValidChordSymbol } from '$lib/audio/chord';
 	import { classifyChord, type ChordFamily } from '$lib/model/chords';
-	import { chordChroma, florets, sectorPitchClass, tonicRotation } from '$lib/art/seedhead';
+	import { chordChroma, sectorPitchClass, tonicRotation } from '$lib/art/seedhead';
 
 	interface Props {
 		/** Concert-pitch tonic of the key ('' when there's nothing to show yet). */
@@ -24,21 +25,27 @@
 		chords?: string[];
 		/** The chord sounding now (concert), or ''. */
 		sounding?: string;
-		/** Written-pitch offset in semitones, so the flower matches the key you read. */
+		/** Written-pitch offset in semitones, so the record matches the key you read. */
 		offset?: number;
 		/** Extra lit notes (concert pitch classes) when there are no chords — a drill's scale. */
 		notes?: number[];
+		/** Minor or major: the label's colour. */
+		mode?: 'major' | 'minor' | string;
 		/** Rendered size in px. */
 		size?: number;
 	}
 
-	let { tonic, chords = [], sounding = '', offset = 0, notes = [], size = 96 }: Props = $props();
+	let { tonic, chords = [], sounding = '', offset = 0, notes = [], mode = 'major', size = 112 }: Props = $props();
 
 	const VB = 100;
 	const C = VB / 2;
-	const HEAD_R = 27;
-	const HEAD = florets(150, HEAD_R);
-	const PETALS = 21;
+	const R_VINYL = 49;
+	const R_DOTS = 40;
+	const R_LABEL = 29;
+	const R_NAMES = 21;
+	const GROOVES = [33, 35.5, 44.5, 47];
+	// Circle-of-fifths order, conventionally spelled; sector 0 = C.
+	const NAMES = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'D♭', 'A♭', 'E♭', 'B♭', 'F'];
 
 	const wrap = (pc: number) => (((pc + offset) % 12) + 12) % 12;
 	const valid = (s: string) => s.trim() !== '' && isValidChordSymbol(s);
@@ -68,12 +75,12 @@
 	});
 
 	const now = $derived(valid(sounding) ? new Set([...chordChroma(sounding)].map(wrap)) : new Set<number>());
-	const nowFamily = $derived(valid(sounding) ? classifyChord(sounding) : null);
 	const tonicPc = $derived.by(() => {
 		const pc = tonic ? Note.chroma(tonic) : undefined;
 		return pc === undefined || Number.isNaN(pc) ? null : wrap(pc);
 	});
 	const writtenTonic = $derived(tonicPc === null ? 'C' : Note.pitchClass(Note.fromMidi(60 + tonicPc)));
+	const labelInk = $derived(tonicPc === null ? 'var(--c-other)' : mode === 'minor' ? 'var(--c-minor)' : 'var(--c-major)');
 
 	// Turn by the short way round, so C → F spins a fifth, not eleven.
 	let rotation = $state(tonicRotation('C'));
@@ -84,83 +91,120 @@
 		if (delta !== 0) rotation = current + delta;
 	});
 
-	function fill(sector: number): { color: string; grow: number } {
-		const pc = sectorPitchClass(sector);
-		if (now.has(pc)) return { color: nowFamily ? `var(--c-${nowFamily})` : 'var(--spot)', grow: 1.9 };
-		if (pc === tonicPc) return { color: 'var(--ink)', grow: 1.35 };
-		if (songInk.has(pc)) {
-			const f = songInk.get(pc);
-			return { color: f ? `var(--c-${f})` : 'var(--spot)', grow: 1.2 };
-		}
-		return { color: 'var(--rule)', grow: 1 };
-	}
+	const sectors = Array.from({ length: 12 }, (_, s) => {
+		const a = ((s + 0.5) * 30 * Math.PI) / 180;
+		return {
+			s,
+			name: NAMES[s],
+			dot: [C + Math.sin(a) * R_DOTS, C - Math.cos(a) * R_DOTS] as const,
+			text: [C + Math.sin(a) * R_NAMES, C - Math.cos(a) * R_NAMES] as const
+		};
+	});
 
-	const petals = Array.from({ length: PETALS }, (_, i) => (i / PETALS) * 360);
+	function dotOf(s: number): { ink: string; r: number } | null {
+		const pc = sectorPitchClass(s);
+		if (!songInk.has(pc)) return now.has(pc) ? { ink: 'var(--ink-3)', r: 3.6 } : null;
+		const f = songInk.get(pc);
+		return { ink: f ? `var(--c-${f})` : 'var(--c-other)', r: now.has(pc) ? 4.4 : 2.9 };
+	}
 </script>
 
-<svg class="flower" viewBox="0 0 {VB} {VB}" width={size} height={size} aria-hidden="true">
-	<!-- Petals: a warm halo first, then the sun over it. -->
-	{#key sounding}
-		<g class="flower__petals">
-			{#each petals as a (a)}
-				<ellipse class="petal petal--under" cx={C} cy={C - HEAD_R - 10} rx="5.2" ry="11" transform="rotate({a} {C} {C})" />
-			{/each}
-			{#each petals as a (a)}
-				<ellipse class="petal" cx={C} cy={C - HEAD_R - 9.5} rx="4" ry="9.5" transform="rotate({a} {C} {C})" />
-			{/each}
-		</g>
-	{/key}
-	<circle class="flower__disc" cx={C} cy={C} r={HEAD_R + 2} />
-	<g class="flower__head" style:transform="rotate({rotation}deg)">
-		{#each HEAD as f, i (i)}
-			{@const t = fill(f.sector)}
-			<circle class="floret" cx={C + f.x} cy={C + f.y} r={f.r * t.grow} style:fill={t.color} />
+<svg class="record" viewBox="0 0 {VB} {VB}" width={size} height={size} aria-hidden="true">
+	<circle class="record__vinyl" cx={C} cy={C} r={R_VINYL} />
+	{#each GROOVES as r (r)}
+		<circle class="record__groove" cx={C} cy={C} {r} />
+	{/each}
+	<g class="record__turn" style:--rot="{rotation}deg">
+		{#each sectors as sec (sec.s)}
+			{@const d = dotOf(sec.s)}
+			{#if d}
+				<circle class="record__dot" cx={sec.dot[0]} cy={sec.dot[1]} r={d.r} style:fill={d.ink} />
+			{/if}
+		{/each}
+		<circle class="record__label" cx={C} cy={C} r={R_LABEL} style:fill={labelInk} />
+		{#each sectors as sec (sec.s)}
+			{@const pc = sectorPitchClass(sec.s)}
+			{#if pc === tonicPc}
+				<circle class="record__tonic" cx={sec.text[0]} cy={sec.text[1]} r="5.6" />
+			{/if}
+			<text
+				class="record__name"
+				class:record__name--lit={songInk.has(pc) || pc === tonicPc}
+				class:record__name--tonic={pc === tonicPc}
+				x={sec.text[0]}
+				y={sec.text[1]}>{sec.name}</text
+			>
 		{/each}
 	</g>
+	<circle class="record__hole" cx={C} cy={C} r="2.4" />
 </svg>
 
 <style lang="scss">
-	.flower {
+	.record {
 		display: block;
 		flex: 0 0 auto;
 		overflow: visible;
 	}
 
-	.flower__petals {
+	/* The vinyl is always black — a record is a record on either board — with a
+	   hairline so it keeps its edge on the dark one. */
+	.record__vinyl {
+		fill: var(--vinyl);
+		stroke: var(--vinyl-rim);
+		stroke-width: 1;
+	}
+
+	.record__groove {
+		fill: none;
+		stroke: var(--vinyl-groove);
+		stroke-width: 0.5;
+	}
+
+	.record__turn {
 		transform-origin: 50px 50px;
-		animation: petals-breathe 360ms var(--motion-pop);
+		transform: rotate(var(--rot));
+		transition: transform 620ms var(--motion-ease-out);
 	}
 
-	@keyframes petals-breathe {
-		from {
-			transform: scale(0.9) rotate(-4deg);
-		}
-	}
-
-	.petal {
-		fill: var(--sun);
-	}
-
-	.petal--under {
-		fill: var(--spot);
-		opacity: 0.35;
-	}
-
-	.flower__disc {
-		fill: var(--paper);
-		stroke: color-mix(in srgb, var(--sun) 70%, var(--spot));
-		stroke-width: 1.5;
-	}
-
-	.flower__head {
-		transform-origin: 50px 50px;
-		transition: transform 560ms var(--motion-pop);
-	}
-
-	.floret {
+	.record__dot {
 		transition:
-			fill var(--motion-standard) var(--motion-ease-out),
-			r var(--motion-standard) var(--motion-pop);
+			r var(--motion-standard) var(--motion-ease-out),
+			fill var(--motion-standard) var(--motion-ease-out);
 	}
 
+	.record__label {
+		transition: fill var(--motion-standard) var(--motion-ease-out);
+	}
+
+	.record__tonic {
+		fill: var(--vinyl);
+	}
+
+	/* The names turn back as the record turns, so they always read upright. */
+	.record__name {
+		font-family: var(--font-display);
+		font-stretch: 75%;
+		font-weight: 800;
+		font-size: 7px;
+		fill: var(--on-pigment);
+		opacity: 0.55;
+		text-anchor: middle;
+		dominant-baseline: central;
+		transform-box: fill-box;
+		transform-origin: center;
+		transform: rotate(calc(-1 * var(--rot)));
+		transition: transform 620ms var(--motion-ease-out);
+	}
+
+	.record__name--lit {
+		opacity: 1;
+	}
+
+	.record__name--tonic {
+		fill: var(--on-vinyl);
+	}
+
+	.record__hole {
+		fill: var(--ground);
+	}
 </style>

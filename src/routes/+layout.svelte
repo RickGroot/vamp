@@ -5,7 +5,6 @@
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
-	import { MediaQuery } from 'svelte/reactivity';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view, TRANSPOSE_OPTIONS, THEME_OPTIONS } from '$lib/stores/view.svelte';
 	import { library } from '$lib/stores/library.svelte';
@@ -14,8 +13,6 @@
 	import { engine } from '$lib/audio/engine';
 	import { isValidChordSymbol } from '$lib/audio/chord';
 	import { classifyChord, type ChordFamily } from '$lib/model/chords';
-	import { beatsToQuarters } from '$lib/model/time';
-	import { createMeadow, type Meadow, type MeadowSignal } from '$lib/art/meadow';
 	import { flattenSlots } from '$lib/model/slots';
 	import { inferKey } from '$lib/model/key';
 	import { readSharedProgression } from '$lib/storage/share';
@@ -139,10 +136,6 @@
 		}
 	}
 
-	// Reactive so both art effects re-run when the OS setting flips mid-session
-	// (a one-shot matchMedia read left the wrong mode running until re-toggle).
-	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
-
 	// The browser chrome (address bar, installed-app title bar) takes the page's
 	// ground, whichever theme is showing — pinned or following the system.
 	$effect(() => {
@@ -178,24 +171,19 @@
 		};
 	});
 
-	// Nature (always on): the art is a picture of the band. Everything below reads the
-	// music — the chord sounding, the tempo, the transport's own clock — and when
-	// nothing plays, nothing moves.
-
-	// Harmonic weather: the page's light follows the chord family. While the song
-	// plays it's the chord sounding; stopped, it's the song's home chord; a rest
-	// or a drill clears the sky. One CSS custom property, crossfaded over a beat.
-	// The family of every chord in the song, in order — the meadow's garden and
-	// the resting weather are both made of these.
+	// The field: the one block of colour on the page (the deck's play panel, the
+	// stand, the dock). While the song plays it is the chord sounding; stopped,
+	// the tune's own colour; a rest, a drill or a blank canvas leaves it ink.
+	// The family of every chord in the song, in order.
 	const songFamilies = $derived(
 		flattenSlots(progression.current.bars)
 			.map((f) => f.slot.chord.trim())
 			.filter((c) => c !== '' && isValidChordSymbol(c))
 			.map((c) => classifyChord(c))
 	);
-	// Resting weather: the song's most-used family (a blues gets an orange sky),
-	// the home chord's breaking a tie.
-	const restingWeather = $derived.by((): ChordFamily | null => {
+	// The tune's colour: its most-used family (a blues prints orange), the home
+	// chord's breaking a tie — like a record label giving each sleeve its colour.
+	const tuneColour = $derived.by((): ChordFamily | null => {
 		if (songFamilies.length === 0) return null;
 		const counts = new Map<ChordFamily, number>();
 		for (const f of songFamilies) counts.set(f, (counts.get(f) ?? 0) + 1);
@@ -205,145 +193,40 @@
 		return best;
 	});
 
-	const weather = $derived.by((): ChordFamily | null => {
-		if (!view.artMode) return null;
+	const field = $derived.by((): ChordFamily | null => {
 		if (progression.isPlaying) {
 			const i = progression.activeSlot;
 			if (engine.source !== 'progression' || i === null) return null;
 			const chord = flattenSlots(progression.current.bars)[i]?.slot.chord ?? '';
 			return chord.trim() && isValidChordSymbol(chord) ? classifyChord(chord) : null;
 		}
-		return restingWeather;
+		return tuneColour;
 	});
 
 	$effect(() => {
 		const root = document.documentElement;
-		if (weather) root.style.setProperty('--weather', `var(--c-${weather})`);
-		else root.style.removeProperty('--weather');
-		root.style.setProperty('--weather-ms', `${Math.round(60000 / progression.current.tempo)}ms`);
-	});
-
-	// Wind in the grass. Gusts start where the chord changed on screen.
-	let meadowEl = $state<HTMLCanvasElement | null>(null);
-	let meadow: Meadow | null = null;
-	let changeAt = 0;
-	let originX = 0.5;
-	let lastSlot: number | null = null;
-
-	const signal = (): MeadowSignal => ({
-		clock: engine.clock(),
-		quartersPerBeat:
-			engine.source === 'progression' ? beatsToQuarters(1, progression.current.timeSignature) : 1,
-		family: progression.isPlaying ? weather : null,
-		changeAt,
-		originX,
-		songFamilies
-	});
-
-	$effect(() => {
-		if (!view.artMode || !meadowEl) return;
-		const m = createMeadow(meadowEl, signal);
-		meadow = m;
-		if (reducedMotion.current) {
-			// A still frame in the current chord's colour; redrawn on changes below.
-			m.drawStatic();
-			const onStaticResize = () => m.drawStatic();
-			window.addEventListener('resize', onStaticResize, { passive: true });
-			return () => {
-				window.removeEventListener('resize', onStaticResize);
-				m.stop();
-				meadow = null;
-			};
+		if (field) {
+			root.style.setProperty('--field', `var(--c-${field})`);
+			root.style.setProperty('--on-field', 'var(--on-pigment)');
+		} else {
+			root.style.removeProperty('--field');
+			root.style.removeProperty('--on-field');
 		}
-		m.resize();
-		const onResize = () => m.resize();
-		const onVisibility = () => {
-			if (!document.hidden) m.wake();
-		};
-		window.addEventListener('resize', onResize, { passive: true });
-		document.addEventListener('visibilitychange', onVisibility);
-		return () => {
-			m.stop();
-			meadow = null;
-			window.removeEventListener('resize', onResize);
-			document.removeEventListener('visibilitychange', onVisibility);
-		};
-	});
-
-	// The theme changed: re-ink the meadow from the new tokens.
-	$effect(() => {
-		void view.night;
-		meadow?.refresh();
-	});
-
-	// The song changed shape while stopped: regrow the garden in its colours.
-	$effect(() => {
-		void songFamilies;
-		if (!meadow || progression.isPlaying) return;
-		if (reducedMotion.current) meadow.drawStatic();
-		else meadow.resize();
-	});
-
-	// The music changed (play, stop, a new chord): note where, and wake the field.
-	$effect(() => {
-		const slot = progression.activeSlot;
-		void progression.engineState;
-		void weather;
-		if (slot !== lastSlot) {
-			lastSlot = slot;
-			if (slot !== null) {
-				changeAt = performance.now();
-				const el = document.querySelector('.slot--active');
-				if (el) {
-					const r = el.getBoundingClientRect();
-					originX = (r.left + r.width / 2) / Math.max(1, window.innerWidth);
-				}
-			}
-		}
-		if (!meadow) return;
-		if (reducedMotion.current) meadow.drawStatic();
-		else meadow.wake();
 	});
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="frame" class:art={view.artMode}>
-	{#if view.artMode}
-		<div class="art-weather" aria-hidden="true"></div>
-		<!-- The sun rises when the band starts and settles when it stops. -->
-		<div class="art-sun" class:art-sun--up={progression.isPlaying} aria-hidden="true"></div>
-		<canvas class="art-meadow" bind:this={meadowEl} aria-hidden="true"></canvas>
-	{/if}
+<div class="frame">
 	<header class="head">
 		<div class="head__left">
 			<span class="wordmark head__mark">Vamp</span>
-			<!-- Two workspaces, one switch: where you are is the filled segment. -->
+			<!-- Two workspaces, one switch: where you are is underlined in ink. -->
 			<nav class="nav" aria-label="Workspace">
 				<a class="nav__link" class:nav__link--on={!onPractice} aria-current={!onPractice ? 'page' : undefined} href={SKETCH}>
-					<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
-						><path
-							d="M10.6 2.9l2.5 2.5-7.4 7.4-3.2.7.7-3.2zM9.2 4.3l2.5 2.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.4"
-							stroke-linejoin="round"
-						/></svg
-					>
 					Sketch
 				</a>
 				<a class="nav__link" class:nav__link--on={onPractice} aria-current={onPractice ? 'page' : undefined} href={PRACTICE}>
-					<!-- A metronome. -->
-					<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
-						><path
-							d="M6 2.5h4l2.6 11H3.4zM3.9 11.2h8.2M8 11.2l3.4-6.4"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.4"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/></svg
-					>
 					Practice
 				</a>
 			</nav>
@@ -352,7 +235,7 @@
 			<fieldset class="theme">
 				<legend class="theme__legend">Theme</legend>
 				{#each THEME_OPTIONS as t (t.id)}
-					<label class="theme__opt" title={t.label}>
+					<label class="theme__opt" title={t.title}>
 						<input
 							class="theme__input"
 							type="radio"
@@ -361,27 +244,7 @@
 							checked={view.themePref === t.id}
 							onchange={() => view.setTheme(t.id)}
 						/>
-						<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-							{#if t.id === 'day'}
-								<!-- Sunrise: the sun coming up over the horizon. -->
-								<path d="M3.5 11a4.5 4.5 0 0 1 9 0Z" fill="currentColor" />
-								<path
-									d="M1.5 13h13M8 2.5v2.2M2.9 5.6l1.4 1.2M13.1 5.6l-1.4 1.2"
-									stroke="currentColor"
-									stroke-width="1.4"
-									stroke-linecap="round"
-								/>
-							{:else if t.id === 'night'}
-								<!-- Sunset: the sun half-gone, a first star. -->
-								<path d="M4 12.5a4 4 0 0 1 8 0Z" fill="currentColor" />
-								<path d="M1.5 13h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-								<circle cx="12.5" cy="3.5" r="1.1" fill="currentColor" />
-							{:else}
-								<circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.4" />
-								<path d="M8 2.8a5.2 5.2 0 0 1 0 10.4Z" fill="currentColor" />
-							{/if}
-						</svg>
-						<span class="theme__text">{t.label}</span>
+						{t.label}
 					</label>
 				{/each}
 			</fieldset>
@@ -455,16 +318,19 @@
 		pointer-events: none;
 	}
 
+	/* A printed slip: ink block, ground text. */
 	.notice {
 		display: flex;
 		align-items: center;
 		gap: var(--space-4);
 		max-width: 100%;
+		min-height: var(--tap);
 		padding: var(--space-2) var(--space-4);
-		background: var(--color-black);
-		color: var(--color-white);
-		font-size: 0.85rem;
-		box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+		background: var(--ink);
+		color: var(--ground);
+		font-size: 0.875rem;
+		font-weight: 700;
+		box-shadow: 0 14px 32px var(--shadow);
 		animation: notice-in 140ms var(--motion-ease-out);
 	}
 
@@ -482,21 +348,24 @@
 
 	.notice__action {
 		flex: 0 0 auto;
-		min-height: 36px;
-		border: 1px solid var(--color-white);
+		min-height: 32px;
+		border: var(--rule-heavy) solid var(--ground);
 		background: transparent;
-		color: var(--color-white);
+		color: var(--ground);
 		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.8rem;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 
 		&:hover {
-			background: var(--color-white);
-			color: var(--color-black);
+			background: var(--ground);
+			color: var(--ink);
 		}
 
 		&:focus-visible {
-			outline: 2px solid var(--color-white);
+			outline: 2px solid var(--ground);
 			outline-offset: 2px;
 		}
 	}
@@ -513,102 +382,94 @@
 		}
 	}
 
-	/* The notebook's running head: hand-lettered name, the two workspaces, and the
-	   per-device settings. Sits on the page ground, closed by one hairline rule. */
+	/* The sleeve's top strip: the name on its ink block, the two workspaces, and
+	   the per-device settings, closed by a heavy printed rule. */
 	.head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: var(--space-2) var(--space-4);
+		gap: var(--space-2) var(--space-6);
 		/* The two groups drop onto separate rows rather than running off the edge. */
 		flex-wrap: wrap;
 		max-width: 1100px;
+		min-height: 72px;
 		margin: 0 auto;
 		padding: var(--space-3) var(--space-6);
-		border-bottom: 1px solid var(--rule);
+		/* The rule is drawn inside the gutter, so it lines up with the editor's
+		   own rules below rather than running to the padding edge. */
+		background-image: linear-gradient(var(--ink), var(--ink));
+		background-size: calc(100% - 2 * var(--space-6)) var(--rule-heavy);
+		background-position: center bottom;
+		background-repeat: no-repeat;
 	}
 
 	.head__left {
 		display: flex;
 		align-items: center;
-		gap: var(--space-6);
+		gap: var(--space-8);
 		/* Without this, a flex child refuses to shrink below its content width and
 		   pushes the pitch select off-screen instead of wrapping. */
 		min-width: 0;
 	}
 
-	/* The name, catching the light. */
 	.head__mark {
-		font-size: 1.875rem;
-		line-height: 1;
-		color: var(--ink);
-		text-shadow: var(--text-glow);
-		/* Petaluma sits high in its em box; nudge it onto the nav's baseline. */
-		transform: translateY(2px);
+		font-size: 1.625rem;
 	}
 
-	/* Sketch · Practice: one pill, like the theme switch beside it. An underline
-	   alone was too quiet to tell the two pages apart at a glance. */
+	/* Sketch · Practice: printed words; where you are is underlined in ink. */
 	.nav {
 		display: inline-flex;
-		padding: 2px;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
+		gap: var(--space-6);
 	}
 
 	.nav__link {
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		min-height: 34px;
-		padding: 0 var(--space-3) 0 10px;
-		border-radius: var(--radius-pill);
-		font-size: 0.9375rem;
-		font-weight: 500;
-		color: var(--ink-2);
+		min-height: 40px;
+		font-size: 0.8125rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-3);
 		text-decoration: none;
+		box-shadow: inset 0 -4px 0 transparent;
 		transition:
-			background-color var(--motion-fast) var(--motion-ease-out),
-			color var(--motion-fast) var(--motion-ease-out);
+			color var(--motion-fast) var(--motion-ease-out),
+			box-shadow var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
 			color: var(--ink);
-			background: var(--wash);
+			box-shadow: inset 0 -4px 0 var(--rule);
 		}
 
 		@media (pointer: coarse) {
-			min-height: 40px;
+			min-height: var(--tap);
 		}
 	}
 
-	/* You are here: the page inked solid. Ink, not the sun — the sun means
-	   "makes music / switched on", and this is a place, not a switch. */
+	/* You are here. A place, not a switch — so an underline, not a filled box. */
 	.nav__link--on,
 	.nav__link--on:hover {
-		background: var(--ink);
-		color: var(--paper);
+		color: var(--ink);
+		box-shadow: inset 0 -4px 0 var(--ink);
 	}
 
 	.head__right {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
+		gap: var(--space-3) var(--space-6);
 		min-width: 0;
 	}
 
-	/* Day · Auto · Night: three radio segments, the chosen one inked in spot pink. */
+	/* Light · Auto · Dark: three printed segments, the chosen one inked solid. */
 	.theme {
 		display: inline-flex;
 		margin: 0;
-		padding: 2px;
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
+		padding: 0;
+		border: var(--rule-heavy) solid var(--ink);
 	}
 
-	.theme__legend,
-	.theme__text {
+	.theme__legend {
 		position: absolute;
 		width: 1px;
 		height: 1px;
@@ -621,9 +482,12 @@
 		position: relative;
 		display: grid;
 		place-items: center;
-		width: 30px;
-		height: 30px;
-		border-radius: var(--radius-pill);
+		min-height: 30px;
+		padding: 0 var(--space-2);
+		font-size: 0.6875rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 		color: var(--ink-2);
 		cursor: pointer;
 		transition:
@@ -646,8 +510,8 @@
 		}
 
 		@media (pointer: coarse) {
-			width: 40px;
-			height: 40px;
+			min-height: 40px;
+			padding: 0 var(--space-3);
 		}
 	}
 
@@ -659,22 +523,30 @@
 		cursor: pointer;
 	}
 
+	.head__right .label {
+		margin-right: calc(-1 * var(--space-3));
+	}
+
 	.head__pitch {
 		min-height: 36px;
 		font-family: inherit;
-		font-size: 0.875rem;
-		font-weight: 500;
+		font-size: 0.9375rem;
+		font-weight: 700;
 		color: var(--ink);
 		background: transparent;
 		border: 0;
-		border-bottom: 1px solid var(--edge);
+		border-bottom: var(--rule-heavy) solid var(--ink);
 		padding: 0 var(--space-1);
 		border-radius: 0;
 		min-width: 0;
 
-		&:hover,
+		&:hover {
+			background: var(--wash);
+		}
+
 		&:focus {
-			border-bottom-color: var(--ink);
+			outline: none;
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 
 		option {
@@ -693,8 +565,9 @@
 	   Everything fitted on one line at 375px only by overflowing the viewport. */
 	@media (max-width: 600px) {
 		.head {
-			padding: var(--space-2) var(--space-4);
-			gap: var(--space-1);
+			padding: var(--space-2) var(--space-4) var(--space-3);
+			gap: var(--space-2);
+			background-size: calc(100% - 2 * var(--space-4)) var(--rule-heavy);
 		}
 
 		.head__left,
@@ -703,17 +576,31 @@
 		}
 
 		.head__left {
-			gap: var(--space-4);
+			gap: var(--space-6);
 		}
 
 		.head__right {
 			justify-content: flex-start;
+			column-gap: var(--space-4);
+		}
+
+		.head__pitch {
+			flex: 0 1 auto;
+			min-width: 0;
+		}
+
+		.theme__opt {
+			padding: 0 var(--space-2);
+			letter-spacing: 0.04em;
+		}
+
+		.head__right .label {
+			margin-left: auto;
 		}
 
 		.head__mark {
-			font-size: 1.5rem;
+			font-size: 1.375rem;
 		}
-
 	}
 
 	.update {
@@ -725,29 +612,31 @@
 		align-items: center;
 		gap: var(--space-4);
 		padding: var(--space-3) var(--space-4);
-		background: var(--color-black);
-		color: var(--color-white);
+		background: var(--ink);
+		color: var(--ground);
+		box-shadow: 0 14px 32px var(--shadow);
 		z-index: 10;
 	}
 
 	.update :global(.label) {
-		color: var(--color-white);
+		color: var(--ground);
 	}
 
 	.update__btn {
-		border: 1px solid var(--color-white);
+		min-height: 32px;
+		border: var(--rule-heavy) solid var(--ground);
 		background: transparent;
-		color: var(--color-white);
-		padding: var(--space-1) var(--space-3);
+		color: var(--ground);
+		padding: 0 var(--space-3);
 		font-family: inherit;
-		font-size: 0.6875rem;
-		font-weight: 400;
-		letter-spacing: 0.08em;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 
 		&:hover {
-			background: var(--color-white);
-			color: var(--color-black);
+			background: var(--ground);
+			color: var(--ink);
 		}
 	}
 </style>

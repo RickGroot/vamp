@@ -71,9 +71,9 @@
 		margin-top: var(--space-1);
 		min-width: 260px;
 		background: var(--color-white);
-		border: 1px solid var(--ink);
-		border-radius: var(--radius);
-		box-shadow: 0 10px 28px var(--shadow);
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
+		box-shadow: 0 14px 32px var(--shadow);
 		z-index: 50;
 	}
 
@@ -81,8 +81,9 @@
 		display: block;
 		width: 100%;
 		border: 0;
-		border-bottom: 1px solid var(--color-border);
+		border-bottom: var(--rule-heavy) solid var(--ink);
 		background: transparent;
+		font-weight: 700;
 		padding: var(--space-3);
 		font-family: inherit;
 		font-size: 1rem;
@@ -90,7 +91,7 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 	}
 
@@ -109,7 +110,7 @@
 		width: 100%;
 		border: 0;
 		background: transparent;
-		border-radius: 2px;
+		border-radius: 0;
 		padding: var(--space-2) var(--space-3);
 		text-align: left;
 		color: var(--ink);
@@ -120,11 +121,13 @@
 		}
 	}
 
-	/* Tune names in the hand the chart is written in — a set list. */
+	/* Tune names set like titles on a sleeve — a set list. */
 	.item__title {
-		font-family: var(--font-hand);
-		font-size: 1.25rem;
-		line-height: 1.15;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.375rem;
+		line-height: 1;
 	}
 
 	.item__origin {

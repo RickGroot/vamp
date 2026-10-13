@@ -11,6 +11,7 @@
 	import { flattenSlots } from '$lib/model/slots';
 	import { resolveLoopRange } from '$lib/model/time';
 	import { standCue } from '$lib/model/cue';
+	import ChordSymbol from './ChordSymbol.svelte';
 
 	let { shown, onstand }: { shown: boolean; onstand: () => void } = $props();
 
@@ -46,84 +47,94 @@
 		{/if}
 	</button>
 
-	<p class="dock__cue" style:--q={family ? `var(--c-${family})` : 'transparent'}>
-		<span class="dock__now">{now || '—'}</span>
-		{#if next}<span class="dock__next">then {next}</span>{/if}
+	<p class="dock__cue" style:--q={family ? `var(--c-${family})` : 'var(--rule)'}>
+		<span class="dock__now">{#if now}<ChordSymbol symbol={now} />{:else}—{/if}</span>
+		{#if next}<span class="dock__next">then <ChordSymbol symbol={next} /></span>{/if}
 	</p>
 
 	<button class="bar-btn dock__stand" type="button" onclick={onstand}>Stand</button>
 </div>
 
 <style lang="scss">
+	/* A printed strip along the bottom: a square of the field holding play, the
+	   chord you're on, and the way to the stand. */
 	.dock {
 		position: fixed;
-		left: 50%;
-		bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+		left: 0;
+		right: 0;
+		bottom: 0;
 		z-index: 40;
 		display: flex;
-		align-items: center;
+		align-items: stretch;
 		gap: var(--space-3);
-		width: min(460px, calc(100% - 2 * var(--space-4)));
-		padding: var(--space-2) var(--space-2) var(--space-2) var(--space-2);
+		padding: 0 max(var(--space-4), calc((100% - 1100px) / 2 + var(--space-6))) env(safe-area-inset-bottom);
 		background: var(--paper);
-		border: 1px solid var(--ink);
-		border-radius: calc(var(--tap) / 2 + var(--space-2));
-		box-shadow: 0 10px 28px var(--shadow);
-		transform: translate(-50%, calc(100% + var(--space-6)));
-		opacity: 0;
-		transition:
-			transform 260ms var(--motion-ease-out),
-			opacity 200ms var(--motion-ease-out);
+		border-top: var(--rule-heavy) solid var(--ink);
+		transform: translateY(calc(100% + var(--space-2)));
+		transition: transform 260ms var(--motion-ease-out);
 	}
 
 	.dock--shown {
-		transform: translate(-50%, 0);
-		opacity: 1;
+		transform: translateY(0);
 	}
 
 	.dock__play {
 		display: grid;
 		place-items: center;
 		flex: 0 0 auto;
-		width: var(--tap);
-		height: var(--tap);
+		width: 64px;
+		min-height: 60px;
 		border: 0;
-		border-radius: var(--radius-pill);
-		background: radial-gradient(circle at 35% 30%, var(--sun) 0%, var(--spot) 78%);
-		color: var(--on-spot);
-		box-shadow: var(--lift);
+		background: var(--field);
+		color: var(--on-field);
+
+		&:focus-visible {
+			outline-offset: -6px;
+			outline-color: var(--on-field);
+		}
 	}
 
 	.dock__cue {
 		display: flex;
-		align-items: baseline;
-		gap: var(--space-2);
+		align-items: center;
+		gap: var(--space-3);
 		flex: 1 1 auto;
 		min-width: 0;
 		margin: 0;
 	}
 
 	.dock__now {
-		font-family: var(--font-hand);
-		font-size: 1.625rem;
+		--cs-stretch: 62%;
+		--cs-weight: 900;
+		font-size: 2rem;
 		line-height: 1;
-		padding-bottom: 2px;
-		border-bottom: 4px solid var(--q);
+		padding-top: 4px;
+		box-shadow: inset 0 4px 0 var(--q);
 		white-space: nowrap;
 	}
 
 	.dock__next {
+		display: inline-flex;
+		align-items: baseline;
+		gap: var(--space-1);
 		overflow: hidden;
-		text-overflow: ellipsis;
 		white-space: nowrap;
-		font-size: 0.875rem;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 		color: var(--ink-3);
+
+		:global(.cs) {
+			font-size: 1.375rem;
+			text-transform: none;
+			color: var(--ink-2);
+		}
 	}
 
 	.dock__stand {
 		flex: 0 0 auto;
+		align-self: center;
 		min-height: var(--tap);
-		border-radius: calc(var(--tap) / 2);
-		padding: 0 var(--space-4);
 	}
 </style>

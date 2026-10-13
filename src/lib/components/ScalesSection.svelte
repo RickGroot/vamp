@@ -185,8 +185,8 @@
 
 <style lang="scss">
 	.scales {
-		margin-top: var(--space-12);
-		border-top: 1px solid var(--rule);
+		margin-top: var(--space-8);
+		border-top: var(--rule-heavy) solid var(--ink);
 		padding-top: var(--space-4);
 	}
 
@@ -217,7 +217,7 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 	}
 	.sel--wide {
@@ -312,22 +312,24 @@
 		gap: var(--space-2);
 		flex-wrap: wrap;
 	}
-	/* The scale spelled out, hand-lettered like the chords above it. */
+	/* The scale spelled out, set like the chords above it. */
 	.note {
-		min-width: 2.4rem;
+		min-width: 2.6rem;
 		text-align: center;
 		padding: var(--space-1) var(--space-2);
-		border: 1px solid var(--rule);
-		border-radius: var(--radius);
-		background: var(--paper);
-		font-family: var(--font-hand);
-		font-size: 1.25rem;
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
+		background: var(--ground);
+		font-family: var(--font-display);
+		font-stretch: 72%;
+		font-weight: 800;
+		font-size: 1.375rem;
 		line-height: 1.2;
 		color: var(--ink);
 	}
 	.note--root {
-		border-color: var(--spot);
-		box-shadow: inset 0 0 0 1px var(--ink);
+		background: var(--ink);
+		color: var(--ground);
 	}
 
 	.kbd {
@@ -371,7 +373,7 @@
 	.legend__dot {
 		width: 10px;
 		height: 10px;
-		border-radius: var(--radius-pill);
+		border-radius: 50%;
 		display: inline-block;
 		margin-left: var(--space-3);
 	}

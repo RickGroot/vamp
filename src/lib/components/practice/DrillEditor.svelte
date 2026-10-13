@@ -159,8 +159,8 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		padding: var(--space-4);
-		border: 1px solid var(--color-black);
-		background: var(--color-white);
+		border: var(--rule-heavy) solid var(--ink);
+		background: var(--paper);
 	}
 
 	.editor__row {

@@ -7,19 +7,20 @@ instrument, through every key, in your range and written pitch. No login, no bac
 accounts — everything stays on your device.
 
 Built with **SvelteKit + TypeScript + SCSS**, deployed as a static PWA to GitHub
-Pages. It looks like **golden hour**: choose **Sunrise** (a pale morning sky warming to
-gold), **Sunset** (indigo into plum and a rose glow) or Auto. The chart is a hand-lettered
-lead sheet — barlines, repeat signs for the loop, rhythm slashes — and chords are
-**colour-coded by quality** in the colours of the light (major = gold, minor = lilac,
-dominant = coral, diminished = rose, augmented = sky, suspended = lagoon). The chord
-sounding now lights up as a solid block of its colour. The play button is the sun.
+Pages. It looks like a **jazz record sleeve**: hard edges, heavy condensed type
+(Archivo, self-hosted), black and white, in **Light**, **Dark** or Auto. The chart is set
+like a Real Book — big root, small raised quality — on a printed lead sheet with ink
+barlines, repeat signs for the loop and rhythm slashes, and chords are **colour-coded by
+quality** in flat printing inks (major = yellow, minor = blue, dominant = orange,
+diminished = magenta, augmented = green, suspended = cyan). The chord sounding now is a
+solid block of its colour.
 
-**Nature** is always on, and paints only the music: weather that takes the colour of the
-chord sounding, a sun on the horizon that rises when you press play, a wildflower meadow
-grown from your song's chords (silhouettes and glowing flowers at sunset), growth rings
-round the play button — one per chorus — and the key drawn as a circle-of-fifths
-**sunflower**. When the music stops, everything holds still. **Stand** opens a
-full-screen music stand. A blank canvas offers back the sketches you were recently
+The page has **one field of colour**: the deck's play panel, which takes the colour of
+the chord sounding (at rest, your tune's colour), with the play disc cut into it and
+**grooves** round it — one per chorus you play. The key is drawn as a **record**: the
+circle of fifths printed round the label, your song's notes as dots on the vinyl; it
+turns when you transpose. When the music stops, everything holds still. **Stand** opens
+a full-screen music stand. A blank canvas offers back the sketches you were recently
 working on, saved or not.
 
 ## Features (v1 / MVP)
@@ -129,12 +130,15 @@ pnpm check                      # type / svelte-check
 pnpm build                      # static production build -> build/
 ```
 
-Regenerate the brand raster assets (PWA icons, apple-touch icon, favicon PNG, and
-the Open Graph share image) from the gradient-V mark — dependency-free, no native
-image libs:
+Regenerate the brand and PWA assets in `static/` (the mark is a black record with a
+yellow V label on an orange field). The icons are dependency-free; the share image
+and install screenshots are rendered by a locally installed Chrome/Chromium in
+headless mode (set `CHROME` to its path if it is not found):
 
 ```sh
-node scripts/gen-assets.mjs   # writes pwa-192/512.png, apple-touch-icon.png, favicon-48.png, og-image.png to static/
+node scripts/gen-assets.mjs                                     # vamp-icon.svg, pwa-192/512.png, apple-touch-icon.png, favicon-48.png
+node scripts/gen-assets.mjs --share                             # og-image.png (1200x630)
+node scripts/gen-assets.mjs --screenshots http://localhost:5179 # screenshot-wide/narrow.png from a running app
 ```
 
 Preview the **real production build** under the GitHub Pages base path (`/vamp/`):

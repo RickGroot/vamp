@@ -37,8 +37,9 @@
 
 <section class="runner" aria-label="Drill runner">
 	<header class="runner__head">
+		<KeyCompass tonic={shown?.writtenRoot ?? ''} notes={phrasePcs} size={80} />
 		<div class="runner__what">
-			<h2 class="wordmark runner__title">{practice.definition.name}</h2>
+			<h2 class="runner__title">{practice.definition.name}</h2>
 			<p class="hint runner__sub">
 				<!-- A song-sourced drill has no meaningful "key" to show — it follows
 				     the changes — so name the sketch instead. -->
@@ -46,8 +47,6 @@
 				{practice.rangeLabel} · {shown?.tempo ?? practice.tempo} bpm
 			</p>
 		</div>
-
-		<KeyCompass tonic={shown?.writtenRoot ?? ''} notes={phrasePcs} size={88} />
 
 		<div class="runner__transport">
 			<button
@@ -59,16 +58,22 @@
 			>
 				{#if practice.isLoading}Loading{:else if practice.isPlaying}Stop{:else}Start{/if}
 			</button>
-			<button
-				class="bar-btn"
-				class:bar-btn--on={practice.leadAudible}
-				type="button"
-				aria-pressed={practice.leadAudible}
-				title="Hear the line, or play it yourself over the backing"
-				onclick={() => practice.setLeadAudible(!practice.leadAudible)}
-			>
-				{practice.leadAudible ? 'Hearing it' : 'Playing it'}
-			</button>
+			<!-- Two printed segments: hear the line played, or play it yourself over
+			     the backing. Each names what you get, so neither reads as an action. -->
+			<div class="lead" role="group" aria-label="The line" title="Hear the line, or play it yourself over the backing">
+				<button
+					class="lead__opt"
+					type="button"
+					aria-pressed={practice.leadAudible}
+					onclick={() => practice.setLeadAudible(true)}>Hear it</button
+				>
+				<button
+					class="lead__opt"
+					type="button"
+					aria-pressed={!practice.leadAudible}
+					onclick={() => practice.setLeadAudible(false)}>Play it</button
+				>
+			</div>
 		</div>
 	</header>
 
@@ -105,20 +110,68 @@
 		gap: var(--space-3);
 	}
 
+	/* The record beside the title, the transport on the right. Practice's one
+	   block of colour is Start: the key's colour (the record's label), like the
+	   field on Sketch. */
 	.runner__head {
-		display: flex;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: var(--space-4);
-		flex-wrap: wrap;
+		--field: var(--c-major);
+		--on-field: var(--on-pigment);
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: var(--space-3) var(--space-4);
 	}
 
-	/* The drill's name, lettered like the tune title on Sketch. */
+	@media (max-width: 640px) {
+		.runner__head {
+			grid-template-columns: auto minmax(0, 1fr);
+		}
+
+		.runner__transport {
+			grid-column: 1 / -1;
+		}
+	}
+
+	.lead {
+		display: inline-flex;
+		border: var(--rule-heavy) solid var(--ink);
+	}
+
+	.lead__opt {
+		min-height: 40px;
+		padding: 0 var(--space-3);
+		border: 0;
+		background: transparent;
+		font-family: inherit;
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--ink-2);
+
+		&:hover {
+			background: var(--wash);
+			color: var(--ink);
+		}
+
+		&[aria-pressed='true'] {
+			background: var(--ink);
+			color: var(--ground);
+		}
+
+		@media (pointer: coarse) {
+			min-height: var(--tap);
+		}
+	}
+
+	/* The drill's name, set like the tune title on Sketch. */
 	.runner__title {
-		font-family: var(--font-hand);
-		font-weight: 400;
-		font-size: 2rem;
-		line-height: 1.15;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 2.75rem;
+		line-height: 0.95;
+		text-transform: uppercase;
 		margin: 0;
 	}
 
@@ -133,25 +186,22 @@
 		gap: var(--space-2);
 	}
 
-	/* The same sun as Sketch's play disc, with its word on it. */
+	/* Start lives in the field, like Sketch's play disc: a block of the field's
+	   colour with its word on it. */
 	.play {
 		min-height: var(--tap);
-		border: 0;
-		border-radius: var(--radius-pill);
+		min-width: 120px;
+		border: var(--rule-heavy) solid var(--field);
+		border-radius: 0;
 		padding: 0 var(--space-6);
 		font-family: inherit;
-		font-size: 0.9375rem;
-		font-weight: 700;
-		color: var(--on-spot);
-		background: radial-gradient(circle at 35% 30%, var(--sun) 0%, var(--spot) 78%);
-		box-shadow: var(--lift);
-		transition:
-			transform var(--motion-fast) var(--motion-ease-out),
-			box-shadow var(--motion-fast) var(--motion-ease-out);
-
-		&:hover {
-			box-shadow: 0 4px 12px var(--shadow);
-		}
+		font-size: 0.8125rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--on-field);
+		background: var(--field);
+		transition: transform var(--motion-fast) var(--motion-ease-out);
 
 		&:active {
 			transform: scale(0.97);
@@ -162,11 +212,11 @@
 		}
 	}
 
+	/* Running: the field turns over to the board, ink border kept. */
 	.play--on {
-		box-shadow:
-			var(--lift),
-			0 0 0 3px var(--ground),
-			0 0 0 5px var(--spot);
+		background: var(--ground);
+		color: var(--ink);
+		border-color: var(--ink);
 	}
 
 	.runner__status {
@@ -176,7 +226,7 @@
 
 	.runner__empty {
 		padding: var(--space-4);
-		border: 1px dashed var(--color-border);
+		border: var(--rule-heavy) dashed var(--ink-4);
 		color: var(--color-text-muted);
 		margin: 0;
 	}

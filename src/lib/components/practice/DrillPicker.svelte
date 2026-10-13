@@ -371,14 +371,15 @@
 		gap: 2px;
 		text-align: left;
 		padding: var(--space-3);
-		border: 1px solid var(--color-border);
-		background: var(--color-white);
+		border: var(--rule-heavy) solid var(--ink);
+		background: var(--ground);
 		font-family: inherit;
+		color: var(--ink);
 		cursor: pointer;
-		transition: border-color var(--motion-fast) var(--motion-ease-out);
+		transition: background-color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			border-color: var(--color-black);
+			background: var(--wash);
 		}
 
 		&:focus-visible {
@@ -388,14 +389,26 @@
 	}
 
 	/* The selected drill is marked by a bar and a border, never colour alone. */
-	.drill--on {
-		border-color: var(--color-black);
-		box-shadow: inset 0 0 0 1px var(--ink);
+	/* The chosen drill is inked solid. */
+	.drill--on,
+	.drill--on:hover {
+		background: var(--ink);
+		color: var(--ground);
+
+		.drill__name,
+		.drill__desc {
+			color: inherit;
+		}
 	}
 
 	.drill__name {
-		font-size: 0.9rem;
-		color: var(--color-text);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.25rem;
+		line-height: 1;
+		text-transform: uppercase;
+		color: var(--ink);
 	}
 
 	.drill__desc {

@@ -6,6 +6,7 @@
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { scales } from '$lib/stores/scales.svelte';
+	import ChordSymbol from './ChordSymbol.svelte';
 
 	interface Props {
 		barIndex: number;
@@ -134,8 +135,8 @@
 	class:slot--active={active}
 	class:slot--invalid={invalid}
 	class:slot--filled={!!family}
+	class:slot--faced={!!family && !focused}
 	style:--q={family ? `var(--c-${family})` : undefined}
-	style:--wq={family ? `var(--w-${family})` : undefined}
 	style:flex-grow={beats}
 	onfocusout={onFocusOut}
 >
@@ -157,6 +158,12 @@
 		onfocus={onFocus}
 		onkeydown={onKeydown}
 	/>
+
+	<!-- The chord as a Real Book prints it, laid over the field while you are not
+	     typing in it (the input still holds the text, for editing and for AT). -->
+	{#if family && !focused}
+		<span class="slot__face" aria-hidden="true"><ChordSymbol symbol={displayValue} /></span>
+	{/if}
 
 	{#if family}
 		<button
@@ -203,7 +210,7 @@
 						onclick={() => selectChord(suggestion)}
 					>
 						<span class="dot"></span>
-						<span class="opt__name">{suggestion.display}</span>
+						<span class="opt__name"><ChordSymbol symbol={suggestion.display} /></span>
 					</button>
 				</li>
 			{/each}
@@ -212,97 +219,91 @@
 </div>
 
 <style lang="scss">
-	/* A chord written into the measure on a wash of its colour (at dusk a glowing
-	   outline instead — a dark fill of any hue turns brown), the symbol
-	   hand-lettered on top, a stroke of the colour beneath. */
+	/* A chord written into the measure under a tab of its ink. The chord sounding
+	   now is a solid block of that ink with --on-pigment text — the block you
+	   can read from the stand. */
 	.slot {
 		position: relative;
 		flex: 1 1 0;
 		min-width: 0;
-		border-radius: var(--radius);
-		transition:
-			background-color var(--motion-fast) var(--motion-ease-out),
-			transform var(--motion-fast) var(--motion-ease-out);
+		/* The face sizes itself to the slot (cqi), so a quarter-bar never clips. */
+		container-type: inline-size;
+		border-top: 6px solid var(--rule);
+		transition: background-color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
 			background-color: var(--wash);
 		}
 
 		&--filled {
-			background: var(--wq);
-			box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--q) var(--ring), transparent);
-
-			&:hover {
-				background: color-mix(in oklab, var(--wq) 80%, var(--q));
-			}
+			border-top-color: var(--q);
 		}
 
-		/* The stroke of full ink under a recognised chord. */
-		&--filled::after {
-			content: '';
-			position: absolute;
-			left: 20%;
-			right: 20%;
-			bottom: 5px;
-			height: 4px;
-			border-radius: 2px;
-			background: var(--q);
-			pointer-events: none;
-		}
-
-		/* Sounding now: a solid block of its colour, glowing, with a small pop as
-		   it lands — the lantern you can read from the stand. */
+		/* Sounding now. A rest sounding is a block of ink. */
 		&--active,
 		&--active:hover {
-			background: var(--q, var(--spot));
-			box-shadow: 0 0 18px color-mix(in srgb, var(--q, var(--spot)) 55%, transparent);
-			animation: slot-pop 240ms var(--motion-pop);
+			background: var(--q, var(--ink));
+			border-top-color: var(--q, var(--ink));
 
 			.slot__input,
-			.slot__roman {
+			.slot__roman,
+			.slot__face {
 				color: var(--on-pigment);
 			}
 
-			&::after {
-				background: var(--on-pigment);
-				opacity: 0.5;
+			.slot__input::placeholder {
+				color: var(--ground);
 			}
-		}
-	}
-
-	@keyframes slot-pop {
-		from {
-			transform: scale(0.94);
 		}
 	}
 
 	.slot__input {
 		width: 100%;
-		min-height: 52px;
+		min-height: 56px;
 		border: 0;
-		border-radius: var(--radius);
+		border-radius: 0;
 		background: transparent;
-		padding: var(--space-2) var(--space-2) var(--space-4);
-		font-family: var(--font-hand);
-		font-size: 1.75rem;
+		padding: var(--space-3) var(--space-2) var(--space-2);
+		font-family: var(--font-display);
+		font-stretch: 72%;
+		font-weight: 800;
+		font-size: min(2rem, 26cqi);
 		line-height: 1.1;
 		color: var(--ink);
-		text-align: center;
+		text-align: left;
 		text-overflow: ellipsis;
 
 		&::placeholder {
-			color: var(--ink-4);
+			color: var(--ink-3);
 		}
 
 		&:focus {
-			outline: 2px solid var(--ink);
+			outline: var(--rule-heavy) solid var(--ink);
 			outline-offset: -2px;
 		}
 	}
 
+	/* The set face sits exactly over the input text; the input itself goes
+	   transparent behind it until you click in. */
+	.slot--faced .slot__input {
+		color: transparent;
+	}
+
+	.slot__face {
+		position: absolute;
+		left: var(--space-2);
+		right: var(--space-2);
+		top: var(--space-3);
+		font-size: min(2.25rem, 30cqi);
+		line-height: 1;
+		color: var(--ink);
+		pointer-events: none;
+		overflow: hidden;
+	}
+
 	/* The invitation in bar 1 of a blank song is readable text, not a mark. */
 	.slot__input:placeholder-shown:not(:focus) {
-		font-size: 1.375rem;
+		font-size: 1.5rem;
 	}
 
 	/* Not a chord we can read: danger ink and a wavy underline, like a typo. */
@@ -315,26 +316,24 @@
 
 	.slot__roman {
 		display: block;
-		text-align: center;
-		font-size: 0.8125rem;
-		font-weight: 700;
-		letter-spacing: 0.02em;
+		padding: 0 var(--space-2) var(--space-2);
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
 		color: var(--ink-2);
-		padding: 0 0 var(--space-4);
-		margin-top: -10px;
 	}
 
 	.slot__scale,
 	.slot__remove {
 		position: absolute;
-		top: 0;
+		top: 2px;
 		width: 24px;
 		height: 24px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		border: 0;
-		border-radius: var(--radius-sm);
+		border-radius: 0;
 		background: transparent;
 		color: var(--ink-2);
 		cursor: pointer;
@@ -344,13 +343,13 @@
 			color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			color: var(--ink);
-			background: var(--paper);
+			color: var(--ground);
+			background: var(--ink);
 		}
 	}
 
 	.slot__scale {
-		left: 0;
+		right: 26px;
 	}
 
 	.slot--active .slot__scale,
@@ -359,9 +358,32 @@
 	}
 
 	.slot__remove {
-		right: 0;
+		right: 2px;
 		font-size: 1rem;
+		font-weight: 800;
 		line-height: 1;
+	}
+
+	/* Touch shows the slot tools all the time, so they get their own strip
+	   above the chord instead of sitting on it. */
+	@media (pointer: coarse) {
+		.slot__input {
+			padding-top: 40px;
+		}
+
+		.slot__face {
+			top: 40px;
+		}
+
+		.slot__scale,
+		.slot__remove {
+			width: 34px;
+			height: 34px;
+		}
+
+		.slot__scale {
+			right: 38px;
+		}
 	}
 
 	/* Slot tools appear with the slot on hover-capable devices. */
@@ -385,45 +407,42 @@
 		left: 0;
 		min-width: max(100%, 180px);
 		margin: 4px 0 0;
-		padding: var(--space-1);
+		padding: var(--space-1) 0;
 		max-height: 260px;
 		overflow-y: auto;
 		list-style: none;
 		background: var(--paper);
-		border: 1px solid var(--ink);
-		border-radius: var(--radius);
-		box-shadow: 0 10px 28px var(--shadow);
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
+		box-shadow: 0 14px 32px var(--shadow);
 		z-index: 50;
 	}
 
 	.opt {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		width: 100%;
-		min-height: 36px;
+		min-height: 38px;
 		border: 0;
-		border-radius: var(--radius-sm);
+		border-radius: 0;
 		background: transparent;
 		padding: var(--space-1) var(--space-3);
-		font-family: var(--font-hand);
-		font-size: 1.25rem;
+		font-size: 1.375rem;
 		text-align: left;
 		color: var(--ink);
 
 		&:hover,
 		&--hl {
-			background: color-mix(in srgb, var(--q) 20%, var(--paper));
+			background: var(--wash);
 		}
 	}
 
-	/* A dab of the chord's ink beside each suggestion. */
+	/* A square of the chord's ink beside each suggestion. */
 	.dot {
-		width: 11px;
-		height: 11px;
-		border-radius: 50% 45% 55% 40%;
+		width: 10px;
+		height: 10px;
 		background: var(--q);
-		box-shadow: 0 0 6px color-mix(in srgb, var(--q) 50%, transparent);
 		flex: 0 0 auto;
 	}
 </style>

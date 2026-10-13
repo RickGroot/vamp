@@ -71,7 +71,7 @@
 				<span class="seed__swatch" aria-hidden="true"></span>House of the Rising Sun
 			</button>
 		{/if}
-		<button class="seed seed--spot" style:--q="var(--spot)" style:--q2="var(--sun)" type="button" onclick={() => progression.inspire()}>
+		<button class="seed seed--spot" style:--q="var(--ink)" style:--q2="var(--c-major)" type="button" onclick={() => progression.inspire()}>
 			<span class="seed__swatch" aria-hidden="true"></span>Surprise me
 		</button>
 	</div>
@@ -80,26 +80,24 @@
 </section>
 
 <style lang="scss">
+	/* The blank sleeve: a panel of wash between the deck and the chart. */
 	.start {
 		margin-top: var(--space-6);
 		padding: var(--space-6);
-		border: 1px solid var(--edge);
-		border-radius: var(--radius);
-		background:
-			radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--sun) 22%, transparent), transparent 60%),
-			var(--paper);
+		background: var(--wash);
 	}
 
 	.start__title {
-		font-family: var(--font-hand);
-		font-weight: 400;
-		font-size: 2rem;
-		line-height: 1.1;
-		text-shadow: var(--text-glow);
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 2.75rem;
+		line-height: 0.95;
+		text-transform: uppercase;
 	}
 
 	.start__group {
-		margin: var(--space-4) 0 var(--space-2);
+		margin: var(--space-6) 0 var(--space-2);
 	}
 
 	.start__recent {
@@ -121,31 +119,33 @@
 		gap: 2px;
 		width: 100%;
 		min-height: var(--tap);
-		padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
-		border: 1px solid var(--edge);
-		border-radius: var(--radius);
+		padding: var(--space-3) var(--space-8) var(--space-3) var(--space-3);
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
 		background: var(--ground);
 		font-family: inherit;
 		text-align: left;
 		color: var(--ink);
-		transition:
-			transform var(--motion-fast) var(--motion-pop),
-			border-color var(--motion-fast) var(--motion-ease-out);
+		transition: background-color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			border-color: var(--ink);
-			transform: translateY(-1px);
+			background: var(--paper);
+			box-shadow: inset 0 -4px 0 var(--ink);
 		}
 	}
 
 	.sketch__name {
-		font-family: var(--font-hand);
-		font-size: 1.375rem;
-		line-height: 1.15;
+		font-family: var(--font-display);
+		font-stretch: var(--display-stretch);
+		font-weight: 900;
+		font-size: 1.5rem;
+		line-height: 1;
+		text-transform: uppercase;
 	}
 
 	.sketch__chords {
 		font-size: 0.875rem;
+		font-weight: 600;
 		color: var(--ink-2);
 		white-space: nowrap;
 		overflow: hidden;
@@ -153,26 +153,26 @@
 	}
 
 	.sketch__when {
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 		color: var(--ink-3);
 	}
 
 	.sketch__forget {
 		position: absolute;
-		top: 4px;
-		right: 4px;
+		top: 6px;
+		right: 6px;
 		display: grid;
 		place-items: center;
 		width: 28px;
 		height: 28px;
 		border: 0;
-		border-radius: var(--radius-sm);
+		border-radius: 0;
 		background: transparent;
 		color: var(--ink-3);
 
 		&:hover {
-			background: var(--wash);
-			color: var(--ink);
+			background: var(--ink);
+			color: var(--ground);
 		}
 
 		@media (pointer: coarse) {
@@ -192,33 +192,30 @@
 	.seed {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		min-height: var(--tap);
 		padding: 0 var(--space-4) 0 var(--space-2);
-		border: 1px solid var(--edge);
-		border-radius: var(--radius-pill);
+		border: var(--rule-heavy) solid var(--ink);
+		border-radius: 0;
 		background: var(--ground);
 		font-family: inherit;
 		font-size: 0.9375rem;
-		font-weight: 600;
+		font-weight: 800;
 		color: var(--ink);
-		transition:
-			transform var(--motion-fast) var(--motion-pop),
-			border-color var(--motion-fast) var(--motion-ease-out);
+		transition: background-color var(--motion-fast) var(--motion-ease-out);
 
 		&:hover {
-			border-color: var(--ink);
-			transform: translateY(-1px) rotate(-1deg);
+			background: var(--ink);
+			color: var(--ground);
 		}
 	}
 
-	/* The shape of the progression in its colours. */
+	/* The progression's colours, printed side by side like a label. */
 	.seed__swatch {
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		background: linear-gradient(135deg, var(--q) 0 55%, var(--q2) 55% 100%);
-		box-shadow: var(--lift);
+		width: 24px;
+		height: 24px;
+		background: linear-gradient(90deg, var(--q) 0 50%, var(--q2) 50% 100%);
+		box-shadow: 0 0 0 1px var(--ground);
 	}
 
 	.start__hint {
@@ -226,8 +223,10 @@
 	}
 
 	.start__try {
-		font-family: var(--font-hand);
-		font-size: 1.2em;
+		font-family: var(--font-display);
+		font-stretch: 72%;
+		font-weight: 800;
+		font-size: 1.15em;
 		color: var(--ink);
 	}
 
@@ -237,7 +236,7 @@
 		}
 
 		.start__title {
-			font-size: 1.625rem;
+			font-size: 2.25rem;
 		}
 	}
 </style>

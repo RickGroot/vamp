@@ -137,7 +137,7 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 	}
 
@@ -158,7 +158,7 @@
 		&:focus {
 			outline: none;
 			border-bottom-color: var(--ink);
-			box-shadow: inset 0 -1px 0 var(--ink);
+			box-shadow: inset 0 -2px 0 var(--ink);
 		}
 	}
 

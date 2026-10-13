@@ -179,25 +179,25 @@
 
 	<div class="bar__staff" aria-hidden="true">
 		{#each { length: beats } as _, i (i)}
-			<span class="slash">/</span>
+			<span class="slash"></span>
 		{/each}
 	</div>
 </div>
 
 <style lang="scss">
-	/* A measure on the chart: barlines left and right (neighbours overlap by a
-	   pixel so a shared barline stays one line), chords above a faint staff of
-	   rhythm slashes. No box, no card. */
+	/* A measure on the chart: heavy ink barlines left and right (neighbours
+	   overlap so a shared barline stays one line), chords above a row of rhythm
+	   slashes. No box, no card — a printed lead sheet. */
 	.bar {
-		/* Inner barlines are the lighter ink; repeat and final barlines stay full ink. */
-		--barline: var(--ink-2);
+		--barline: var(--ink);
+		--bw: var(--rule-heavy);
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
-		margin-right: -1px;
-		border-left: 1px solid var(--barline);
-		border-right: 1px solid var(--barline);
+		margin-right: calc(-1 * var(--bw));
+		border-left: var(--bw) solid var(--barline);
+		border-right: var(--bw) solid var(--barline);
 		padding: 0 var(--space-2) var(--space-2);
 		transition:
 			opacity var(--motion-standard) var(--motion-ease-out),
@@ -206,13 +206,8 @@
 
 	/* In a sub-range loop, the bars outside it recede. */
 	.bar--out-loop {
-		opacity: 0.55;
-		filter: saturate(0.25);
-	}
-
-	/* Playhead: a bar of ink across the top of the measure that's sounding. */
-	.bar--playing {
-		box-shadow: inset 0 4px 0 var(--spot);
+		opacity: 0.4;
+		filter: saturate(0);
 	}
 
 	/* Pattern-insight hover: the bars it names get a wash. */
@@ -221,77 +216,74 @@
 	}
 
 	.bar--dragover {
-		outline: 2px dashed var(--ink);
+		outline: var(--rule-heavy) dashed var(--ink);
 		outline-offset: -2px;
 	}
 
 	/* Repeat signs mark the loop: thick + thin barline and two dots, facing in. */
 	.bar--loop-start {
-		--barline: var(--ink);
-		border-left: 4px solid var(--barline);
-		padding-left: calc(var(--space-2) + 6px);
+		border-left: 7px solid var(--barline);
+		padding-left: calc(var(--space-2) + 8px);
 
 		&::before {
-			content: '';
+			content: "";
 			position: absolute;
 			left: 3px;
 			top: 0;
 			bottom: 0;
-			width: 1px;
+			width: var(--bw);
 			background: var(--barline);
 		}
 
 		.bar__staff::before {
-			left: calc(-1 * var(--space-2) + 2px);
+			left: calc(-1 * var(--space-2) + 1px);
 		}
 	}
 
 	.bar--loop-end {
-		--barline: var(--ink);
-		border-right: 4px solid var(--barline);
-		padding-right: calc(var(--space-2) + 6px);
+		border-right: 7px solid var(--barline);
+		padding-right: calc(var(--space-2) + 8px);
 
 		&::after {
-			content: '';
+			content: "";
 			position: absolute;
 			right: 3px;
 			top: 0;
 			bottom: 0;
-			width: 1px;
+			width: var(--bw);
 			background: var(--barline);
 		}
 
 		.bar__staff::after {
-			right: calc(-1 * var(--space-2) + 2px);
+			right: calc(-1 * var(--space-2) + 1px);
 		}
 	}
 
-	/* Repeat dots sit in the staff's two middle spaces. */
+	/* Repeat dots, either side of the slashes. */
 	.bar--loop-start .bar__staff::before,
 	.bar--loop-end .bar__staff::after {
-		content: '';
+		content: "";
 		position: absolute;
-		top: 6px;
-		width: 4px;
-		height: 4px;
+		top: 4px;
+		width: 5px;
+		height: 5px;
 		border-radius: 50%;
 		background: var(--barline);
-		box-shadow: 0 5px 0 var(--barline);
+		box-shadow: 0 8px 0 var(--barline);
 	}
 
 	/* Final barline at the end of the tune: thin + thick. */
 	.bar--final {
-		--barline: var(--ink);
-		border-right: 4px solid var(--barline);
-		padding-right: calc(var(--space-2) + 6px);
+		border-right: 7px solid var(--barline);
+		padding-right: calc(var(--space-2) + 8px);
 
 		&::after {
-			content: '';
+			content: "";
 			position: absolute;
 			right: 3px;
 			top: 0;
 			bottom: 0;
-			width: 1px;
+			width: var(--bw);
 			background: var(--barline);
 		}
 	}
@@ -304,8 +296,8 @@
 	}
 
 	.bar__num {
-		font-size: 0.75rem;
-		font-weight: 600;
+		font-size: 0.6875rem;
+		font-weight: 800;
 		font-variant-numeric: tabular-nums;
 		color: var(--ink-3);
 		min-width: 1.5ch;
@@ -336,11 +328,12 @@
 			overflow: visible;
 			clip-path: none;
 			white-space: nowrap;
-			font-size: 0.75rem;
+			font-size: 0.6875rem;
+			font-weight: 800;
+			text-transform: uppercase;
 			color: var(--ink);
 			background: var(--paper);
-			border: 1px solid var(--ink);
-			border-radius: var(--radius);
+			border: var(--rule-heavy) solid var(--ink);
 		}
 	}
 
@@ -351,7 +344,7 @@
 		width: 20px;
 		height: 24px;
 		cursor: grab;
-		color: var(--ink-4);
+		color: var(--ink-3);
 		user-select: none;
 
 		&:hover {
@@ -376,19 +369,21 @@
 		justify-content: center;
 		gap: var(--space-1);
 		min-width: 28px;
-		height: 28px;
+		height: 26px;
 		border: 0;
-		border-radius: var(--radius);
+		border-radius: 0;
 		background: transparent;
 		padding: 0 var(--space-2);
 		font-family: inherit;
-		font-size: 0.8125rem;
-		font-weight: 500;
+		font-size: 0.6875rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 		color: var(--ink-2);
 
 		&:hover:not(:disabled) {
-			background: var(--wash);
-			color: var(--ink);
+			background: var(--ink);
+			color: var(--ground);
 		}
 
 		&:disabled {
@@ -434,24 +429,23 @@
 
 	.bar__slots {
 		display: flex;
-		gap: 2px;
+		gap: var(--space-1);
 	}
 
-	/* A single-line staff band with one slash per beat. */
+	/* One heavy slash per beat, the way a chart shows time. */
 	.bar__staff {
 		position: relative;
 		display: flex;
 		justify-content: space-around;
 		align-items: center;
-		height: 21px;
-		margin-top: var(--space-1);
-		background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 5px);
+		height: 18px;
+		margin-top: var(--space-2);
 	}
 
 	.slash {
-		font-family: var(--font-hand);
-		font-size: 1.125rem;
-		line-height: 1;
-		color: var(--ink-3);
+		width: 3px;
+		height: 15px;
+		background: var(--ink-2);
+		transform: skewX(-22deg);
 	}
 </style>

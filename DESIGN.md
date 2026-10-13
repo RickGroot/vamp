@@ -1,147 +1,198 @@
 # Vamp — design
 
-**Golden hour.** The app is a sky. **Sunrise** (the light theme) is a pale
-morning blue warming through peach to gold at the horizon; **Sunset** (the dark
-theme) is indigo deepening through plum to a rose glow. The sun sits on the
-horizon behind a wildflower meadow and rises when the band starts. Chord
-qualities are the colours of the light, the chart is hand-lettered like a lead
-sheet, the play button is the sun, and the key is a sunflower. Everything that
-moves, moves with the music — and holds still in silence.
+**Sleeve.** Vamp is a jazz record sleeve, in the Blue Note tradition: hard edges,
+heavy condensed type, black and white doing most of the work, and **one flat
+field of colour**. The field is the deck's play panel, and it takes the colour of
+the chord sounding now. At rest it shows your tune's colour. Chords are set the way
+a Real Book prints them, the key is a record, and the choruses you play are cut
+as grooves round the play disc. Everything that moves, moves with the music, and
+holds still in silence.
+
+**Light** is the sleeve printed on white board. **Dark** is an old black sleeve:
+warm charcoal board, aged-paper type, slightly muted inks and a faint print grain,
+never digital black.
 
 Tokens live in `src/app.scss` and nowhere else. Components use `var(--…)`.
 
 ## Theme
 
-The header's other switch is the workspace: **Sketch · Practice**, one pill with
-the page you're on inked solid (ink, not the sun — it's a place, not an "on").
-Practice opens with a **Back to Sketch** button naming the tune: Sketch's
-"Practise this" sends you there, and an installed app has no Back button.
+Light · Auto · Dark, three printed segments in the header with the chosen one
+inked solid. Auto follows the system; a pinned choice lives in `vamp:theme`
+(`'day'` / `'night'`, the ids never changed) and is applied **before first
+paint** by the inline script in `app.html` (`data-theme` on `<html>`).
+`view.night` is the resolved answer for anything drawn outside CSS. The
+`theme-color` meta follows `--ground`.
 
-Sunrise · Auto · Sunset, switched in the header (three radio segments). Auto
-follows the system; a pinned choice lives in `vamp:theme` (`'day'` / `'night'`)
-and is applied **before first paint** by the inline script in `app.html`
-(`data-theme` on `<html>`). `view.night` is the resolved answer for anything
-drawn outside CSS. `theme-color` follows `--ground`.
+The header's other switch is the workspace: **SKETCH · PRACTICE**, printed words
+with the page you're on underlined in ink. It's a place, not a switch, so it gets
+an underline rather than a filled box. Practice opens with a **Back to Sketch**
+button naming the tune.
 
-## Sky, paper and ink
+## Board and ink
 
-| Token | Sunrise | Sunset | Use |
+| Token | Light | Dark | Use |
 |---|---|---|---|
-| `--sky` | `#e6ecfb → #f1e6f3 → #fde4d6 → #ffe6b8` | `#1b1541 → #2c1a52 → #4a2160 → #5e2550 → #7a3048` | The page, fixed behind everything, with `--grain` over it |
-| `--ground` | `#fdf0ea` | `#2a1a4f` | The page's representative tone (browser chrome, solid fills) |
-| `--paper` | `#fffbf6` | `#2e2458` | Raised sheets: the deck, fields, popovers, buttons |
-| `--wash` | `#fbe9dc` | `#3a2e66` | Hover, pressed |
-| `--ink` | `#2b2250` | `#fff0e0` | Text, strong barlines, focus |
-| `--ink-2` | `#574d78` | `#e6d3dc` | Secondary text, inner barlines |
-| `--ink-3` | `#645b84` | `#cdb6c9` | Hints, units — ≥4.5:1 on every stop of the sky |
-| `--ink-4` | `#b3abc6` | `#85709a` | Disabled and placeholder marks only |
-| `--edge` | `#8a81a6` | `#a58fb2` | Control borders |
-| `--rule` | `#efdcd2` | `#4a3b72` | Hairlines, staff lines |
-| `--spot` | `#ff6a3d` | `#ffb347` | **The sun: play, Start, anything switched on**, the playhead. `--on-spot` text on it |
-| `--sun` / `--sun-core` | `#ffc233` / `#ffcf5a` | `#ffd166` / `#ff9a4a` | The play disc's highlight, the horizon sun, petals |
-| `--grass` | `#5aa65b` | `#150f33` | The meadow — green at dawn, silhouettes at dusk |
-| `--lift` | warm shadow | glow | How lit things sit on the page |
-| `--text-glow` | warm halo | glow | The wordmark, the song title |
+| `--ground` | `#ffffff` | `#1c1915` | The page and the browser chrome |
+| `--paper` | `#ffffff` | `#26221c` | Things that float: menus, popovers, the dock |
+| `--wash` | `#f0f0ed` | `#2c2821` | Hover and pressed fills, chips, the start panel |
+| `--ink` | `#0e0e0f` | `#ede4d3` (aged paper) | Text, rules, control borders, focus, "on" |
+| `--ink-2` | `#3f3f43` | `#d3c9b6` | Secondary text, labels |
+| `--ink-3` | `#5c5c60` | `#aaa08d` | Hints, units, placeholders (≥4.5:1 on the ground) |
+| `--ink-4` | `#b3b3ae` | `#5f584c` | Disabled marks only |
+| `--rule` | `#dadad6` | `#3b362e` | Hairlines, quiet dividers |
+| `--spot` / `--on-spot` | ink / ground | ink / ground | **On**: anything switched on, pressed or chosen is inked solid |
+| `--field-rest` / `--on-field-rest` | `#0e0e0f` / white | `#2e2a23` / ink | The field when it has no chord to show |
+| `--vinyl`, `--vinyl-groove`, `--on-vinyl` | black, `#2c2c30`, white | same (+ a `--vinyl-rim`) | The record. Vinyl is black on either board |
+| `--grain` / `--grain-opacity` | none | grey noise, 0.28 | The print's grain: a fixed overlay-blended layer over everything (`body::after`), dark only |
 
-## Chord colours — the light
+`--rule-heavy` (2px) is the sleeve's printed rule: section rules, the deck's
+rules, barlines and every control border. `--radius` is 0. Round things (the play
+disc, the record, LED-like status dots) are circles, and nothing else is rounded.
 
-| Family | Colour | Sunrise | Sunset |
-|---|---|---|---|
-| major | gold | `#f2a900` | `#ffc94d` |
-| minor | lilac | `#8b6fd6` | `#c2a8ff` |
-| dominant | coral | `#ff6a3d` | `#ff9466` |
-| diminished | rose | `#e8456b` | `#ff7096` |
-| augmented | sky | `#3d8fe0` | `#7cb8ff` |
-| suspended | lagoon | `#1fa8a0` | `#5ed8cc` |
-| other | haze | `#a39aa8` | `#bfb2c6` |
+## The field
 
-Every chord sits on its colour: **by day** a light wash (`--w-{family}`); **at
-dusk** a glowing outline round the paper (`--ring`), because a dark fill of any
-of these hues turns brown or grey. The chord **sounding now** is a solid block of
-its colour with `--on-pigment` text, glowing, with a small pop as it lands. A
-stroke of the colour sits under every chord. The symbol always carries the
-quality as text too, so colour is never the only cue.
+The one block of colour on the page. The layout writes `--field` and
+`--on-field` on `<html>`:
+
+- **Playing:** the sounding chord's ink, with black text (`--on-pigment`).
+- **Stopped:** the tune's colour, which is its most-used chord family, with the
+  home chord breaking a tie. A blues prints orange and a minor tune prints blue,
+  the way a label gave each record its own colour.
+- **Blank canvas, a rest, or a drill playing:** `--field-rest`.
+- **Practice** sets its own field locally: the key's colour (the record label's
+  ink). That makes **Start** the page's one block of colour.
+
+It changes as a **cut**, never a fade, so the field and the ink printed on it
+can't disagree mid-way. It appears in three places:
+- the deck's play panel, with the play disc cut into it;
+- the Stand, where the chord you're on fills it;
+- the dock, as the square play button.
+
+## Chord inks
+
+| Family | Ink | Hex |
+|---|---|---|
+| major | yellow | `#ffbd1a` (dark: `#f0b43a`) |
+| minor | blue | `#4f7dff` (dark: `#6a8ef0`) |
+| dominant | orange | `#ff5c1c` (dark: `#f0703a`) |
+| diminished | magenta | `#ff4583` (dark: `#ec5c88`) |
+| augmented | green | `#19c17a` (dark: `#3db87f`) |
+| suspended | cyan | `#22b5d7` (dark: `#3fb3cc`) |
+| other | grey | `#aaaaa5` (dark: `#a8a194`) |
+
+On dark board the inks print a little less fluorescent. Every ink takes the
+dark `--on-pigment` text at ≥5:1, in both themes. A chord sits under a **6px
+tab** of its ink. The chord **sounding now** is a solid block of its ink with
+black text. **Chord colours mean chord quality and nothing else.** The symbol
+always carries the quality as text too.
 
 ## Type
 
-- **System face** (`--font-ui`) for everything you operate.
-- **Petaluma Script** (`--font-hand`, self-hosted, OFL): the wordmark, the song
-  title, chord symbols, the stand's chord, drill names, scale notes, tune and
-  sketch names.
-- `.label` for field names and group titles; `.hint` for sentences.
+One family, **Archivo** (variable, self-hosted, SIL OFL), at two widths:
+- **Normal width** for everything you operate.
+- **Display:** `--font-display` at `--display-stretch` (62%), weight 900, in
+  capitals. Used for the wordmark, the tune title, big numbers (tempo, time,
+  loop), the key name, section titles, drill and tune names.
+- **Chords** go through `ChordSymbol`, which sets the same condensed face without
+  capitals, Real Book style: a big root, a small raised quality, a slash bass back
+  at full size. `model/symbol.ts` does the split. It is display only, and the stored
+  symbol stays literal. Flats and sharps are **drawn** (inline SVG at cap height),
+  because Archivo has no ♭ / ♯ and the system fallback looked wrong. Long qualities
+  (7sus4) set a size smaller, and a slot's chord sizes itself to the slot
+  (container units), so a chord is never cut off.
+- **Never uppercase a musical name.** "ii–V–I" is not "II–V–I", and an uppercased
+  "Bb" reads "BB". The key name's root goes through `ChordSymbol`; preset, example
+  and starter names keep their case.
+- `.label` is 11px, weight 800, uppercase and tracked, for field names and group
+  titles. `.hint` is sentence text. Buttons are 12px, weight 800, uppercase.
+- **Petaluma Script** survives **only in the notation staff** (and its PNG/PDF
+  export), where a chart is expected to look hand-copied.
 
-## Shape and depth
+## Controls
 
-- `--radius: 8px`, `--radius-sm: 5px`; the deck 18px (14px on a phone). Round
-  things are round: the sun, pills (history, stepper, theme), the dock.
-- `--lift` on lit things; soft shadows on floating things. No hard offsets.
-- One focus ring: 2px ink, offset 2px. Underlined fields double their underline.
-- Touch: every control ≥44px on a coarse pointer (`--tap`).
+- `.bar-btn`: a printed box, 2px ink border, square, small caps. Hover is a wash.
+  **On** and **primary** (Practise this) are inked solid.
+- Fields: values on a 2px ink underline. In the deck the value *is* the control:
+  the tempo number is the input, and time and loop are big condensed selects.
+- Menus and popovers: `--paper` with a 2px ink border and a soft shadow.
+- Focus: one 2px ink ring, offset 2px (on the field, in the field's ink).
+- Touch: every control is ≥44px on a coarse pointer (`--tap`). Slot tools get
+  their own strip above the chord on touch screens.
 
 ## The top of Sketch
 
-Grouped by intent, and laid out by the editor's own width (container queries),
-never by ragged wrapping:
-- **Song bar:** the title; history (undo/redo as two icons in one pill); the file
-  (File · Share); the two ways to play along (Stand · Practise this). Desktop:
-  one row. Narrower: title above, actions in a row. Phone: history + File + Share,
-  then Stand and Practise as equal halves.
-- **The deck** (TransportBar): one paper panel — the sun (play, growth rings,
-  session line) on the left, the sunflower (key, name, transpose) on the right,
-  tempo (− n + stepper, Tap, Count-in) and Time · Loop between. Desktop: one
-  row. Tablet: two. Phone: sun + tempo, then the key, then time and loop.
-- **Add chords:** Preset · Examples · Suggest · Inspire me — one row everywhere
-  (short labels on a phone).
-- **The chart's header:** the pattern chips, and the Roman-numerals toggle, which
-  is about reading the chart, so it lives with it.
+Laid out by the editor's own width (container queries), never by ragged wrapping:
+- **Title:** the tune's name on its own line, huge, condensed, in capitals,
+  sized to fit its length on one line (from 4.75rem down to 1.75rem).
+- **Toolbar:** history (undo/redo as two joined boxes), File and Share on the
+  left; Stand and **Practise this** (primary) on the right. On a phone: history +
+  File + Share, then Stand and Practise as equal halves.
+- **The deck** (TransportBar): one band between two heavy rules, its panels
+  divided by rules (the grid's gaps showing the ink behind). Panels: **field**
+  (play disc + the chord now, or the chord the band starts on) | **tempo** (the
+  number, −/+, Tap, Count-in) | **time / loop** | **the record + key** (−/+
+  transposes). Desktop: one row. Tablet: the field across the top, the rest
+  beneath. Phone: four compact full-width bands — field; tempo with its tools
+  beside the number; time | loop; the key as one row.
+- **Add chords:** Preset · Examples · Suggest · Inspire me, one row everywhere.
+- **The chart's header:** pattern chips (wash blocks, inked on hover) and the
+  Roman-numerals toggle.
 
 ## The chart
 
-A lead sheet: four measures to a line (two on a phone). Inner barlines are the
-lighter ink; repeat signs (loop) and the final barline stay full ink. One slash
-per beat on a single-line staff. The playhead is a bar of the sun colour across
-the measure that's sounding. Bars outside the loop recede and desaturate.
+A printed lead sheet: four measures to a line (two on a phone), 2px ink
+barlines, thick + thin repeat signs with dots for the loop, a thin + thick final
+barline, and one heavy slash per beat. Bars outside the loop fade to grey. The
+playhead is the sounding chord's solid block.
 
-## Nature — always on
+## The music, drawn
 
-No toggle: it's still whenever nothing plays, so it costs nothing at rest.
-Rules for anything in this family:
-1. **The music is the only input** — `engine.clock()` and the progression.
-2. **Silence is stillness.** Stop, and it settles within a second and holds.
-3. **Behind the content, never over it.**
+There is no scenery any more: the sky, sun, meadow and sunflower are gone. What
+remains follows four rules:
+1. **The music is the only input:** `engine.clock()` and the progression.
+2. **Silence is stillness.**
+3. **Behind or beside the content, never over it.**
 4. **Reduced motion gets a still picture that still carries meaning.**
 
 The pieces:
-- **Harmonic weather:** the light takes the sounding chord's colour — high in the
-  sky and along the horizon (resting: the song's most-used family), over a beat.
-- **The sun** on the horizon, behind the meadow: it rises when you press play
-  and settles when you stop (a transition, not a clock).
-- **Wildflower meadow:** grass sways once per two beats and gusts from the
-  sounding bar; the flowers are your song's garden — shares by chord family,
-  buds at rest, blooming when their family sounds. At sunset the grass is a
-  silhouette and the flowers glow. Every stem stands on the bottom edge, over a
-  band of turf in the grass's colour; depth makes things shorter and fainter,
-  never rooted higher (that left bare sky under the field, and it floated).
-- **Growth rings** round the play button: one arc per looped bar, one ring per
-  chorus, and a session summary on stop.
-
-## The sunflower (key compass)
-
-The circle of fifths as a Vogel seedhead ringed with petals. At rest your song's
-notes are lit in the colour of the family that uses each most; the tonic is ink;
-the sounding chord swells its florets and the petals take a breath. Transposing
-turns the flower the short way round. In the deck (96px, 72 on a phone), on the
-Stand, and on Practice, where it walks the circle of fifths with the drill.
+- **The field** (above): the harmony, as one block of colour.
+- **Grooves** (LoopRings) round the play disc, in the field's ink. There is one
+  arc per looped bar: faint before it's played, solid once played, thickest while
+  sounding. A stylus dot travels round with the engine's clock. Each finished
+  chorus leaves a groove, modulated by the tune (dominants push it out a little),
+  and a session line under it when you stop.
+- **The record** (KeyCompass): the key as a record. The circle of fifths is
+  printed round the label, and the label is the key's colour (minor blue, major
+  yellow). The tonic is reversed out of an ink spot. Your song's notes are dots on
+  the vinyl in the colour of the family that uses each note most, and the sounding
+  chord's dots swell. Transposing turns the record the short way round; the note
+  names turn back as it goes, so they always read upright. It appears in the deck
+  (104px, 72 on a phone), on the Stand, and on Practice.
 
 ## The start screen
 
-A blank canvas offers the sketches that recently left it (`vamp:recent`, up to
-five, saved or not), four starters (ii–V–I, 12-bar blues, Rising Sun, Surprise
-me), and "try Dm7" in bar 1.
+A blank canvas shows a wash panel: **START A TUNE**, the sketches that recently
+left the canvas (`vamp:recent`, saved or not), four starters with their colours
+printed side by side, and "try Dm7" in bar 1.
 
 ## The stand
 
-Full-screen, for when your hands are on your instrument: one chord you can read
-from two metres, glowing in its colour; the next *change* and how far off it is;
-the chart compact below; the sunflower; tempo and the sun in the thumb zone. The
-screen stays awake while music plays.
+Full-screen, for when your hands are on your instrument. The chord you're on
+fills the field, set as large as the screen allows. Under it come the next
+*change* and how far off it is, then the chart compact below. At the bottom, in
+the thumb zone, sit tempo ±5 and the ink play disc with its grooves. The screen
+stays awake while music plays.
+
+## The dock
+
+When the deck scrolls away, a printed strip runs along the foot of the screen,
+under a heavy rule: a square of the field (play), the chord now with a tab of its
+ink, what's next, and Stand.
+
+## Practice
+
+The drill runner's header is the record beside the drill's name, then the
+transport: **Start** as a block of the key's colour (it turns to an ink-bordered
+**Stop** while running), and **HEAR IT | PLAY IT**, a two-segment switch for whether
+the line plays or you play it over the backing. Drill cards are printed boxes; the
+chosen one is inked solid.

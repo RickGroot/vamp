@@ -1,8 +1,10 @@
 <script lang="ts">
-	// The loop as a tree's cross-section, drawn round the play disc: one arc per
-	// looped bar in its chord's pigment, a hand that travels round in time, and a
-	// growth ring for every chorus you've played this session. When you stop,
-	// the rings (and the caption under them) are the record of what you did.
+	// The loop as a record's grooves, cut round the play disc: one arc per looped
+	// bar, a stylus that travels round in time, and a groove for every chorus
+	// you've played this session — modulated by the tune, the way a real groove
+	// carries the music (dominants push it out a little). When you stop, the
+	// grooves (and the caption) are the record of what you did. Always drawn on
+	// the field, in the field's own ink.
 	//
 	// The hand reads the engine's own clock each frame while the song plays, so
 	// it can't drift from the band; stopped, nothing animates. Reduced motion:
@@ -143,9 +145,9 @@
 			<path
 				class="clock__bar"
 				class:clock__bar--now={playingThis && i === currentBar}
-				class:clock__bar--dim={playingThis && i !== currentBar}
+				class:clock__bar--past={playingThis && i < currentBar}
+				class:clock__bar--empty={!families[i]}
 				{d}
-				style:stroke={families[i] ? `var(--c-${families[i]})` : 'var(--rule)'}
 			/>
 		{/each}
 		{#if playingThis}
@@ -179,36 +181,41 @@
 		pointer-events: none;
 	}
 
+	/* Cut in the field's ink: bars to come faint, bars played this chorus solid,
+	   the bar sounding thickest. */
 	.clock__bar {
 		fill: none;
+		stroke: var(--on-field);
 		stroke-width: 4;
-		stroke-linecap: round;
-		opacity: 0.75;
+		opacity: 0.3;
 		transition:
-			opacity var(--motion-standard) var(--motion-ease-out),
-			stroke-width var(--motion-standard) var(--motion-ease-out);
+			opacity var(--motion-fast) var(--motion-ease-out),
+			stroke-width var(--motion-fast) var(--motion-ease-out);
 	}
 
-	.clock__bar--dim {
-		opacity: 0.35;
+	.clock__bar--empty {
+		opacity: 0.14;
+	}
+
+	.clock__bar--past {
+		opacity: 0.85;
 	}
 
 	.clock__bar--now {
 		opacity: 1;
-		stroke-width: 5.5;
+		stroke-width: 6;
 	}
 
 	.clock__ring {
 		fill: none;
-		stroke: var(--ink-2);
-		stroke-width: 0.8;
+		stroke: var(--on-field);
+		stroke-width: 0.9;
 	}
 
 	.clock__hand {
-		fill: var(--ink);
-		stroke: var(--ground);
+		fill: var(--on-field);
+		stroke: var(--field);
 		stroke-width: 1.5;
 	}
-
 
 </style>

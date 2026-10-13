@@ -101,7 +101,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
-		border: 1px solid var(--color-black);
+		border: var(--rule-heavy) solid var(--ink);
 		background: transparent;
 		padding: var(--space-2) var(--space-4);
 		font-family: inherit;
