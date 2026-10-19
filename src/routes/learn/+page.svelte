@@ -21,7 +21,7 @@
 	const MODES: { id: Mode; label: string; ready: boolean }[] = [
 		{ id: 'map', label: 'Map', ready: true },
 		{ id: 'ear', label: 'Ear', ready: true },
-		{ id: 'song', label: 'Your song', ready: false },
+		{ id: 'song', label: 'Your song', ready: true },
 		{ id: 'review', label: 'Review', ready: false },
 		{ id: 'lab', label: 'Lab', ready: false }
 	];

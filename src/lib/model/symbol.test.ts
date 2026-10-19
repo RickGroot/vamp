@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chordFace, spokenChord } from './symbol';
+import { chordFace, spokenChord, spokenNote } from './symbol';
 
 describe('chordFace', () => {
 	it('splits root and quality', () => {
@@ -79,5 +79,14 @@ describe('spokenChord', () => {
 		for (const root of ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'])
 			for (const q of ['', 'm', '7', 'maj7', 'm7', 'm7b5', 'dim7', '7b9', '7#9', '13'])
 				expect(spokenChord(root + q), root + q).not.toMatch(/[b#♭♯]\b|[#♭♯]/);
+	});
+});
+
+describe('spokenNote', () => {
+	it('says a bare note name, without a quality', () => {
+		expect(spokenNote('C')).toBe('C');
+		expect(spokenNote('Eb')).toBe('E flat');
+		expect(spokenNote('F#')).toBe('F sharp');
+		expect(spokenNote('Am')).toBe('Am');
 	});
 });

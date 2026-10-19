@@ -287,3 +287,28 @@ Three rules specific to Learn:
 - **A quiz gives nothing away before it's answered.** No chord colour on the slots
   or the pad, and Play takes the key's ink, never the question's chord's. Colour
   arrives with the reveal, where it means what it always means: the chord's quality.
+
+### Your song
+
+The second mode explains the sketch on the canvas, in the key you hear as home.
+
+- **The card is the song.** The key as a record beside the tune's name (its own
+  case, never capitals), a count of its chords and how many come from outside the
+  key, then the map's transport: key, mode, **Play** (the whole song once, in its
+  own sound) and the status. The key starts as the detector's guess and says so;
+  pick another and the card names what the chords suggested, with a way back.
+- **PATTERNS**: each named progression as a printed entry under a hairline: its
+  name in its own case, the bars, the formula in drawn numerals beside the chords,
+  what it is and why it works, how to listen, and **Open in Sketch at bars …**,
+  which loops those bars there.
+- **CHORD BY CHORD**: one row per change. The chord is a wash chip under its ink
+  tab (tap it to hear it move to the next chord); beside it a small-caps line with
+  the bars and the role, the label in numerals (V7/ii, subV/I, "passing into ii")
+  and one sentence. A chord from outside the key is set in full ink with an Open in
+  Sketch; a chord in the key is quieter and says its sentence only the first time
+  its numeral comes up. **ALL | OUTSIDE THE KEY** narrows the list. On a phone the
+  chip stays on the left and everything else stacks beside it.
+- **The role is words, never a colour.** The chip's ink is the chord's quality, as
+  everywhere; "secondary dominant" or "borrowed" is printed in the row.
+- **An empty canvas** gets a card that says what the page will do, with Go to
+  Sketch and one example to try.
