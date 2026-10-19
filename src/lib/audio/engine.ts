@@ -1,4 +1,5 @@
-// Playback engine: turn a PlaybackPlan into a looping Tone.Transport schedule.
+// Playback engine: turn a PlaybackPlan into a Tone.Transport schedule — looping,
+// or played once and then stopped by itself (`plan.loop === false`).
 //
 // There is one Tone Transport, so there is one engine. It takes a plan (plan.ts)
 // rather than a Progression, so both the editor's song and a generated practice
@@ -18,7 +19,7 @@ import type { Progression } from '$lib/model/types';
 import { progressionPlan } from './schedule';
 import { type CompEvent } from './comp';
 import { type PlaybackPlan, type PlaybackSource } from './plan';
-import { isComping, type MixLevels } from './mix';
+import { isComping, planMix, type MixLevels } from './mix';
 import { type ClickFeel } from './drills';
 import {
 	getInstrument,
@@ -38,6 +39,12 @@ const BASS_VELOCITY = 80;
 const DRUM_VELOCITY = 80;
 const DRUM_ACCENT_VELOCITY = 110;
 const LEAD_VELOCITY = 100;
+/**
+ * How long a play-once plan rings on after its last event before the engine
+ * stops. stop() cuts the chord instrument, so without this the final chord of a
+ * quiz question would be clipped at its slot boundary.
+ */
+const END_TAIL_MS = 1200;
 
 /** A CompEvent placed on the transport: same shape plus its tick position. */
 type ScheduledEvent = CompEvent & { time: string }; // time e.g. "384i"
@@ -55,6 +62,11 @@ class PlaybackEngine {
 	private click: Tone.Synth | null = null;
 	private _state: EngineState = 'stopped';
 	private loopEventId: number | null = null;
+	// A play-once plan's end: the transport event at the last tick, then the
+	// wall-clock timer that waits out the tail. Both cleared in teardownPart().
+	private endEventId: number | null = null;
+	private endTimer: ReturnType<typeof setTimeout> | null = null;
+	private _ended = false;
 	// Cancellation token: play() awaits sample loads for seconds on first use, and
 	// a stop()/newer play() during those awaits must invalidate the stale run —
 	// otherwise playback starts against an explicit stop (or plays a replaced song).
@@ -108,6 +120,16 @@ class PlaybackEngine {
 
 	get isPlaying(): boolean {
 		return this._state === 'playing';
+	}
+
+	/**
+	 * True when the last run finished by itself (a `loop: false` plan reached its
+	 * end), false when it was stopped or replaced. Set before the 'stopped' state
+	 * is announced, so an onState listener can tell "the question is over" from
+	 * "someone pressed stop".
+	 */
+	get ended(): boolean {
+		return this._ended;
 	}
 
 	/**
@@ -199,11 +221,13 @@ class PlaybackEngine {
 	}
 
 	/**
-	 * Start (or restart) looping playback of a prepared plan. This is the only
-	 * entry point that touches the transport; `play()` is the Progression adapter.
+	 * Start (or restart) playback of a prepared plan — looping, or once when
+	 * `plan.loop === false`. This is the only entry point that touches the
+	 * transport; `play()` is the Progression adapter.
 	 */
 	async start(plan: PlaybackPlan): Promise<void> {
 		const gen = ++this.playGen;
+		this._ended = false;
 		await unlockAudio();
 		if (gen !== this.playGen) return; // stopped/superseded while unlocking
 		this.setState('loading');
@@ -239,10 +263,20 @@ class PlaybackEngine {
 			transport.position = 0;
 			transport.bpm.value = plan.tempo;
 
+			// Captured per run: a `full` plan ignores the live Band-panel mix,
+			// trade-fours and lead gain without touching them (see planMix).
+			const mixMode = plan.mix;
+			const loops = plan.loop !== false;
+
 			this.part = new Tone.Part<ScheduledEvent>((time, ev) => {
+				const live = planMix(mixMode, {
+					levels: this.mix,
+					tradeBars: this.tradeBars,
+					leadGain: this.leadGain
+				});
 				// "Trade fours": the band drops out during your solo blocks. Chords and
 				// bass go silent; drums + click keep time so you have a reference.
-				const comping = isComping(ev.atQuarters, this.quartersPerBar, this.tradeBars);
+				const comping = isComping(ev.atQuarters, this.quartersPerBar, live.tradeBars);
 
 				if (ev.kind === 'click') {
 					this.ensureClick().triggerAttackRelease(
@@ -252,7 +286,7 @@ class PlaybackEngine {
 						ev.accent ? 0.9 : 0.5
 					);
 				} else if (ev.kind === 'drum') {
-					const gain = this.mix.drums;
+					const gain = live.levels.drums;
 					if (this.drums && gain > 0) {
 						const base = ev.accent ? DRUM_ACCENT_VELOCITY : DRUM_VELOCITY;
 						this.drums.start({
@@ -266,7 +300,7 @@ class PlaybackEngine {
 					const isLead = ev.kind === 'lead';
 					// Bass plays its own instrument when set; otherwise ('keys') the chord one.
 					const inst = isBass ? (this.bassInstrument ?? this.instrument) : this.instrument;
-					const gain = isBass ? this.mix.bass : isLead ? this.leadGain : this.mix.chords;
+					const gain = isBass ? live.levels.bass : isLead ? live.leadGain : live.levels.chords;
 					// The lead is *your* line — trade-fours drops the band out, never it.
 					if ((comping || isLead) && inst && gain > 0 && ev.midi.length) {
 						// Seconds-per-quarter from the *current* tempo keeps durations live.
@@ -297,9 +331,11 @@ class PlaybackEngine {
 				}
 			}, events);
 
-			this.part.loop = true;
-			this.part.loopStart = 0;
-			this.part.loopEnd = `${totalTicks}i`;
+			this.part.loop = loops;
+			if (loops) {
+				this.part.loopStart = 0;
+				this.part.loopEnd = `${totalTicks}i`;
+			}
 			this.loopTicks = totalTicks;
 
 			let loopStartTicks = 0;
@@ -321,7 +357,7 @@ class PlaybackEngine {
 			this.loopStartTicks = loopStartTicks;
 
 			// Fire onLoop listeners at each loop boundary (drives practice drills).
-			if (this.loopListeners.size > 0) {
+			if (loops && this.loopListeners.size > 0) {
 				this.loopEventId = transport.scheduleRepeat(
 					() => {
 						for (const fn of this.loopListeners) fn();
@@ -329,6 +365,22 @@ class PlaybackEngine {
 					`${totalTicks}i`,
 					`${loopStartTicks + totalTicks}i`
 				);
+			}
+
+			// A play-once plan stops itself: at its last tick, wait out the tail, then
+			// stop. The wait is a plain timer, NOT Tone.getDraw() — Draw is rAF-flushed
+			// and drops callbacks that run late, so in a hidden tab the engine would
+			// sit on 'playing' in silence forever. Gen-guarded: a timer queued before a
+			// stop/replace survives transport.cancel(), and the end of one question
+			// must never stop the next.
+			if (!loops) {
+				this.endEventId = transport.scheduleOnce((time) => {
+					const wait = Math.max(0, (time - Tone.immediate()) * 1000) + END_TAIL_MS;
+					this.endTimer = setTimeout(() => {
+						this.endTimer = null;
+						if (gen === this.playGen && this._state === 'playing') this.halt(true);
+					}, wait);
+				}, `${loopStartTicks + totalTicks}i`);
 			}
 
 			transport.start();
@@ -342,15 +394,25 @@ class PlaybackEngine {
 	}
 
 	stop(): void {
+		this.halt(false);
+	}
+
+	/** Stop everything; `ended` records whether the run finished by itself. */
+	private halt(ended: boolean): void {
 		this.playGen++; // invalidate any in-flight play()
+		// Part before transport: Part.stop() reads the transport's current tick,
+		// which right after `position = 0` can come out as -1e-12 — Tone throws a
+		// RangeError on that, and a throw here left the engine 'playing' over a
+		// stopped transport (seen when a play-once Learn run ended by itself).
+		this.teardownPart();
 		const transport = Tone.getTransport();
 		transport.stop();
 		transport.cancel();
 		transport.position = 0;
-		this.teardownPart();
 		this.instrument?.stop();
 		this.setActiveSlot(null);
 		this.setActiveCue(null);
+		this._ended = ended;
 		this.setState('stopped');
 	}
 
@@ -364,8 +426,21 @@ class PlaybackEngine {
 			Tone.getTransport().clear(this.loopEventId);
 			this.loopEventId = null;
 		}
+		if (this.endEventId !== null) {
+			Tone.getTransport().clear(this.endEventId);
+			this.endEventId = null;
+		}
+		if (this.endTimer !== null) {
+			clearTimeout(this.endTimer);
+			this.endTimer = null;
+		}
 		if (this.part) {
-			this.part.stop();
+			try {
+				this.part.stop();
+			} catch {
+				// Same float edge as in halt(): dispose() below still unschedules every
+				// event, and a throw must never leave the engine half-stopped.
+			}
 			this.part.dispose();
 			this.part = null;
 		}

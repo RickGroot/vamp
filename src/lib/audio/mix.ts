@@ -6,6 +6,10 @@
 // - isComping decides, for a given position, whether the band is comping or
 //   leaving you open solo space ("trade fours"): the loop alternates blocks of
 //   `tradeBars` bars, band → you → band → …
+// - planMix picks what a plan actually plays with: the live Band-panel state, or
+//   the full band for a plan that must not inherit it (a Learn quiz).
+
+import type { PlanMixMode } from './plan';
 
 export type MixLane = 'chords' | 'bass' | 'drums';
 
@@ -69,4 +73,24 @@ export function isComping(atQuarters: number, quartersPerBar: number, tradeBars:
 	const bar = Math.floor(atQuarters / quartersPerBar + 1e-6);
 	const block = Math.floor(bar / tradeBars);
 	return block % 2 === 0;
+}
+
+/** Everything the engine's Part callback reads from the mix, per event. */
+export interface LiveMix {
+	levels: MixLevels;
+	/** Trade-fours block length in bars (0 = off). */
+	tradeBars: number;
+	/** The drill lead line's gain, 0..1. */
+	leadGain: number;
+}
+
+/**
+ * The mix a plan plays with. `live` passes the Band-panel state through; `full`
+ * is every lane at full volume, no trading, lead audible. Decided per plan and
+ * captured by the engine's Part closure, so nothing has to be saved and
+ * restored around a quiz (which would break whenever something else ended it).
+ */
+export function planMix(mode: PlanMixMode | undefined, live: LiveMix): LiveMix {
+	if (mode !== 'full') return live;
+	return { levels: { chords: 1, bass: 1, drums: 1 }, tradeBars: 0, leadGain: 1 };
 }

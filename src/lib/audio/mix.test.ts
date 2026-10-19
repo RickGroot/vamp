@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMixLevels, defaultMix, isComping, type MixState } from './mix';
+import { computeMixLevels, defaultMix, isComping, planMix, type LiveMix, type MixState } from './mix';
 
 const mix = (over: Partial<Record<keyof MixState, Partial<MixState['chords']>>> = {}): MixState => {
 	const base = defaultMix();
@@ -69,5 +69,33 @@ describe('isComping (trade fours)', () => {
 
 	it('guards against a zero-length bar', () => {
 		expect(isComping(4, 0, 4)).toBe(true);
+	});
+});
+
+describe('planMix', () => {
+	// A Band panel left in a state that would wreck a quiz: chords muted by a
+	// bass solo, trade-fours on, the drill lead silenced for "play it yourself".
+	const live: LiveMix = {
+		levels: computeMixLevels(mix({ bass: { solo: true } })),
+		tradeBars: 2,
+		leadGain: 0
+	};
+
+	it('a live plan plays with the Band panel as it is', () => {
+		expect(planMix('live', live)).toBe(live);
+		expect(planMix(undefined, live)).toBe(live);
+	});
+
+	it('a full plan ignores it: every lane at full, no trading, lead audible', () => {
+		expect(planMix('full', live)).toEqual({
+			levels: { chords: 1, bass: 1, drums: 1 },
+			tradeBars: 0,
+			leadGain: 1
+		});
+	});
+
+	it('never writes back into the live state', () => {
+		planMix('full', live);
+		expect(live).toEqual({ levels: { chords: 0, bass: 1, drums: 0 }, tradeBars: 2, leadGain: 0 });
 	});
 });
