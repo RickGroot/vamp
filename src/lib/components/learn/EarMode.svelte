@@ -7,7 +7,7 @@
 <script lang="ts">
 	// Ear: hear a few bars with the band, then name what you heard. One exercise
 	// at a time (a quiz item), one question at a time (QuizCard). Answers are
-	// tapped; a MIDI keyboard joins in a later phase.
+	// tapped, or played on a MIDI keyboard where the browser has Web MIDI.
 	import { KIND_TITLES, QUIZ_ITEMS, quizItemById, type QuizKind } from '$lib/learn/items';
 	import QuizCard from './QuizCard.svelte';
 

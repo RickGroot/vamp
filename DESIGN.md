@@ -254,6 +254,13 @@ kind (Chords in a key · Loops · Chord quality). Its card reads top to bottom:
   holds a name in its own case, a loop's formula under it in numerals. Before the
   question has been played the keys are greyed: hear it first. **UNDO** takes back
   the last tap.
+- **KEYBOARD**, beside Undo, only in a browser with Web MIDI: a printed toggle,
+  inked solid while on (the "on" rule, like Count-in), with one sentence beside it
+  saying what the keyboard does here ("Listening to *device*: play each chord in
+  turn", "…a chord of that kind, on any root", "…a loop is named with a tap"). A
+  chord played fills the next box exactly as a tap would; anything the card can't
+  take is said in the status in words ("That isn't a chord I can name"), never
+  flashed. Where there's no Web MIDI the row is just Undo, as before.
 - **Marking is ink and words.** A wrong numeral is struck through with a drawn ink
   rule and **IT WAS V** printed under it; a right one says **RIGHT**. On a choice
   pad the right answer keeps full ink with a second rule and says **RIGHT ANSWER**

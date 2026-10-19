@@ -11,10 +11,15 @@
 	// slots are ink only, Play takes the KEY's colour (major yellow, minor blue,
 	// printed beside it), and chord colours appear only in the chips that reveal
 	// the answer.
+	//
+	// With a MIDI keyboard connected (Chromium only), the card CAPTURES it: a
+	// chord played fills the next slot exactly as a tap would, and nothing played
+	// here reaches the song. The capture is taken per question and released on
+	// the next one and on unmount, so back on Sketch chords go into the song again.
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { displayChord } from '$lib/audio/transpose';
 	import { patternInfo } from '$lib/model/analysis';
-	import { gradeAnswer, type Grade } from '$lib/learn/grade';
+	import { gradeAnswer, gradeNotes, type Grade } from '$lib/learn/grade';
 	import { QUALITIES, type QuizItem } from '$lib/learn/items';
 	import { loopById, loopNumerals } from '$lib/learn/loops';
 	import { learnPlan } from '$lib/learn/plan';
@@ -22,6 +27,8 @@
 	import { DAY_MS, isDue } from '$lib/learn/srs';
 	import { learn } from '$lib/stores/learn.svelte';
 	import { learnProgress } from '$lib/stores/learnProgress.svelte';
+	import { midi } from '$lib/stores/midi.svelte';
+	import type { MidiGesture } from '$lib/midi/input';
 	import { view } from '$lib/stores/view.svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import ChordSymbol from '../ChordSymbol.svelte';
@@ -45,6 +52,8 @@
 	/** Played at least once: the pad waits for the question to be heard. */
 	let heard = $state(false);
 	let tapped = $state<number | null>(null);
+	/** What the keyboard last played, when it couldn't answer (said in the status). */
+	let keyboardHint = $state<string | null>(null);
 
 	let playButton: HTMLButtonElement | undefined = $state();
 	let nextButton: HTMLButtonElement | undefined = $state();
@@ -95,6 +104,7 @@
 		if (loading) return 'Loading the band…';
 		// Answered (even mid-run): the verdict is what matters now.
 		if (grade) return verdict(q, grade);
+		if (keyboardHint) return keyboardHint;
 		if (active && role === 'prefix') return 'First the key: hear where home is.';
 		if (active && role === 'gap') return 'Now the question…';
 		if (active && role === 'question') {
@@ -143,11 +153,13 @@
 
 	function play() {
 		heard = true;
+		keyboardHint = null;
 		void learn.play(run, owner);
 	}
 
 	function playQuestionOnly() {
 		heard = true;
+		keyboardHint = null;
 		void learn.play(questionRun(question, { cadence: false }), owner);
 	}
 
@@ -158,6 +170,7 @@
 
 	function pick(value: string) {
 		if (grade || !heard) return;
+		keyboardHint = null;
 		if (question.kind === 'function') {
 			given = [...given, value];
 			if (given.length < question.answer.length) return;
@@ -171,8 +184,65 @@
 	}
 
 	function undo() {
+		keyboardHint = null;
 		if (!grade) given = given.slice(0, -1);
 	}
+
+	// ---- the MIDI keyboard ----
+
+	const keyboardOn = $derived(midi.status === 'on');
+
+	/** What the keyboard does on this question, beside its toggle. */
+	const keyboardLine = $derived.by(() => {
+		if (midi.status === 'requesting') return 'Allow MIDI in the browser’s prompt…';
+		if (midi.status !== 'on') return 'Play your answers on a MIDI keyboard.';
+		const what =
+			question.kind === 'function'
+				? 'play each chord in turn'
+				: question.kind === 'quality'
+					? 'play a chord of that kind, on any root'
+					: 'a loop is named with a tap';
+		return `${midi.device ? `Listening to ${midi.device}` : 'Listening'}: ${what}.`;
+	});
+
+	function toggleKeyboard() {
+		if (midi.status === 'on') midi.disable();
+		else void midi.enable();
+	}
+
+	/**
+	 * A gesture on the keyboard, for question `q`. A chord answers as a tap would
+	 * (pick); anything else is said in the status and fills nothing. A single
+	 * note is someone finding their way, not answering: it's ignored.
+	 */
+	function played(q: Question, { notes }: MidiGesture) {
+		if (q !== question || grade) return;
+		if (new Set(notes.map((n) => n % 12)).size < 2) return;
+		if (!heard) {
+			keyboardHint = 'Play the question first, then play your answer.';
+			return;
+		}
+		if (q.kind === 'loop') {
+			keyboardHint = 'A loop is four chords: name it with a tap.';
+			return;
+		}
+		const { value } = gradeNotes(q, notes, given.length);
+		if (value === null) {
+			keyboardHint = 'That isn’t a chord I can name. Play its root, third and fifth.';
+			return;
+		}
+		pick(value);
+	}
+
+	// While the keyboard is on, this question holds it. A new question takes a
+	// new capture (the cleanup releases the old one first); unmount releases it.
+	// Answers come from the capture callback, never from an $effect on
+	// midi.lastChord, which can't see the same chord played twice.
+	$effect(() => {
+		if (midi.status !== 'on') return;
+		const q = question;
+		return midi.capture((gesture) => played(q, gesture));
+	});
 
 	/** A revealed chord, one bar on its own. */
 	function hear(i: number) {
@@ -189,6 +259,7 @@
 		given = [];
 		grade = null;
 		tapped = null;
+		keyboardHint = null;
 		play();
 		void tick().then(() => playButton?.focus());
 	}
@@ -276,10 +347,26 @@
 			chosen={grade && question.kind !== 'function' ? (given[0] ?? null) : null}
 			onpick={pick}
 		/>
-		{#if question.kind === 'function' && !grade}
+		{#if (question.kind === 'function' && !grade) || midi.supported}
 			<div class="answer__tools">
-				<button class="bar-btn" disabled={given.length === 0} onclick={undo}>Undo</button>
+				{#if question.kind === 'function' && !grade}
+					<button class="bar-btn" disabled={given.length === 0} onclick={undo}>Undo</button>
+				{/if}
+				<!-- Web MIDI only (Chromium): elsewhere the row is as it was. -->
+				{#if midi.supported}
+					<button
+						class="bar-btn"
+						class:bar-btn--on={keyboardOn}
+						aria-pressed={keyboardOn}
+						disabled={midi.status === 'requesting'}
+						onclick={toggleKeyboard}>Keyboard</button
+					>
+					<p class="hint answer__keys">{keyboardLine}</p>
+				{/if}
 			</div>
+			{#if midi.supported && midi.status === 'error' && midi.error}
+				<p class="answer__error" role="alert">{midi.error}</p>
+			{/if}
 		{/if}
 	</div>
 
@@ -523,7 +610,21 @@
 
 	.answer__tools {
 		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: var(--space-2);
+	}
+
+	/* Beside the toggle on a wide card; under the buttons, flush left, on a phone. */
+	.answer__keys {
+		flex: 1 1 14rem;
+		margin: 0;
+	}
+
+	.answer__error {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--danger);
 	}
 
 	.reveal {
