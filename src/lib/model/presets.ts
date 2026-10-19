@@ -65,11 +65,14 @@ export const PRESETS: Preset[] = [
 	}
 ];
 
+/** Build one degree + quality chord in a given root (concert pitch). */
+export function buildPresetChord(root: string, { semitones, quality }: PresetChord): string {
+	const note = Note.simplify(Note.transpose(root, Interval.fromSemitones(semitones)));
+	const symbol = `${note}${quality}`;
+	return isValidChordSymbol(symbol) ? symbol : note;
+}
+
 /** Build the concert-pitch chord symbols for a preset in a given root. */
 export function buildPresetChords(root: string, preset: Preset): string[] {
-	return preset.chords.map(({ semitones, quality }) => {
-		const note = Note.simplify(Note.transpose(root, Interval.fromSemitones(semitones)));
-		const symbol = `${note}${quality}`;
-		return isValidChordSymbol(symbol) ? symbol : note;
-	});
+	return preset.chords.map((chord) => buildPresetChord(root, chord));
 }

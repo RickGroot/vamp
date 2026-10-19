@@ -14,6 +14,15 @@
 // duration weighting (only the blues carries a slot-span guard); power chords
 // (C5) classify as sus; I–IV–V is deliberately absent (too generic to name).
 //
+// Two exceptions to self-anchoring, both because the shape is too common in
+// another key to name on its own:
+// - a `home` pattern only matches on the song's own tonic. I–♭VII–IV is a
+//   plain V–IV–I heard from the V, and ♭VII–IV–I is IV–I–V heard from the V,
+//   so G–F–C in C major must not be named "Mixolydian in G";
+// - the same loop seen from two starting points is ONE fact: a rotation of a
+//   kept pattern (same id, same tonic) that partly overlaps it is dropped, so
+//   C–G–Am–F–C doesn't print as both I–V–vi–IV and V–vi–IV–I.
+//
 // Pure module: tonal + model siblings only — no tone, no stores, never persisted.
 
 import { Chord, Note } from 'tonal';
@@ -135,6 +144,8 @@ interface PatternDef {
 	variants: PatternVariant[];
 	/** 'end': only matches when it closes the song (cadences). */
 	anchor?: 'end';
+	/** Only matches when its tonic is the song's key (see the header). */
+	home?: true;
 	/** Minimum raw slot span (blues only — a 6-slot toy isn't a 12-bar form). */
 	minSlots?: number;
 	blurb: string;
@@ -245,11 +256,32 @@ const PATTERNS: PatternDef[] = [
 			{
 				steps: [s(9, 'min'), s(5, 'maj'), s(0, 'maj'), s(7, 'maj', 'dom')],
 				formula: 'vi–IV–I–V'
+			},
+			{
+				steps: [s(5, 'maj'), s(0, 'maj'), s(7, 'maj', 'dom'), s(9, 'min')],
+				formula: 'IV–I–V–vi'
+			},
+			{
+				steps: [s(7, 'maj', 'dom'), s(9, 'min'), s(5, 'maj'), s(0, 'maj')],
+				formula: 'V–vi–IV–I'
 			}
 		],
 		blurb: "The four-chord 'Axis' loop behind hundreds of hits.",
 		why: 'It cycles tension and release without ever cadencing hard, so it can spin forever.',
 		listen: 'Notice how the vi darkens the mood without leaving the key — a melody can sit unchanged over all four chords.'
+	},
+	{
+		id: 'hopscotch',
+		name: 'Hopscotch',
+		variants: [
+			{
+				steps: [s(5, 'maj'), s(7, 'maj', 'dom'), s(9, 'min'), s(0, 'maj')],
+				formula: 'IV–V–vi–I'
+			}
+		],
+		blurb: "IV–V–vi–I — the 'hopscotch' loop: the Axis chords reordered so the tonic comes last.",
+		why: 'Starting away from home delays the tonic, so the loop resolves at the end of every pass instead of setting out from it.',
+		listen: 'Loop it and feel the vi lean towards home: the I lands on the last beat of the phrase, then the climb starts again.'
 	},
 	{
 		id: 'royal-road',
@@ -278,6 +310,26 @@ const PATTERNS: PatternDef[] = [
 		listen: 'Try the Phrygian dominant scale over the final V chord.'
 	},
 	{
+		id: 'mixolydian',
+		name: 'Mixolydian rock',
+		home: true,
+		variants: [
+			{ steps: [s(0, 'maj'), s(10, 'maj'), s(5, 'maj')], formula: 'I–♭VII–IV' },
+			{ steps: [s(10, 'maj'), s(5, 'maj'), s(0, 'maj')], formula: '♭VII–IV–I' }
+		],
+		blurb: 'The Mixolydian rock move: ♭VII and IV, two major chords a fourth apart, settling on I.',
+		why: "♭VII comes from the key's Mixolydian mode, and its IV then falls onto I like a plagal cadence, so the loop lands without a leading tone.",
+		listen: 'Over the whole loop, play the major pentatonic of the I, then the Mixolydian scale: the ♭7 is the colour.'
+	},
+	{
+		id: 'mario',
+		name: 'Mario cadence',
+		variants: [{ steps: [s(8, 'maj'), s(10, 'maj'), s(0, 'maj')], formula: '♭VI–♭VII–I' }],
+		blurb: 'The ♭VI–♭VII–I fanfare: two major chords borrowed from the minor key, climbing by whole steps to a bright I.',
+		why: '♭VI and ♭VII come from the parallel minor, so arriving on a MAJOR tonic after them sounds like the sun coming out.',
+		listen: 'Put it at the end of a phrase and listen for the lift on the last chord.'
+	},
+	{
 		id: 'backdoor',
 		name: 'Backdoor dominant',
 		variants: [{ steps: [s(10, 'dom'), s(0, 'maj')], formula: '♭VII7–I' }],
@@ -293,6 +345,17 @@ const PATTERNS: PatternDef[] = [
 		blurb: "An authentic cadence, V–I: music's strongest full stop.",
 		why: 'The leading tone rises a half-step while the root falls a fifth — the two strongest pulls in tonal music, at once.',
 		listen: 'Stop playback just before the final chord and feel your ear demand it.'
+	},
+	{
+		// Before the plagal cadence, which also accepts a minor iv: on the same
+		// span the earlier pattern wins, so Fm–C is named for what it is.
+		id: 'cadence-minor-plagal',
+		name: 'Minor plagal cadence',
+		anchor: 'end',
+		variants: [{ steps: [s(5, 'min'), s(0, 'maj')], formula: 'iv–I' }],
+		blurb: 'The minor plagal cadence, iv–I: a minor iv borrowed from the parallel minor, sighing onto a major I.',
+		why: "The iv's minor third (the key's ♭6) slides down a half step to the 5th of I: a softer pull than V–I, with a shadow over it.",
+		listen: 'Swap the iv for a plain IV and compare: the same landing, a different mood.'
 	},
 	{
 		id: 'cadence-plagal',
@@ -313,6 +376,31 @@ const PATTERNS: PatternDef[] = [
 		listen: 'Use it to extend an ending: deceive once, then resolve for real.'
 	}
 ];
+
+/** What a pattern is, without the matching machinery (lessons and quizzes). */
+export interface PatternInfo {
+	id: string;
+	name: string;
+	/** Every variant's formula, the primary one first. */
+	formulas: string[];
+	blurb: string;
+	why: string;
+	listen: string;
+}
+
+/** Look a pattern up by id; null for an unknown id. */
+export function patternInfo(id: string): PatternInfo | null {
+	const p = PATTERNS.find((x) => x.id === id);
+	if (!p) return null;
+	return {
+		id: p.id,
+		name: p.name,
+		formulas: p.variants.map((v) => v.formula),
+		blurb: p.blurb,
+		why: p.why,
+		listen: p.listen
+	};
+}
 
 // ---- matching ---------------------------------------------------------------
 
@@ -348,6 +436,7 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 					}
 				}
 				if (!ok) continue;
+				if (p.home && tonic !== keyChroma) continue;
 				if (p.minSlots && win[L - 1].endSlot - win[0].startSlot + 1 < p.minSlots) continue;
 				raw.push({
 					patternId: p.id,
@@ -399,7 +488,9 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 	// Suppress detections fully contained in a kept one (any pattern): kills the
 	// V–I inside a closing ii–V–I and rotations inside a merged loop. PARTIAL
 	// overlaps are kept deliberately — a turnaround and the ii–V–I resolving out
-	// of it are two real facts.
+	// of it are two real facts — except between two readings of the SAME loop
+	// (same pattern, same tonic): C–G–Am–F–C is one Axis, not I–V–vi–IV plus
+	// V–vi–IV–I.
 	merged.sort(
 		(a, b) =>
 			b.endChange - b.startChange - (a.endChange - a.startChange) ||
@@ -409,7 +500,14 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 	const kept: RawDetection[] = [];
 	for (const m of merged) {
 		const contained = kept.some((k) => k.startChange <= m.startChange && m.endChange <= k.endChange);
-		if (!contained) kept.push(m);
+		const sameLoop = kept.some(
+			(k) =>
+				k.patternId === m.patternId &&
+				k.tonic === m.tonic &&
+				m.startChange <= k.endChange &&
+				k.startChange <= m.endChange
+		);
+		if (!contained && !sameLoop) kept.push(m);
 	}
 
 	kept.sort((a, b) => a.startSlot - b.startSlot);

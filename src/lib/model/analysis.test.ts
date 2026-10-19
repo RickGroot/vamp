@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Note } from 'tonal';
-import { chordCore, collapseChanges, detectProgressions, type CoreQuality } from './analysis';
+import { chordCore, collapseChanges, detectProgressions, patternInfo, type CoreQuality } from './analysis';
 import { PRESETS, PRESET_ROOTS, buildPresetChords } from './presets';
 import { EXAMPLES, buildExample } from './examples';
 import { inferKey, type KeyInfo } from './key';
@@ -239,5 +239,134 @@ describe('examples smoke', () => {
 		const bars = buildExample(e).bars;
 		const symbols = bars.flatMap((b) => b.slots.map((s) => s.chord));
 		expect(detectProgressions(bars, inferKey(symbols)).map((x) => x.patternId)).toContain('canon');
+	});
+});
+
+describe('rock and pop additions', () => {
+	it('names I–♭VII–IV and ♭VII–IV–I on the home key', () => {
+		expect(ids(barsOf('C', 'Bb', 'F'))).toEqual(['mixolydian']);
+		expect(detect(barsOf('C', 'Bb', 'F'))[0].formula).toBe('I–♭VII–IV');
+		const back = detect(barsOf('Bb', 'F', 'C'));
+		expect(back.map((d) => d.patternId)).toContain('mixolydian');
+		expect(back.find((d) => d.patternId === 'mixolydian')!.formula).toBe('♭VII–IV–I');
+	});
+
+	// Self-anchored, these shapes are everyday diatonic motion seen from V:
+	// G–F–C is V–IV–I in C and F–C–G is IV–I–V. Only the song's own tonic counts.
+	it('does not name V–IV–I or IV–I–V as Mixolydian in the key of the V', () => {
+		expect(ids(barsOf('G', 'F', 'C'))).not.toContain('mixolydian');
+		expect(ids(barsOf('F', 'C', 'G'))).not.toContain('mixolydian');
+		expect(ids(barsOf('G', 'F', 'C'), { tonic: 'G', mode: 'major' })).toContain('mixolydian');
+	});
+
+	it('a looped I–♭VII–IV is one detection, not its rotations', () => {
+		const d = detect(barsOf('D', 'C', 'G', 'D', 'C', 'G'), { tonic: 'D', mode: 'major' });
+		expect(d).toHaveLength(1);
+		expect(d[0]).toMatchObject({ patternId: 'mixolydian', formula: 'I–♭VII–IV', repeats: 2 });
+	});
+
+	it('names the hopscotch loop and the Mario cadence', () => {
+		expect(ids(barsOf('F', 'G', 'Am', 'C'))).toEqual(['hopscotch']);
+		expect(ids(barsOf('Ab', 'Bb', 'C'))).toEqual(['mario']);
+		// Self-anchored: a Mario cadence into a new key is still one.
+		const up = detect(barsOf('C', 'G', 'Bb', 'C', 'D'));
+		expect(up.find((d) => d.patternId === 'mario')).toMatchObject({ localTonic: 'D', relation: 'II' });
+	});
+
+	it('names every Axis rotation as the Axis', () => {
+		expect(detect(barsOf('F', 'C', 'G', 'Am'))[0]).toMatchObject({ patternId: 'pop', formula: 'IV–I–V–vi' });
+		expect(detect(barsOf('G', 'Am', 'F', 'C'))[0]).toMatchObject({ patternId: 'pop', formula: 'V–vi–IV–I' });
+	});
+
+	it('reads one Axis, not two, when a pass starts on another chord', () => {
+		const d = detect(barsOf('C', 'G', 'Am', 'F', 'C'));
+		expect(d.filter((x) => x.patternId === 'pop')).toHaveLength(1);
+	});
+
+	it('names iv–I as a minor plagal cadence, not a plagal one', () => {
+		expect(ids(barsOf('C', 'Fm', 'C'))).toEqual(['cadence-minor-plagal']);
+		expect(ids(barsOf('C', 'F', 'C'))).toEqual(['cadence-plagal']);
+		expect(ids(barsOf('Fm', 'C', 'Am'))).toEqual([]); // end-anchored
+	});
+});
+
+describe('patternInfo', () => {
+	it('describes a pattern without exposing the dictionary', () => {
+		const info = patternInfo('pop')!;
+		expect(info.name).toBe('Pop / Axis');
+		expect(info.formulas).toEqual(['I–V–vi–IV', 'vi–IV–I–V', 'IV–I–V–vi', 'V–vi–IV–I']);
+		expect(info.blurb.length).toBeGreaterThan(0);
+		expect(patternInfo('nope')).toBeNull();
+	});
+});
+
+// The whole built-in library through the analyser. A change to the dictionary
+// may only change what it meant to: any other difference here is a regression
+// someone will see over a song they know.
+describe('detection snapshot: every example and preset', () => {
+	const summary = (bars: Bar[], key: KeyInfo) =>
+		detectProgressions(bars, key).map(
+			(d) =>
+				`${d.patternId} ${d.formula} ${d.localTonic} b${d.startBar}-${d.endBar}${d.repeats > 1 ? ` x${d.repeats}` : ''}`
+		);
+
+	const EXPECTED_EXAMPLES: Record<string, string[]> = {
+		pachelbel: ['canon I–V–vi–iii–IV–I–IV–V D b0-7'],
+		'ode-to-joy': ['cadence-authentic V–I C b5-7'],
+		// C–G–Am–F–C: one Axis (the V–vi–IV–I starting a bar later is the same loop).
+		greensleeves: ['pop I–V–vi–IV C b1-4', 'pop I–V–vi–IV C b9-12', 'cadence-authentic V–I A b13-15'],
+		'rising-sun': [],
+		'amazing-grace': ['cadence-authentic V–I G b6-7'],
+		saints: ['cadence-authentic V–I C b9-11'],
+		'auld-lang-syne': ['cadence-authentic V–I G b6-7'],
+		'swing-low': ['cadence-authentic V–I G b6-7'],
+		'drunken-sailor': ['cadence-deceptive V–vi F b6-7'],
+		'hava-nagila': ['cadence-authentic V–I D b6-7'],
+		'oh-susanna': ['cadence-authentic V–I G b5-7'],
+		wayfaring: ['cadence-authentic V–I A b5-7'],
+		'st-james': ['cadence-authentic V–I A b5-7'],
+		korobeiniki: ['cadence-authentic V–I E b6-7'],
+		'jingle-bells': ['cadence-authentic V–I G b8-11'],
+		'silent-night': ['cadence-authentic V–I C b13-15'],
+		'joy-to-the-world': ['cadence-authentic V–I C b5-7'],
+		'blues-in-a': ['blues12 I7–IV7–I7–V7–IV7–I7–V7 A b0-11']
+	};
+
+	const EXPECTED_PRESETS: Record<string, string[]> = {
+		pop: ['pop I–V–vi–IV C b0-3'],
+		doowop: ['doowop I–vi–IV–V C b0-3'],
+		'vi-iv-i-v': ['pop vi–IV–I–V C b0-3'],
+		'i-iv-v': [], // deliberately unnamed
+		'jazz-251': ['jazz-251 ii–V–I C b0-2'],
+		'minor-251': ['minor-251 iiø–V–i C b0-2'],
+		canon: ['canon I–V–vi–iii–IV–I–IV–V C b0-7'],
+		andalusian: ['andalusian i–♭VII–♭VI–V C b0-3'],
+		blues12: ['blues12 I7–IV7–I7–V7–IV7–I7–V7 C b0-11']
+	};
+
+	it('covers every example and preset', () => {
+		expect(Object.keys(EXPECTED_EXAMPLES).sort()).toEqual(EXAMPLES.map((e) => e.id).sort());
+		expect(Object.keys(EXPECTED_PRESETS).sort()).toEqual(PRESETS.map((p) => p.id).sort());
+	});
+
+	it('detects exactly what it did, plus the intended additions', () => {
+		for (const e of EXAMPLES) {
+			const bars = buildExample(e).bars;
+			const symbols = bars.flatMap((b) => b.slots.map((s) => s.chord));
+			expect(summary(bars, inferKey(symbols)), e.id).toEqual(EXPECTED_EXAMPLES[e.id]);
+		}
+		for (const p of PRESETS) {
+			const chords = buildPresetChords('C', p);
+			expect(summary(barsOf(...chords), inferKey(chords)), p.id).toEqual(EXPECTED_PRESETS[p.id]);
+		}
+	});
+
+	it('keeps I–IV–V unnamed in every root', () => {
+		const preset = PRESETS.find((p) => p.id === 'i-iv-v')!;
+		for (const root of PRESET_ROOTS) {
+			const chords = buildPresetChords(root, preset);
+			expect(detect(barsOf(...chords), inferKey(chords)), root).toEqual([]);
+			expect(detect(barsOf(...chords), { tonic: root, mode: 'major' }), root).toEqual([]);
+		}
 	});
 });
