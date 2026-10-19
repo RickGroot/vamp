@@ -312,3 +312,40 @@ The second mode explains the sketch on the canvas, in the key you hear as home.
   everywhere; "secondary dominant" or "borrowed" is printed in the row.
 - **An empty canvas** gets a card that says what the page will do, with Go to
   Sketch and one example to try.
+
+### Lab
+
+The fifth mode tries one change on the bars you loop and lets you hear it against
+yours, A/B.
+
+- **The song line** sits above the card, unboxed: the tune's name in its own case,
+  "Your loop, bars 5–8" (or the bar count) and how many ideas fit, then the key
+  picker. The key is shared with Your song: pick one in either and the other follows.
+- **The idea's card**: the move's name in the display voice, in its own case with
+  its numerals drawn (ii–V, Backdoor ♭VII7), the bar it changes as a label, and one
+  sentence on what changed. Under it the two versions as rows of bars, **A · YOURS**
+  over **B · REHARM**: ink barlines, each chord a wash chip under its quality's ink
+  tab with its numeral, a split bar's chords sharing the bar by their beats. The new
+  chord says **NEW** under its numeral, in ink over a short rule; every B chip keeps
+  that line, so the row stays level.
+- **A and B are switches.** The printed key at the start of each row plays that
+  version round and round, over a few bars around the change, and is inked solid
+  while it sounds. Tap the other and it takes over at once, from the top; pick
+  another idea while listening and you hear the same side of the new one. Play (the
+  key's ink, as on every Learn card) and Stop sit under the rows, with the status
+  beside them ("B: the reharm, bars 5–8, round and round").
+- **USE IN MY SONG** is the inked primary button: it writes the change into the
+  sketch as one undo step, and says so twice: a notice with Undo, and a line above
+  the card with its own Undo while the song is still exactly that. **OPEN IN
+  SKETCH** goes there.
+- **IDEAS**, under a heavy rule: all six moves as printed entries (the name, one line
+  on what the move does) with a button per place it fits ("BAR 6  G♭7", the chords in
+  their own case); the one on the card is inked. A move with nowhere to go stays in
+  the list, greyed: "Nowhere in these bars". The list teaches the vocabulary.
+- **Narrow.** When the card is under about 520px the switch becomes a strip above its
+  bars, the bars go two to a row, and Play takes the full width.
+- **No colour for roles here either.** A tritone sub or a borrowed iv is a word and a
+  numeral, never a tint: the chips' inks are the chords' qualities.
+- **Empty.** A blank canvas gets a card that says what the Lab does, with Go to
+  Sketch and one example to try. Chords with nothing to change say why (two chords in
+  a row, room in a bar to split one, and it works on the loop) and offer the same.

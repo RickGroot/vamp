@@ -3,8 +3,8 @@
 
 	// The key you picked for a song, by song id, for the session: "Open in
 	// Sketch" and back must not lose it. Never persisted; the detector's guess is
-	// the default every launch.
-	const picked = new Map<string, KeyInfo>();
+	// the default every launch. Shared with the Lab (learn/songKey.ts).
+	import { pickedKeys as picked } from '$lib/learn/songKey';
 </script>
 
 <script lang="ts">
