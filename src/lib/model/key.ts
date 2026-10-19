@@ -15,7 +15,9 @@ export interface DiatonicChord {
 	symbol: string;
 }
 
-type Quality = 'M' | 'm' | 'dim';
+/** A triad's quality as the key's scale builds it. */
+export type TriadQuality = 'M' | 'm' | 'dim';
+type Quality = TriadQuality;
 
 const MAJOR = { offsets: [0, 2, 4, 5, 7, 9, 11], quals: ['M', 'm', 'm', 'M', 'M', 'm', 'dim'] as Quality[] };
 const MINOR = { offsets: [0, 2, 3, 5, 7, 8, 10], quals: ['m', 'dim', 'M', 'm', 'm', 'M', 'M'] as Quality[] };
@@ -32,6 +34,25 @@ function category(chord: ReturnType<typeof Chord.get>): Quality {
 }
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
+
+/**
+ * Semitones above the tonic of each degree of the key's scale (natural major or
+ * natural minor). A fresh array, so no caller can edit the table.
+ */
+export function scaleSemitones(mode: KeyInfo['mode']): number[] {
+	return [...(mode === 'major' ? MAJOR : MINOR).offsets];
+}
+
+/**
+ * The triad the key's scale builds on a chromatic degree (semitones above the
+ * tonic), or null when the degree is off the scale. Natural major / minor: the
+ * harmonic minor's raised V is the caller's business.
+ */
+export function diatonicQuality(semitones: number, mode: KeyInfo['mode']): TriadQuality | null {
+	const tbl = mode === 'major' ? MAJOR : MINOR;
+	const i = tbl.offsets.indexOf(mod12(semitones));
+	return i < 0 ? null : tbl.quals[i];
+}
 
 /** Best-guess key for a set of chord symbols (major/minor diatonic scoring). */
 export function inferKey(symbols: string[]): KeyInfo {

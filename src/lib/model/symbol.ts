@@ -135,6 +135,12 @@ function speakQuality(quality: string): string {
 
 const speakNote = (letter: string, acc: string) => letter + (LETTER_ACCIDENTAL[acc] ?? '');
 
+/** The spoken form of a bare note name, a key's tonic: 'Eb' → 'E flat'. As typed when it isn't one. */
+export function spokenNote(name: string): string {
+	const m = name.trim().match(/^([A-G])([b#]{0,2})$/);
+	return m ? speakNote(m[1], m[2]) : name.trim();
+}
+
 /**
  * The spoken form of a chord symbol: 'Ebm7' → 'E flat minor seven', 'C/G' →
  * 'C major over G', 'G7b9' → 'G seven flat nine'. Returns the symbol as typed
