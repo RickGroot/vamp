@@ -119,7 +119,6 @@
 
 	const SOON = [
 		{ name: 'Ear', text: 'Hear a few bars with the band, then name the chords.' },
-		{ name: 'Your song', text: 'What every chord in your sketch is doing, including the borrowed ones.' },
 		{ name: 'Lessons', text: 'Short tracks from three chords to jazz forms, each tried out in Sketch.' },
 		{ name: 'Review', text: "A few minutes of mixed practice on what you've learned, spaced over days." },
 		{ name: 'Lab', text: 'Swap in a substitute chord and hear both versions back to back.' }
