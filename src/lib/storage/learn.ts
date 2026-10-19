@@ -10,6 +10,10 @@
 // progress (`lessons`, Phase 3) is optional: progress saved before lessons
 // existed has none and still loads, so LEARN_VERSION stays 1.
 //
+// Phase 4 puts it in the backup: `learnForBackup` reads it for exportBackup,
+// `importLearn` MERGES a backup's into it (mergeLearn: the later answer wins
+// per item, finished lessons are combined), never replacing what is here.
+//
 // Pure apart from the storage it is handed (a DraftStorage, so tests pass a
 // Map-backed fake). Never throws. Must NOT import stores.
 
@@ -112,7 +116,11 @@ export function migrateLearn(raw: unknown, now: number = Date.now()): LearnProgr
 	return out;
 }
 
-/** The stored progress, or empty. A corrupt entry is removed, never fatal. */
+/**
+ * The stored progress, or empty. A corrupt entry is removed, never fatal, and
+ * a repaired one (a date clamped from a wrong clock) is stored repaired, so the
+ * clamp is made once and sticks instead of moving with every launch.
+ */
 export function readLearn(storage: DraftStorage, now: number = Date.now()): LearnProgress {
 	let raw: string | null;
 	try {
@@ -124,7 +132,16 @@ export function readLearn(storage: DraftStorage, now: number = Date.now()): Lear
 	try {
 		const parsed: unknown = JSON.parse(raw);
 		if (!isRecord(parsed)) throw new Error('not progress');
-		return migrateLearn(parsed, now);
+		const progress = migrateLearn(parsed, now);
+		const repaired = JSON.stringify(progress);
+		if (repaired !== raw) {
+			try {
+				storage.setItem(LEARN_KEY, repaired);
+			} catch {
+				/* full or blocked: the repair is made again next time */
+			}
+		}
+		return progress;
 	} catch {
 		try {
 			storage.removeItem(LEARN_KEY);
@@ -143,4 +160,68 @@ export function writeLearn(storage: DraftStorage, progress: LearnProgress): bool
 	} catch {
 		return false;
 	}
+}
+
+// ---- backup ------------------------------------------------------------------
+
+/** No item and no lesson: nothing to back up, nothing an import brought. */
+export function isEmptyLearn(progress: LearnProgress): boolean {
+	return Object.keys(progress.items).length === 0 && Object.keys(progress.lessons ?? {}).length === 0;
+}
+
+/**
+ * Two devices' progress as one. Both must already be migrated (migrateLearn);
+ * ids that don't look like ids are left out either way.
+ * - An item: the record answered more recently (`last`) wins; a tie keeps a's.
+ * - A lesson: finished if either finished it (the later date), at the furthest
+ *   step either reached.
+ */
+export function mergeLearn(a: LearnProgress, b: LearnProgress): LearnProgress {
+	const out = emptyLearn();
+	const ids = (x: Record<string, unknown>) => Object.keys(x).filter((id) => ID_RE.test(id));
+	for (const id of new Set([...ids(a.items), ...ids(b.items)])) {
+		const x = Object.prototype.hasOwnProperty.call(a.items, id) ? a.items[id] : undefined;
+		const y = Object.prototype.hasOwnProperty.call(b.items, id) ? b.items[id] : undefined;
+		out.items[id] = !x ? y! : !y ? x : y.last > x.last ? y : x;
+	}
+	const la = a.lessons ?? {};
+	const lb = b.lessons ?? {};
+	for (const id of new Set([...ids(la), ...ids(lb)])) {
+		const x = Object.prototype.hasOwnProperty.call(la, id) ? la[id] : undefined;
+		const y = Object.prototype.hasOwnProperty.call(lb, id) ? lb[id] : undefined;
+		out.lessons![id] =
+			x && y ? { step: Math.max(x.step, y.step), done: Math.max(x.done, y.done) } : (x ?? y)!;
+	}
+	return out;
+}
+
+/** A backup's `learn` field, whatever it holds, as valid progress (empty for garbage). */
+export function extractLearn(raw: unknown, now: number = Date.now()): LearnProgress {
+	return migrateLearn(raw, now);
+}
+
+/** What a backup carries: the stored progress, or null when there is none (the key is then omitted). */
+export function learnForBackup(storage: DraftStorage, now: number = Date.now()): LearnProgress | null {
+	const progress = readLearn(storage, now);
+	return isEmptyLearn(progress) ? null : progress;
+}
+
+/** What an import brought: how many exercises and lessons the backup held. */
+export interface LearnImport {
+	items: number;
+	lessons: number;
+}
+
+/**
+ * Merge a backup's `learn` field into the stored progress — never replacing
+ * it. Null when the backup brought nothing usable (absent, empty, garbage) or
+ * the merged progress could not be stored; nothing is written then.
+ */
+export function importLearn(storage: DraftStorage, raw: unknown, now: number = Date.now()): LearnImport | null {
+	const incoming = extractLearn(raw, now);
+	if (isEmptyLearn(incoming)) return null;
+	// Through the gate again: a merge of two capped sets can exceed the cap.
+	const merged = migrateLearn(mergeLearn(readLearn(storage, now), incoming), now);
+	if (!writeLearn(storage, merged)) return null;
+	return { items: Object.keys(incoming.items).length, lessons: Object.keys(incoming.lessons ?? {}).length };
 }

@@ -113,4 +113,11 @@ export interface VampBackup {
 	 * coerces every entry on the way in.
 	 */
 	drills?: unknown[];
+	/**
+	 * Learn progress (`vamp:learn`: quiz items and lessons), if any. OPTIONAL
+	 * like `drills`, and omitted when there is none: older backups import
+	 * unchanged and the song schema version stays 1. storage/learn.ts coerces it
+	 * and MERGES it into what is saved.
+	 */
+	learn?: unknown;
 }

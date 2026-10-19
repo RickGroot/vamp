@@ -5,6 +5,7 @@
 	import { library } from '$lib/stores/library.svelte';
 	import { notice } from '$lib/stores/notice.svelte';
 	import { readFileAsText } from '$lib/storage/backup';
+	import { importMessage } from '$lib/storage/importSummary';
 	import { newId } from '$lib/model/factory';
 	import { dismissable } from '$lib/actions/dismissable';
 
@@ -71,18 +72,15 @@
 
 	// Shared import path for both a picked file and pasted text. Surfaces a
 	// human-readable result/error instead of failing silently, and loads the
-	// first imported song so it's immediately on the canvas.
+	// first imported song so it's immediately on the canvas. A backup with only
+	// drills or Learn progress in it is a success, said as one (importMessage).
 	async function runImport(text: string) {
 		status = null;
 		try {
-			const imported = await library.import(text);
-			if (imported.length === 0) {
-				status = { kind: 'err', text: 'No songs found in that JSON.' };
-				return;
-			}
-			progression.load($state.snapshot(imported[0]));
-			const more = imported.length > 1 ? ` (+${imported.length - 1} more added)` : '';
-			status = { kind: 'ok', text: `Imported “${imported[0].name}”${more}.` };
+			const summary = await library.import(text);
+			status = importMessage(summary);
+			if (status.kind === 'err') return;
+			if (summary.songs.length > 0) progression.load($state.snapshot(summary.songs[0]));
 			pasteText = '';
 			showPaste = false;
 		} catch (error) {
