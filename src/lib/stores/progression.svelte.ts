@@ -10,7 +10,14 @@ import { engine, type EngineState } from '$lib/audio/engine';
 import { isBlank as isBlankSong, readDraft, writeDraft } from '$lib/storage/draft';
 import { forgetSketch, readRecent, rememberSketch, type RecentSketch } from '$lib/storage/recent';
 import { barBeats } from '$lib/model/time';
-import { createBar, createProgression, createSlot, TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
+import {
+	createBar,
+	createProgression,
+	createSlot,
+	MAX_SLOTS_PER_BAR,
+	TEMPO_MIN,
+	TEMPO_MAX
+} from '$lib/model/factory';
 import { buildPresetChords, type Preset } from '$lib/model/presets';
 import { buildExample, type Example } from '$lib/model/examples';
 import { randomProgression } from '$lib/model/inspire';
@@ -32,10 +39,9 @@ import type {
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-// Canonical bounds live in the model layer (shared with import coercion).
-export { TEMPO_MIN, TEMPO_MAX } from '$lib/model/factory';
-/** How many chords a single bar may be split into (1 = full, 2 = half-bars, …). */
-export const MAX_SLOTS_PER_BAR = 4;
+// Canonical bounds live in the model layer (shared with import coercion, and with
+// the pure modules that build bars, which can't import a store).
+export { TEMPO_MIN, TEMPO_MAX, MAX_SLOTS_PER_BAR } from '$lib/model/factory';
 
 const HISTORY_LIMIT = 100;
 const COALESCE_MS = 700;

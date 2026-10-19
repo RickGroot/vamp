@@ -15,6 +15,8 @@ export const DEFAULT_TEMPO = 100;
 /** Valid tempo range, shared by the UI clamp and the import/load coercion. */
 export const TEMPO_MIN = 20;
 export const TEMPO_MAX = 300;
+/** How many chords a single bar may be split into (1 = full, 2 = half-bars, …). */
+export const MAX_SLOTS_PER_BAR = 4;
 export const DEFAULT_GROOVE: Groove = {
 	pattern: 'block',
 	bass: 'none',

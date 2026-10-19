@@ -278,6 +278,11 @@ pitch. That workspace has its own format for a *drill*, which this file does not
 it is not something an assistant is asked to write, and the song JSON above is unaffected
 by it.
 
+A third workspace at /vamp/learn teaches harmony by ear: short passages played with the
+band (starting with "Hear home", a cadence in any key), with Roman numerals beside the
+chords. It generates its own material and stores no songs, so it adds nothing to the song
+JSON either.
+
 ## Links
 
 - [Vamp app](https://rickgroot.github.io/vamp/): the app itself.

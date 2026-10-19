@@ -80,6 +80,16 @@ class DroneStore {
 	}
 
 	/**
+	 * Silence the drone without touching its prefs. A Learn question sets its own
+	 * key, and this drone follows the song's — the two would clash.
+	 */
+	off(): void {
+		if (!this.on) return;
+		drone.stop();
+		this.on = false;
+	}
+
+	/**
 	 * Retune a sounding drone when the inferred key changes while in "follow the
 	 * key" mode (root === null). No persist — prefs didn't change, only the key.
 	 */

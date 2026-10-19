@@ -8,6 +8,7 @@
 	import { progression } from '$lib/stores/progression.svelte';
 	import { drillLibrary } from '$lib/stores/drillLibrary.svelte';
 	import { view } from '$lib/stores/view.svelte';
+	import { workspace } from '$lib/stores/workspace.svelte';
 	import { drillById } from '$lib/practice/patterns';
 	import DrillRunner from '$lib/components/practice/DrillRunner.svelte';
 	import DrillPicker from '$lib/components/practice/DrillPicker.svelte';
@@ -27,6 +28,9 @@
 		const wanted = page.url.searchParams.get('drill');
 		if (wanted && drillById(wanted)) practice.setDrill(wanted);
 	});
+
+	// Space plays the drill here, not the song (the layout still stops anything).
+	onMount(() => workspace.register(() => void practice.start()));
 
 	// One transport, one thing playing: leaving Practice stops the drill rather
 	// than leaving it running under the editor.

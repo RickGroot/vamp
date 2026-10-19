@@ -23,10 +23,10 @@ paint** by the inline script in `app.html` (`data-theme` on `<html>`).
 `view.night` is the resolved answer for anything drawn outside CSS. The
 `theme-color` meta follows `--ground`.
 
-The header's other switch is the workspace: **SKETCH · PRACTICE**, printed words
-with the page you're on underlined in ink. It's a place, not a switch, so it gets
-an underline rather than a filled box. Practice opens with a **Back to Sketch**
-button naming the tune.
+The header's other switch is the workspace: **SKETCH · PRACTICE · LEARN**,
+printed words with the page you're on underlined in ink. It's a place, not a
+switch, so it gets an underline rather than a filled box. Practice opens with a
+**Back to Sketch** button naming the tune.
 
 ## Board and ink
 
@@ -209,3 +209,39 @@ The drill staff reads like a part:
 
 The settings are label-over-field units on a grid: columns on a desktop, two to a row
 on a phone, every field 44px tall to the touch.
+
+## Learn
+
+**LEARN** in display capitals, then its modes as printed words under a heavy rule,
+the one you're on underlined: the same "place, not a switch" rule as the workspace
+nav. A mode only joins that row once it is built.
+
+Cards are printed boxes (2px ink, square). A card's transport reads left to right:
+what to play (key, mode), **Play**, then the status against it. Play is the page's
+one block of colour, the key's ink (major yellow, minor blue), the same button as
+Practice's Start: it turns to an ink-bordered Stop while sounding. The key is
+printed beside it, so the colour gives nothing away.
+
+A passage's chords sit in a row of wash chips, each under a 6px tab of its chord's
+ink; the sounding one is a solid block of that ink with an ink rule round it (yellow
+on the wash is too faint to carry it alone). Under each chord, its Roman numeral.
+Tap a chip to hear that chord on its own. When a run ends, the tonic chips are
+marked **HOME** in ink, the status says the payoff in full ink, and the next step
+(the other mode, another key) is a button away.
+
+Under the cards, **COMING UP**: a greyed tracklist of the modes not built yet,
+names only, no links.
+
+Three rules specific to Learn:
+- **Numerals are never uppercased.** Case is meaning (ii is minor, II major), so
+  numerals go through `Numeral`, which sets `text-transform: none` and draws ♭ / ♯
+  like `ChordSymbol` does (both use `Accidental`). Never put a numeral in a
+  `.bar-btn`, `.label` or `.display` text node: all three are uppercase.
+- **No colour for roles or for right and wrong.** Chord inks mean quality and
+  nothing else, so feedback is ink and words.
+- **The page's field stays at rest while Learn plays.** The layout already does
+  this for any source that isn't the song; it matters here because a field in the
+  sounding chord's ink would give away the answer to a chord-quality question. (The
+  card's Play block is the key's colour, set locally, never the chord's.)
+- **Chords and numerals are SAID to assistive tech.** The drawn face is hidden and a
+  spoken form sits beside it: "E flat minor seven", "two minor".

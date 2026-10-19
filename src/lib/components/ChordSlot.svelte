@@ -3,6 +3,7 @@
 	import { classifyChord, filterChordsDisplay, type ChordSuggestion } from '$lib/model/chords';
 	import { displayChord, concertFromDisplay } from '$lib/audio/transpose';
 	import { romanNumeral, type KeyInfo } from '$lib/model/key';
+	import Numeral from './Numeral.svelte';
 	import { progression } from '$lib/stores/progression.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { scales } from '$lib/stores/scales.svelte';
@@ -181,7 +182,7 @@
 		</button>
 	{/if}
 
-	{#if roman}<span class="slot__roman">{roman}</span>{/if}
+	{#if roman}<span class="slot__roman"><Numeral numeral={roman} /></span>{/if}
 
 	{#if canRemove}
 		<button

@@ -262,6 +262,17 @@ a {
 	outline-offset: 2px;
 }
 
+/* Read by assistive tech, not drawn: the spoken form beside a drawn face
+   (ChordSymbol, Numeral), whose flats are images and whose case is meaning. */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
 /* Small caps label — field names and group titles. Never paragraph copy. */
 .label {
 	font-size: 0.6875rem;

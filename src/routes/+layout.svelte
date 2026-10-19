@@ -10,6 +10,7 @@
 	import { library } from '$lib/stores/library.svelte';
 	import { notice } from '$lib/stores/notice.svelte';
 	import { droneState } from '$lib/stores/drone.svelte';
+	import { workspace } from '$lib/stores/workspace.svelte';
 	import { engine } from '$lib/audio/engine';
 	import { isValidChordSymbol } from '$lib/audio/chord';
 	import { classifyChord, type ChordFamily } from '$lib/model/chords';
@@ -20,10 +21,17 @@
 	let { children } = $props();
 
 	// The workspace chrome (frame, header, art, shortcuts) is shared by every
-	// route, so Sketch and Practice look and behave like one app.
+	// route, so Sketch, Practice and Learn look and behave like one app.
 	const SKETCH = `${base}/`;
 	const PRACTICE = `${base}/practice`;
-	const onPractice = $derived(page.url.pathname.replace(/\/$/, '') === PRACTICE.replace(/\/$/, ''));
+	const LEARN = `${base}/learn`;
+	const trim = (path: string) => path.replace(/\/$/, '');
+	const here = $derived.by((): 'sketch' | 'practice' | 'learn' => {
+		const path = trim(page.url.pathname);
+		if (path === trim(PRACTICE)) return 'practice';
+		if (path === trim(LEARN)) return 'learn';
+		return 'sketch';
+	});
 
 	const keyInfo = $derived(
 		inferKey(flattenSlots(progression.current.bars).map((f) => f.slot.chord))
@@ -105,12 +113,18 @@
 		// Spacebar toggles play/stop — but never steal Space from a focused
 		// interactive element (buttons activate with Space; hijacking it makes
 		// every button in the app toggle playback for keyboard users).
+		//
+		// Stop is global: whatever is sounding (song, drill, quiz) stops, on any
+		// route — progression mirrors every engine state. Play is per route: the
+		// page's registered action (Practice → its drill, Learn → the last
+		// question), and the song where nothing is registered (Sketch).
 		if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !inField) {
 			const el = event.target;
 			if (el instanceof Element && el.closest('button, a, select, input, textarea, [contenteditable]'))
 				return;
 			event.preventDefault();
-			void progression.toggle();
+			if (progression.isPlaying || progression.isLoading) progression.stop();
+			else if (!workspace.play()) void progression.toggle();
 			return;
 		}
 
@@ -221,13 +235,16 @@
 	<header class="head">
 		<div class="head__left">
 			<span class="wordmark head__mark">Vamp</span>
-			<!-- Two workspaces, one switch: where you are is underlined in ink. -->
+			<!-- Three workspaces, one switch: where you are is underlined in ink. -->
 			<nav class="nav" aria-label="Workspace">
-				<a class="nav__link" class:nav__link--on={!onPractice} aria-current={!onPractice ? 'page' : undefined} href={SKETCH}>
+				<a class="nav__link" class:nav__link--on={here === 'sketch'} aria-current={here === 'sketch' ? 'page' : undefined} href={SKETCH}>
 					Sketch
 				</a>
-				<a class="nav__link" class:nav__link--on={onPractice} aria-current={onPractice ? 'page' : undefined} href={PRACTICE}>
+				<a class="nav__link" class:nav__link--on={here === 'practice'} aria-current={here === 'practice' ? 'page' : undefined} href={PRACTICE}>
 					Practice
+				</a>
+				<a class="nav__link" class:nav__link--on={here === 'learn'} aria-current={here === 'learn' ? 'page' : undefined} href={LEARN}>
+					Learn
 				</a>
 			</nav>
 		</div>
@@ -406,7 +423,10 @@
 	.head__left {
 		display: flex;
 		align-items: center;
-		gap: var(--space-8);
+		/* At a large text size the nav drops under the wordmark instead of running
+		   off the screen (it fits one row at 100%, down to 320px). */
+		flex-wrap: wrap;
+		gap: 0 var(--space-8);
 		/* Without this, a flex child refuses to shrink below its content width and
 		   pushes the pitch select off-screen instead of wrapping. */
 		min-width: 0;
@@ -416,10 +436,11 @@
 		font-size: 1.625rem;
 	}
 
-	/* Sketch · Practice: printed words; where you are is underlined in ink. */
+	/* Sketch · Practice · Learn: printed words; where you are is underlined in ink. */
 	.nav {
 		display: inline-flex;
-		gap: var(--space-6);
+		flex-wrap: wrap;
+		gap: 0 var(--space-6);
 	}
 
 	.nav__link {
@@ -510,7 +531,7 @@
 		}
 
 		@media (pointer: coarse) {
-			min-height: 40px;
+			min-height: var(--tap);
 			padding: 0 var(--space-3);
 		}
 	}
@@ -561,27 +582,55 @@
 		}
 	}
 
-	/* Phone: wordmark + nav on one row, the controls on their own underneath.
-	   Everything fitted on one line at 375px only by overflowing the viewport. */
-	@media (max-width: 600px) {
-		.head {
-			padding: var(--space-2) var(--space-4) var(--space-3);
-			gap: var(--space-2);
-			background-size: calc(100% - 2 * var(--space-4)) var(--rule-heavy);
+	/* Tablet: the same single strip, set tighter. With three workspaces the
+	   desktop gaps need ~771px; these need ~727 with a mouse and ~751 on touch
+	   (the theme segments widen), so an iPad in portrait (768) keeps one 72px
+	   row instead of wrapping into an arrangement nobody drew. */
+	@media (max-width: 820px) {
+		.head__left,
+		.head__right {
+			column-gap: var(--space-4);
 		}
 
+		.nav {
+			column-gap: var(--space-4);
+		}
+
+		/* Keep PITCH a readable step from its select at the tighter gap. */
+		.head__right .label {
+			margin-right: calc(-1 * var(--space-2));
+		}
+	}
+
+	/* Where one row can't fit (on touch, below ~751px): wordmark + nav on one
+	   row, the controls on their own underneath — always this arrangement, never
+	   a ragged wrap. */
+	@media (max-width: 760px) {
 		.head__left,
 		.head__right {
 			flex: 1 1 100%;
 		}
 
 		.head__left {
-			gap: var(--space-6);
+			column-gap: var(--space-6);
 		}
 
 		.head__right {
 			justify-content: flex-start;
-			column-gap: var(--space-4);
+		}
+
+		.head__right .label {
+			margin-left: auto;
+		}
+	}
+
+	/* Phone: tighter gutters and a smaller wordmark. Everything fitted on one
+	   line at 375px only by overflowing the viewport. */
+	@media (max-width: 600px) {
+		.head {
+			padding: var(--space-2) var(--space-4) var(--space-3);
+			gap: var(--space-2);
+			background-size: calc(100% - 2 * var(--space-4)) var(--rule-heavy);
 		}
 
 		.head__pitch {
@@ -594,12 +643,35 @@
 			letter-spacing: 0.04em;
 		}
 
-		.head__right .label {
-			margin-left: auto;
-		}
-
 		.head__mark {
 			font-size: 1.375rem;
+		}
+	}
+
+	/* Small phones: the wordmark and three links share 288px at 320 wide, and
+	   the pitch select gets the PITCH label's room — it names itself ("Concert",
+	   "B♭ Trumpet"), and was cut to "Conce". The label stays for assistive tech. */
+	@media (max-width: 400px) {
+		.head__left,
+		.nav {
+			column-gap: var(--space-3);
+		}
+
+		.nav__link {
+			letter-spacing: 0.04em;
+		}
+
+		.head__right .label {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+
+		.head__pitch {
+			margin-left: auto;
 		}
 	}
 

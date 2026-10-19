@@ -109,6 +109,20 @@ degrees (`1 2 3 5 4 3`), set the beat value, how far it moves each repetition an
 repetitions — and save it. Saved drills persist locally, travel in the JSON backup, and get
 transposition through every key and register for free.
 
+## Learn mode
+
+A third workspace, **Learn** (the header's Sketch · Practice · Learn switch, or `/learn`),
+for hearing what chords *do* before naming them. It is being built in phases; the plan is in
+[`docs/learning-research.md`](docs/learning-research.md) (the research behind it).
+
+- **Hear home**: a cadence (I–IV–V–I, or i–iv–V–i in minor) played once with the band in any
+  key, then the home chord held, with each chord's Roman numeral beside it.
+- Everything is played by the same engine, voicing and grooves as your song, so it sounds like
+  a band rather than an ear-training app — and it always plays with the full band, whatever is
+  muted or soloed in Sketch's Band panel.
+- Coming next: ear quizzes, an explanation of your own song (including chords from outside the
+  key), lessons on a map of tracks, a review queue, and a reharmonisation lab.
+
 ## Tech stack
 
 | Concern | Choice |

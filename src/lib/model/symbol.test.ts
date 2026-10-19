@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chordFace } from './symbol';
+import { chordFace, spokenChord } from './symbol';
 
 describe('chordFace', () => {
 	it('splits root and quality', () => {
@@ -37,5 +37,47 @@ describe('chordFace', () => {
 
 	it('trims surrounding whitespace', () => {
 		expect(chordFace('  Gm7 ')).toEqual({ root: 'G', quality: 'm7', bass: '' });
+	});
+});
+
+describe('spokenChord', () => {
+	it('says the chord a musician would say', () => {
+		const cases: [string, string][] = [
+			['C', 'C major'],
+			['Am', 'A minor'],
+			['Ebm7', 'E flat minor seven'],
+			['G7', 'G seven'],
+			['Fmaj7', 'F major seven'],
+			['Bm7b5', 'B half-diminished'],
+			['C#dim7', 'C sharp diminished seven'],
+			['Caug', 'C augmented'],
+			['CmMaj7', 'C minor major seven'],
+			['C6/9', 'C six nine'],
+			['D9', 'D nine'],
+			['Gsus4', 'G sus four'],
+			['G7sus4', 'G seven sus four'],
+			['Cadd9', 'C add nine'],
+			['G7b9', 'G seven flat nine'],
+			['Fmaj7#11', 'F major seven sharp eleven'],
+			['A13', 'A thirteen'],
+			['E7alt', 'E seven altered']
+		];
+		for (const [symbol, spoken] of cases) expect(spokenChord(symbol), symbol).toBe(spoken);
+	});
+
+	it('reads a slash bass as "over"', () => {
+		expect(spokenChord('Cm7/Eb')).toBe('C minor seven over E flat');
+		expect(spokenChord('C/G')).toBe('C major over G');
+	});
+
+	it('returns anything that is not a chord as typed', () => {
+		expect(spokenChord('')).toBe('');
+		expect(spokenChord('N.C.')).toBe('N.C.');
+	});
+
+	it('never lets a raw flat or sharp sign through for an ordinary chord', () => {
+		for (const root of ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'])
+			for (const q of ['', 'm', '7', 'maj7', 'm7', 'm7b5', 'dim7', '7b9', '7#9', '13'])
+				expect(spokenChord(root + q), root + q).not.toMatch(/[b#♭♯]\b|[#♭♯]/);
 	});
 });
