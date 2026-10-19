@@ -27,6 +27,7 @@ import { view } from './view.svelte';
 import { drills } from './drills.svelte';
 import { notice } from './notice.svelte';
 import type {
+	Bar,
 	BassInstrumentId,
 	BassMode,
 	CompPattern,
@@ -85,8 +86,9 @@ class ProgressionStore {
 	private draftable = true;
 	private draftTimer: ReturnType<typeof setTimeout> | undefined;
 
-	/** The "Replaced … · Undo" notice while it's up. Any other history move
-	 *  retires it — its Undo would otherwise undo that move instead. */
+	/** The "Replaced … · Undo" notice while it's up (or replaceBars' "Used …
+	 *  · Undo"). Any other history move retires it — its Undo would otherwise
+	 *  undo that move instead. */
 	private replaceNoticeId: number | null = null;
 
 	/** Songs that recently left the canvas, newest first — the start screen offers them back. */
@@ -515,6 +517,37 @@ class ProgressionStore {
 		this.clampLoopRange();
 		this.touch();
 		if (this.isPlayingThis) void this.play();
+	}
+
+	/**
+	 * Swap a run of bars for new versions of THE SAME bars (same ids, same
+	 * count): the reharm lab's "Use in my song", one undo step. `startBar` is the
+	 * song's own index; a caller working on loopBars adds the loop's start
+	 * (resolveLoopRange) back first. Refused, returning false, unless every bar
+	 * it replaces has the id it brings, so an edit computed against an older
+	 * version of the song can never land on bars that have moved, and unless
+	 * every bar holds 1–MAX_SLOTS_PER_BAR slots of a sane length.
+	 *
+	 * The bar count doesn't change, so loopRange stays valid (clamped anyway).
+	 * Slots may split, which shifts every later slot's global index: the song
+	 * restarts if it is what's playing. `announce` is a notice offering the Undo.
+	 */
+	replaceBars(startBar: number, bars: Bar[], announce?: string): boolean {
+		const current = this.current.bars;
+		if (bars.length === 0 || startBar < 0 || startBar + bars.length > current.length) return false;
+		if (bars.some((bar, k) => bar.id !== current[startBar + k].id)) return false;
+		const sane = (bar: Bar) =>
+			bar.slots.length >= 1 &&
+			bar.slots.length <= MAX_SLOTS_PER_BAR &&
+			bar.slots.every((slot) => typeof slot.chord === 'string' && slot.beats > 0 && slot.beats <= 64);
+		if (!bars.every(sane)) return false;
+		this.checkpoint();
+		this.current.bars.splice(startBar, bars.length, ...($state.snapshot(bars) as Bar[]));
+		this.clampLoopRange();
+		this.touch();
+		if (announce) this.replaceNoticeId = notice.show(announce, { label: 'Undo', run: () => this.undo() });
+		if (this.isPlayingThis) void this.play(); // slots split: resync audio + playhead
+		return true;
 	}
 
 	setSlotChord(barIndex: number, slotIndex: number, chord: string): void {

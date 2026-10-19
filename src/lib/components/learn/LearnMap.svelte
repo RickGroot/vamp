@@ -51,8 +51,7 @@
 	onMount(() => workspace.register(() => {}));
 
 	const SOON = [
-		{ name: 'Review', text: "A few minutes of mixed practice on what you've learned, spaced over days." },
-		{ name: 'Lab', text: 'Swap in a substitute chord and hear both versions back to back.' }
+		{ name: 'Review', text: "A few minutes of mixed practice on what you've learned, spaced over days." }
 	];
 </script>
 

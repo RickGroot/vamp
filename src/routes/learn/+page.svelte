@@ -25,7 +25,7 @@
 		{ id: 'ear', label: 'Ear', ready: true },
 		{ id: 'song', label: 'Your song', ready: true },
 		{ id: 'review', label: 'Review', ready: false },
-		{ id: 'lab', label: 'Lab', ready: false }
+		{ id: 'lab', label: 'Lab', ready: true }
 	];
 	const shown = MODES.filter((m) => m.ready);
 
