@@ -6,30 +6,20 @@
 	import { onMount } from 'svelte';
 	import { Note } from 'tonal';
 	import { displayChord } from '$lib/audio/transpose';
-	import { classifyChord } from '$lib/model/chords';
-	import { PRESET_ROOTS } from '$lib/model/presets';
 	import { chordFace } from '$lib/model/symbol';
 	import { numeralOf } from '$lib/model/numerals';
 	import type { KeyInfo } from '$lib/model/key';
 	import { cadenceSections, learnPlan } from '$lib/learn/plan';
+	import { KEY_ROOTS as ROOTS, spellKey as respell } from '$lib/learn/keys';
 	import { learn } from '$lib/stores/learn.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
-	import ChordSymbol from '../ChordSymbol.svelte';
-	import Numeral from '../Numeral.svelte';
+	import ChordChip from './ChordChip.svelte';
 
 	const OWNER = 'map:hear-home';
 	/** One chord of the cadence on its own (a tapped chip). */
 	const CHORD_OWNER = 'map:hear-home:chord';
 
-	// Keys as they are usually written: flats for the major keys (PRESET_ROOTS),
-	// sharps where a minor key is normally spelled with them — C♯ minor, not D♭.
-	const ROOTS: Record<KeyInfo['mode'], string[]> = {
-		major: PRESET_ROOTS,
-		minor: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B']
-	};
-	const respell = (root: string, mode: KeyInfo['mode']) =>
-		ROOTS[mode].find((r) => Note.chroma(r) === Note.chroma(root)) ?? root;
 	/** A root as an <option> can print it: real ♭ / ♯ (no SVG inside an option). */
 	const rootLabel = (root: string) => {
 		const shown = displayChord(root, view.offset);
@@ -118,7 +108,6 @@
 	onMount(() => workspace.register(toggle));
 
 	const SOON = [
-		{ name: 'Ear', text: 'Hear a few bars with the band, then name the chords.' },
 		{ name: 'Your song', text: 'What every chord in your sketch is doing, including the borrowed ones.' },
 		{ name: 'Lessons', text: 'Short tracks from three chords to jazz forms, each tried out in Sketch.' },
 		{ name: 'Review', text: "A few minutes of mixed practice on what you've learned, spaced over days." },
@@ -168,17 +157,7 @@
 		{#each chords as symbol, i (i)}
 			{@const isHome = finished && (numerals[i] === 'I' || numerals[i] === 'i')}
 			<li>
-				<button
-					class="chip"
-					class:chip--on={sounding === i}
-					style:--q="var(--c-{classifyChord(symbol)})"
-					aria-current={sounding === i ? 'true' : undefined}
-					onclick={() => hear(i)}
-				>
-					<span class="chip__chord"><ChordSymbol symbol={displayChord(symbol, view.offset)} /></span>
-					<span class="chip__num"><Numeral numeral={numerals[i]} /></span>
-					{#if isHome}<span class="label chip__home">Home</span>{/if}
-				</button>
+				<ChordChip {symbol} numeral={numerals[i]} on={sounding === i} mark={isHome ? 'Home' : undefined} onclick={() => hear(i)} />
 			</li>
 		{/each}
 	</ol>
@@ -308,9 +287,8 @@
 		font-weight: 600;
 	}
 
-	/* The chords as a printed row: each under a tab of its ink; the one sounding
-	   is a solid block of that ink, as on the Sketch chart, with an ink rule
-	   round it so it reads without the colour (yellow on the wash is faint). */
+	/* The chords as a printed row (ChordChip): each under a tab of its ink; the
+	   one sounding is a solid block of that ink, as on the Sketch chart. */
 	.chips {
 		list-style: none;
 		margin: 0;
@@ -318,62 +296,6 @@
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: var(--space-2);
-	}
-
-	.chip {
-		position: relative;
-		container-type: inline-size;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--space-1);
-		width: 100%;
-		min-height: var(--tap);
-		padding: var(--space-2) var(--space-3) var(--space-3);
-		border: 0;
-		border-top: 6px solid var(--q);
-		border-radius: 0;
-		background: var(--wash);
-		font-family: inherit;
-		color: var(--ink);
-		text-align: left;
-		cursor: pointer;
-
-		&:hover {
-			background: var(--rule);
-		}
-	}
-
-	.chip--on,
-	.chip--on:hover {
-		background: var(--q);
-		color: var(--on-pigment);
-		box-shadow: inset 0 0 0 var(--rule-heavy) var(--ink);
-	}
-
-	/* Sized to the chip, never past it: a chord can't spill into its neighbour
-	   at a large text size. */
-	.chip__chord {
-		font-size: min(2.25rem, 40cqi);
-		line-height: 1;
-	}
-
-	.chip__num {
-		font-size: 0.9375rem;
-		font-weight: 800;
-	}
-
-	/* Bottom right, level with the numeral: the chord's name owns the top of
-	   the chip, and on a phone a wide one (E♭m) reaches the right edge. */
-	.chip__home {
-		position: absolute;
-		right: var(--space-2);
-		bottom: var(--space-3);
-		color: var(--ink);
-	}
-
-	.chip--on .chip__home {
-		color: var(--on-pigment);
 	}
 
 	.next {
