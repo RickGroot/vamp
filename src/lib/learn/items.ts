@@ -89,6 +89,13 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		spec: { kind: 'function', mode: 'major', chords: [c(0), c(5), c(7), c(10)], length: 4 }
 	},
 	{
+		// Lesson 3.3's quiz: the minor key's chords on a major home.
+		id: 'fn-borrowed',
+		title: 'Borrowed chords',
+		lede: 'Home, four and five, plus the minor four, flat six and flat seven from the minor key.',
+		spec: { kind: 'function', mode: 'major', chords: [c(0), c(5), c(7), c(5, 'm'), c(8), c(10)], length: 4 }
+	},
+	{
 		id: 'fn-whole-key',
 		title: 'The whole key',
 		lede: 'All six everyday chords of a major key, minor ones included.',

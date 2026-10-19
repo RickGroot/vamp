@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { BOX_DAYS, DAY_MS, recordResult } from '$lib/learn/srs';
 import { QUIZ_ITEMS } from '$lib/learn/items';
+import { LESSONS } from '$lib/learn/curriculum';
 import type { DraftStorage } from './draft';
-import { emptyLearn, LEARN_KEY, MAX_ITEMS, migrateLearn, readLearn, writeLearn } from './learn';
+import { emptyLearn, LEARN_KEY, MAX_ITEMS, MAX_LESSONS, MAX_STEP, migrateLearn, readLearn, writeLearn } from './learn';
 
 const NOW = Date.UTC(2026, 9, 19, 12);
 
@@ -107,6 +108,72 @@ describe('migrateLearn: hostile input', () => {
 	it('every shipped item id passes the gate', () => {
 		const items = Object.fromEntries(QUIZ_ITEMS.map((i) => [i.id, { box: 1, due: NOW, seen: 0, last: 0 }]));
 		expect(Object.keys(migrateLearn({ items }, NOW).items)).toEqual(QUIZ_ITEMS.map((i) => i.id));
+	});
+});
+
+describe('lesson progress', () => {
+	it('round-trips with the items', () => {
+		const { storage } = fakeStorage();
+		const progress = emptyLearn();
+		progress.items['loop-pop'] = recordResult(undefined, true, NOW);
+		progress.lessons = { 'home-hear-home': { step: 4, done: NOW }, 'loops-axis': { step: 2, done: 0 } };
+		expect(writeLearn(storage, progress)).toBe(true);
+		expect(readLearn(storage, NOW)).toEqual(progress);
+	});
+
+	it('still loads progress saved before lessons existed', () => {
+		const { storage, data } = fakeStorage();
+		const old = { version: 1, items: { 'fn-three-chords': { box: 3, due: NOW, seen: 4, last: NOW - DAY_MS } } };
+		data.set(LEARN_KEY, JSON.stringify(old));
+		const out = readLearn(storage, NOW);
+		expect(out.items['fn-three-chords']).toEqual(old.items['fn-three-chords']);
+		expect(out.lessons).toEqual({});
+		expect(out.version).toBe(1);
+	});
+
+	it('reads lessons even when the items are missing or broken', () => {
+		for (const items of [undefined, null, [], 'x']) {
+			const out = migrateLearn({ items, lessons: { 'loops-axis': { step: 1, done: 0 } } }, NOW);
+			expect(out.items).toEqual({});
+			expect(out.lessons).toEqual({ 'loops-axis': { step: 1, done: 0 } });
+		}
+	});
+
+	const lesson = (fields: unknown) => migrateLearn({ lessons: { 'loops-axis': fields } }, NOW).lessons!['loops-axis'];
+
+	it('clamps the step and repairs the finish date', () => {
+		expect(lesson({ step: 2.7, done: 0 })).toEqual({ step: 2, done: 0 });
+		expect(lesson({ step: -3 }).step).toBe(0);
+		expect(lesson({ step: 1e9 }).step).toBe(MAX_STEP);
+		expect(lesson({ step: 'two', done: 'today' })).toEqual({ step: 0, done: 0 });
+		expect(lesson({ step: Number.NaN, done: Number.NaN })).toEqual({ step: 0, done: 0 });
+		expect(lesson({ done: NOW + 365 * DAY_MS }).done).toBe(NOW);
+		expect(lesson({ done: -1 }).done).toBe(0);
+		expect(lesson({})).toEqual({ step: 0, done: 0 });
+	});
+
+	it('drops entries that are not records, and never lets __proto__ in', () => {
+		const raw = JSON.parse(
+			'{"lessons":{"__proto__":{"step":3,"done":1},"Bad Id":{"step":1},"loops-axis":7,"home-hear-home":{"step":1,"done":0}}}'
+		);
+		const out = migrateLearn(raw, NOW);
+		expect(Object.keys(out.lessons!)).toEqual(['home-hear-home']);
+		expect(Object.getPrototypeOf(out.lessons)).toBe(Object.prototype);
+		for (const bad of [null, 42, 'x', []]) expect(migrateLearn({ lessons: bad }, NOW).lessons).toEqual({});
+	});
+
+	it('caps a flood of lessons, keeping the real ones first', () => {
+		const lessons: Record<string, unknown> = {};
+		for (let i = 0; i < 10_000; i++) lessons[`junk-${i}`] = { step: 1, done: 0 };
+		lessons['loops-axis'] = { step: 3, done: NOW };
+		const out = migrateLearn({ version: 1, lessons }, NOW);
+		expect(Object.keys(out.lessons!)).toHaveLength(MAX_LESSONS);
+		expect(out.lessons!['loops-axis']).toEqual({ step: 3, done: NOW });
+	});
+
+	it('every shipped lesson id passes the gate', () => {
+		const lessons = Object.fromEntries(LESSONS.map((l) => [l.id, { step: 0, done: 0 }]));
+		expect(Object.keys(migrateLearn({ lessons }, NOW).lessons!)).toEqual(LESSONS.map((l) => l.id));
 	});
 });
 

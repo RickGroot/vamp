@@ -312,3 +312,57 @@ The second mode explains the sketch on the canvas, in the key you hear as home.
   everywhere; "secondary dominant" or "borrowed" is printed in the row.
 - **An empty canvas** gets a card that says what the page will do, with Go to
   Sketch and one example to try.
+
+### Lessons and the map
+
+The map is the sleeve's back: a tracklist you can follow as a route.
+
+- **Next up** comes first: a printed card with the suggested lesson's name in the
+  display face (its own case), where it sits (**TRACK 1** · Three chords · Lesson
+  1.1), what it trains and how many steps, then **START LESSON** (or **CONTINUE AT
+  STEP 3**) inked solid. A first visit says **START HERE**; with every lesson done it
+  says so and points to Ear.
+- **TRACKS** under a heavy rule, as a route: one heavy ink line with a square stop
+  at each track. The stop is open while a track has work left, half-inked once
+  you've started it, inked solid when it's done, and grey for a track still to
+  come, whose stretch of the line is dashed. The shared start runs full width; then
+  the line **forks** into two columns, **POP & ROCK** and **JAZZ**, drawn as a
+  bracket that bends right into the jazz line, and both sides bend back into one
+  dashed line for the tracks after them (**BOTH SIDES**). The fork stays two columns
+  down to 320 wide: there, a side drops each track's summary and puts a lesson's
+  state under its title.
+- **A track** is its number and name in the display face (own case, never
+  capitals), "2 OF 3 DONE" or **COMING LATER**, and one line on what it is about. On
+  a wide line the track's text sits left and its lessons right.
+- **A lesson** is a tracklist row under a hairline: a small square (open, half,
+  inked, like the stops), its number (1.2), its name, and its state at the right:
+  **DONE**, **STEP 3 OF 5**, **NEXT UP** (with a heavy rule under the row) or how
+  many steps it has. Every row is a link: the order is a suggestion, never a lock.
+- **Information, never a score**: no percentages, streaks or badges anywhere on
+  the map.
+
+A lesson opens in place of the map (`?lesson=`), the Map tab still underlined:
+
+- **The head**: **THE MAP** with a drawn arrow to go back, the track and lesson
+  number as a label (the track's name in its own case), the lesson's name in the
+  display face, what it trains and how many steps.
+- **The rail**: one cell per step under a heavy rule, a big condensed number and
+  its kind (**LISTEN**, **READ**, **QUIZ**, **TRY**), the step you're on underlined
+  in ink, the ones behind you in fuller ink than the ones ahead. Any step is a tap
+  away. At 320 the numbers carry the rail alone.
+- **A listen step** is the Hear home card, generalised: what to listen for in one
+  sentence, then the card's transport (the key as a select with its mode printed
+  beside it, **Play** in the key's ink, the status), and the passage as chips, four
+  to a row like a chart, each one tap from being heard alone. A step about home
+  marks the tonic chips **HOME** once it has played. **ANOTHER KEY** follows a run.
+- **A read step** is set on the board, not in a box, at reading size (19px on a
+  desktop), numerals drawn and set heavier so "home is i" reads as a numeral.
+- **A quiz step** is the Ear card itself, with a quiet line under it counting what
+  you've answered against a suggested number. Never a gate.
+- **A try step** is a card: what to do in Sketch, the key, the song's chords as
+  chips, then **TRY IT IN SKETCH** inked solid with one line on what happens to the
+  sketch already there ("Undo in Sketch brings yours back").
+- **BACK** and **NEXT: READ** close every step; the last one says **FINISH LESSON**.
+  Finishing prints **LESSON DONE**, the exercises it put into review by name with
+  when each is back ("due now", "back in 2 days"), and **NEXT** with the next
+  lesson's name in its own case.
