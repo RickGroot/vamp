@@ -32,6 +32,9 @@ import { INSTRUMENT_ORDER } from '$lib/audio/instruments';
 import type { DrillDefinition } from '$lib/practice/types';
 import { parseProgressionInput } from './import';
 import { importDrills, listDrills } from './drillDb';
+import type { DraftStorage } from './draft';
+import { backupExtras, salvaged, type ImportSummary } from './importSummary';
+import { importLearn, learnForBackup, type LearnImport } from './learn';
 
 const DB_NAME = 'vamp';
 const DB_VERSION = 2;
@@ -143,38 +146,55 @@ export async function deleteProgression(id: string): Promise<void> {
 
 // ---- export / import ----
 
-export async function exportBackup(): Promise<VampBackup> {
+/**
+ * Everything worth keeping, as one envelope. Learn progress lives in
+ * localStorage, so it is read from the Storage-shaped `learnStorage` the caller
+ * hands in (storage never reads a store); null leaves it out.
+ */
+export async function exportBackup(learnStorage: DraftStorage | null = null): Promise<VampBackup> {
 	const progressions = await listProgressions();
 	const drills = await listDrills();
+	const learn = learnStorage ? learnForBackup(learnStorage) : null;
 	return {
 		app: 'vamp',
 		schemaVersion: CURRENT_SCHEMA_VERSION,
 		exportedAt: Date.now(),
 		progressions,
-		// Omitted entirely when there are none, so a backup looks exactly as it
-		// did before Practice mode for anyone who never made a custom drill.
-		...(drills.length ? { drills } : {})
+		// Each extra is omitted entirely when there is none, so a backup looks
+		// exactly as it did before Practice and Learn for anyone who never used them.
+		...(drills.length ? { drills } : {}),
+		...(learn ? { learn } : {})
 	};
 }
 
 /**
  * Parse, migrate and store pasted / uploaded progression JSON. Forgiving about
  * shape (a Vamp backup, a bare progression, an array, or fenced/prose-wrapped
- * text — see parseProgressionInput). Returns the migrated progressions stored.
- * Throws a human-readable Error the UI surfaces on failure.
+ * text — see parseProgressionInput). A backup's Learn progress is MERGED into
+ * `learnStorage` (never replacing it); null skips it. Returns what came in
+ * (importMessage words it). Throws a human-readable Error the UI surfaces when
+ * nothing at all did.
  */
-export async function importProgressions(text: string): Promise<Progression[]> {
-	// Drills first, and independently: a malformed `drills` field must never cost
-	// the user the songs beside it, and a backup whose owner has drills but no
-	// saved songs must still import rather than throwing "no songs found".
-	let drillsImported = 0;
-	try {
-		const parsed = JSON.parse(text) as { drills?: unknown };
-		if (parsed && Array.isArray(parsed.drills)) {
-			drillsImported = (await importDrills(parsed.drills)).length;
+export async function importProgressions(text: string, learnStorage: DraftStorage | null = null): Promise<ImportSummary> {
+	// The extras first, each on its own: a malformed `drills` or `learn` field
+	// must never cost the user the songs beside it, and a backup with extras but
+	// no saved songs must still import rather than throwing "no songs found".
+	const extras = backupExtras(text);
+	let drills = 0;
+	if (extras.drills) {
+		try {
+			drills = (await importDrills(extras.drills)).length;
+		} catch {
+			/* storage refused the drills — the songs are handled below regardless */
 		}
-	} catch {
-		/* not a JSON envelope, or no drills — songs are handled below regardless */
+	}
+	let learn: LearnImport | null = null;
+	if (extras.learn !== undefined && learnStorage) {
+		try {
+			learn = importLearn(learnStorage, extras.learn);
+		} catch {
+			/* importLearn never throws; belt and braces for the songs below */
+		}
 	}
 
 	let migrated: Progression[];
@@ -183,7 +203,7 @@ export async function importProgressions(text: string): Promise<Progression[]> {
 	} catch (err) {
 		// Only stay quiet when we actually salvaged something; otherwise the UI
 		// must still tell the user their file had nothing in it.
-		if (drillsImported > 0) return [];
+		if (salvaged(drills, learn)) return { songs: [], drills, learn };
 		throw err;
 	}
 
@@ -191,7 +211,7 @@ export async function importProgressions(text: string): Promise<Progression[]> {
 	const tx = db.transaction(STORE, 'readwrite');
 	await Promise.all(migrated.map((p) => tx.store.put(p)));
 	await tx.done;
-	return migrated;
+	return { songs: migrated, drills, learn };
 }
 
 // ---- defensive migration / coercion ----

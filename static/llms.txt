@@ -16,8 +16,10 @@ Follow these rules; they are what makes the result paste cleanly.
 2. **One song = one JSON object** in the shape below. Several songs = a backup envelope:
    `{ "app": "vamp", "progressions": [ ...songs ] }`. Vamp opens the first song and saves
    all of them to its library. (A backup exported from Vamp may also carry a `drills` array
-   — the user's own practice patterns. Leave it out when you write one; if you are editing a
-   backup a user gave you, pass it through untouched.)
+   — the user's own practice patterns — and a `learn` object — what they have learned in
+   Learn: their ear exercises and lessons, merged into what is saved on import. Leave both
+   out when you write one; if you are editing a backup a user gave you, pass them through
+   untouched.)
 3. **Do not include `id`, `createdAt` or `updatedAt`.** Vamp generates them. A copied `id`
    that matches a song the user already saved would overwrite that song.
 4. **The beats in a bar add up to `timeSignature.numerator`.** A whole bar in 4/4 is

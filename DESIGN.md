@@ -410,3 +410,34 @@ yours, A/B.
 - **Empty.** A blank canvas gets a card that says what the Lab does, with Go to
   Sketch and one example to try. Chords with nothing to change say why (two chords in
   a row, room in a bar to split one, and it works on the loop) and offer the same.
+
+### Review
+
+A few minutes of mixed practice on what is due. One printed card at a time, then a
+tracklist of what is scheduled:
+
+- **DUE NOW**: the due exercises as tracklist rows under hairlines (the name in the
+  display face, its own case; its kind as a label; "due now" at the right), one line
+  on what a session does, and **START REVIEW · 10 QUESTIONS** inked solid, the count
+  exact because the session is built before you tap.
+- **NOTHING DUE** names the next exercise back and when ("Three chords, tomorrow"),
+  with **PRACTISE EARLY** as a plain box beside one line on what that means: an early
+  right answer moves nothing later, a miss still brings it back sooner. With nothing
+  scheduled at all, **NOTHING TO REVIEW YET** points to Ear and the map.
+- **COMING BACK**, under a heavy rule: every scheduled exercise and when it is back,
+  soonest first.
+- **A session** is the Ear card itself, one per question, with **QUESTION 3 OF 10**
+  above it (and **· PRACTISING EARLY** when it is) and a quiet **END REVIEW** at the
+  right. Each card plays its question as it appears, the way Next does in Ear; its
+  primary button reads **NEXT QUESTION**, then **FINISH REVIEW**. The exercise
+  changes every question and the kind whenever it can, so the title on the card is
+  how you know what's being asked.
+- **REVIEWED** closes it: how many questions across how many exercises, then each
+  exercise with how many questions it had and when it comes back, and the one rule
+  in a line ("A miss brings an exercise back tomorrow; each answer given on time
+  sends it further out"). No score, no percentage, no streak: when it comes back is
+  the feedback.
+
+With Review built, every Learn mode is in the tab row, so the map's **COMING UP**
+list is gone. Below 400px the five mode names tighten their gaps and tracking, as the
+header's nav does, so the row never wraps at 320.

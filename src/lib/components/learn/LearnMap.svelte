@@ -49,10 +49,6 @@
 
 	// The map plays nothing; Space must not start the Sketch song from here.
 	onMount(() => workspace.register(() => {}));
-
-	const SOON = [
-		{ name: 'Review', text: "A few minutes of mixed practice on what you've learned, spaced over days." }
-	];
 </script>
 
 {#snippet trackEntry(track: Track)}
@@ -150,19 +146,6 @@
 			</ol>
 		</section>
 	</div>
-</section>
-
-<!-- What else is coming to Learn. Greyed and inert: names, not links. -->
-<section class="soon" aria-labelledby="soon-title">
-	<h2 id="soon-title" class="display soon__title">Coming up</h2>
-	<ul class="soon__list">
-		{#each SOON as item (item.name)}
-			<li class="soon__item">
-				<span class="display soon__name">{item.name}</span>
-				<span class="hint soon__text">{item.text}</span>
-			</li>
-		{/each}
-	</ul>
 </section>
 
 <style lang="scss">
@@ -469,41 +452,6 @@
 		color: var(--ink-3);
 	}
 
-	/* ---- Coming up: the sleeve's back, a greyed tracklist ---- */
-	.soon {
-		border-top: var(--rule-heavy) solid var(--ink);
-		padding-top: var(--space-3);
-	}
-
-	.soon__title {
-		margin: 0 0 var(--space-2);
-		font-size: 1.75rem;
-	}
-
-	.soon__list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-
-	.soon__item {
-		display: grid;
-		grid-template-columns: 9rem 1fr;
-		align-items: baseline;
-		gap: var(--space-4);
-		padding: var(--space-2) 0;
-		border-bottom: 1px solid var(--rule);
-	}
-
-	.soon__name {
-		font-size: 1.25rem;
-		color: var(--ink-3);
-	}
-
-	.soon__text {
-		margin: 0;
-	}
-
 	@media (max-width: 640px) {
 		.up {
 			padding: var(--space-3) var(--space-4) var(--space-4);
@@ -549,11 +497,6 @@
 
 		.fork .lesson__title {
 			font-size: 0.9375rem;
-		}
-
-		.soon__item {
-			grid-template-columns: 1fr;
-			gap: 0;
 		}
 	}
 </style>

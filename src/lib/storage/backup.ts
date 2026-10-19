@@ -21,9 +21,18 @@ export function safeFileName(name: string): string {
 	return trimmed || 'vamp';
 }
 
-/** Serialise all saved progressions and trigger a download. */
+/** localStorage, or null where merely touching it throws (some privacy modes). */
+function localStorageOrNull(): Storage | null {
+	try {
+		return typeof localStorage === 'undefined' ? null : localStorage;
+	} catch {
+		return null;
+	}
+}
+
+/** Serialise all saved progressions (plus drills and Learn progress) and trigger a download. */
 export async function downloadBackup(): Promise<void> {
-	const backup = await exportBackup();
+	const backup = await exportBackup(localStorageOrNull());
 	const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
 	const stamp = new Date(backup.exportedAt).toISOString().slice(0, 10);
 	downloadBlob(blob, `vamp-backup-${stamp}.json`);

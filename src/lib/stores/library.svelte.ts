@@ -8,6 +8,18 @@ import {
 	saveProgression
 } from '$lib/storage/db';
 import type { Progression } from '$lib/model/types';
+import type { ImportSummary } from '$lib/storage/importSummary';
+import { browser } from '$app/environment';
+import { learnProgress } from './learnProgress.svelte';
+
+/** localStorage, or null where merely touching it throws (some privacy modes). */
+function safeStorage(): Storage | null {
+	try {
+		return browser ? localStorage : null;
+	} catch {
+		return null;
+	}
+}
 
 class LibraryStore {
 	items = $state<Progression[]>([]);
@@ -62,12 +74,15 @@ class LibraryStore {
 		await this.refresh();
 	}
 
-	/** Import pasted or uploaded JSON; returns the progressions added. Throws on
-	 *  bad input (the caller shows the message); storage errors set `error` too. */
-	async import(text: string): Promise<Progression[]> {
-		const imported = await importProgressions(text);
+	/** Import pasted or uploaded JSON; returns what came in (importMessage words
+	 *  it). Throws on bad input (the caller shows the message); storage errors
+	 *  set `error` too. A backup's Learn progress is merged into `vamp:learn`, and
+	 *  the progress store re-reads it so its next write can't undo the merge. */
+	async import(text: string): Promise<ImportSummary> {
+		const summary = await importProgressions(text, safeStorage());
+		if (summary.learn) learnProgress.reload();
 		await this.refresh();
-		return imported;
+		return summary;
 	}
 }
 

@@ -16,6 +16,11 @@
 	// chord played fills the next slot exactly as a tap would, and nothing played
 	// here reaches the song. The capture is taken per question and released on
 	// the next one and on unmount, so back on Sketch chords go into the song again.
+	//
+	// The Review mode (Phase 4) asks one question per card, interleaving items:
+	// it passes `onnext` (its Next moves to the next item instead of another
+	// question of this one), `onanswer` (to list what you reviewed) and
+	// `autoplay` (the next card plays as soon as it mounts, like Next here does).
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { displayChord } from '$lib/audio/transpose';
 	import { patternInfo } from '$lib/model/analysis';
@@ -36,7 +41,22 @@
 	import AnswerPad, { type PadOption } from './AnswerPad.svelte';
 	import ChordChip from './ChordChip.svelte';
 
-	let { item }: { item: QuizItem } = $props();
+	let {
+		item,
+		autoplay = false,
+		onanswer,
+		onnext,
+		nextLabel = 'Next question'
+	}: {
+		item: QuizItem;
+		/** Play the first question as soon as the card mounts. */
+		autoplay?: boolean;
+		/** Told once per answered question, after it is recorded. */
+		onanswer?: (correct: boolean) => void;
+		/** What the primary button does once answered; default: another question of this item. */
+		onnext?: () => void;
+		nextLabel?: string;
+	} = $props();
 
 	// The card is keyed by item (EarMode), so the item never changes under it.
 	// svelte-ignore state_referenced_locally
@@ -179,6 +199,7 @@
 		}
 		grade = gradeAnswer(question, given);
 		learnProgress.record(item.id, grade.correct);
+		onanswer?.(grade.correct);
 		// The pad is now marked and disabled: keep keyboard focus on the way on.
 		void tick().then(() => nextButton?.focus());
 	}
@@ -265,7 +286,11 @@
 	}
 
 	// Space plays this card's question: always the one on screen.
-	onMount(() => workspace.register(toggle));
+	onMount(() => {
+		const release = workspace.register(toggle);
+		if (autoplay) play();
+		return release;
+	});
 
 	// Leaving the item (another exercise, another mode): stop and forget it.
 	onDestroy(() => {
@@ -395,7 +420,9 @@
 	{#if grade || (heard && question.key)}
 		<div class="next" role="group" aria-label="Next">
 			{#if grade}
-				<button class="bar-btn bar-btn--primary" bind:this={nextButton} onclick={next}>Next question</button>
+				<button class="bar-btn bar-btn--primary" bind:this={nextButton} onclick={() => (onnext ? onnext() : next())}
+					>{nextLabel}</button
+				>
 			{/if}
 			{#if heard && question.key}
 				<button class="bar-btn" onclick={playQuestionOnly}>{question.kind === 'loop' ? 'Just the loop' : 'Just the chords'}</button>

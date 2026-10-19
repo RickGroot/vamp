@@ -30,12 +30,16 @@ class LearnProgressStore {
 	lessons = $state.raw<Record<string, LessonProgress>>({});
 
 	constructor() {
+		this.reload();
+	}
+
+	/** Re-read what is stored: after an import merged a backup's progress into it. */
+	reload(): void {
 		const storage = safeStorage();
-		if (storage) {
-			const stored = readLearn(storage);
-			this.items = stored.items;
-			this.lessons = stored.lessons ?? {};
-		}
+		if (!storage) return;
+		const stored = readLearn(storage);
+		this.items = stored.items;
+		this.lessons = stored.lessons ?? {};
 	}
 
 	get(itemId: string): ItemProgress | undefined {

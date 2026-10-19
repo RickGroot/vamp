@@ -24,7 +24,7 @@
 		{ id: 'map', label: 'Map', ready: true },
 		{ id: 'ear', label: 'Ear', ready: true },
 		{ id: 'song', label: 'Your song', ready: true },
-		{ id: 'review', label: 'Review', ready: false },
+		{ id: 'review', label: 'Review', ready: true },
 		{ id: 'lab', label: 'Lab', ready: true }
 	];
 	const shown = MODES.filter((m) => m.ready);
@@ -176,6 +176,18 @@
 
 		.modes {
 			gap: 0 var(--space-4);
+		}
+	}
+
+	/* Five modes share 288px at 320 wide: tighter gaps and tracking, as the
+	   header's nav does below 400px, so the row doesn't wrap. */
+	@media (max-width: 400px) {
+		.modes {
+			gap: 0 var(--space-3);
+		}
+
+		.modes__link {
+			letter-spacing: 0.04em;
 		}
 	}
 </style>
