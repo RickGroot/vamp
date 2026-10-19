@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOX_DAYS, BOX_MAX, DAY_MS, isDue, newProgress, recordResult, type ItemProgress } from './srs';
+import { BOX_DAYS, BOX_MAX, DAY_MS, enrol, isDue, newProgress, recordResult, type ItemProgress } from './srs';
 
 const T0 = Date.UTC(2026, 9, 19, 12);
 const days = (n: number) => T0 + n * DAY_MS;
@@ -44,5 +44,31 @@ describe('recordResult', () => {
 		}
 		expect(p!.box).toBe(BOX_MAX);
 		expect(p!.due - p!.last).toBe(BOX_DAYS[BOX_MAX - 1] * DAY_MS);
+	});
+});
+
+describe('enrol', () => {
+	const NOW = Date.UTC(2026, 9, 19, 12);
+
+	it('puts new items into box 1, due now, unseen', () => {
+		const out = enrol({}, ['fn-three-chords', 'loop-pop'], NOW);
+		expect(out).toEqual({ 'fn-three-chords': newProgress(NOW), 'loop-pop': newProgress(NOW) });
+		expect(out['loop-pop']).toMatchObject({ box: 1, due: NOW, seen: 0 });
+		expect(isDue(out['loop-pop'], NOW)).toBe(true);
+	});
+
+	it('never demotes an item that is already scheduled', () => {
+		const known: ItemProgress = { box: 4, due: NOW + 8 * DAY_MS, seen: 9, last: NOW - DAY_MS };
+		const items = { 'fn-three-chords': known };
+		const out = enrol(items, ['fn-three-chords', 'loop-pop'], NOW);
+		expect(out['fn-three-chords']).toBe(known);
+		expect(out['loop-pop'].box).toBe(1);
+		expect(items).toEqual({ 'fn-three-chords': known }); // input untouched
+	});
+
+	it('keeps a hostile id a plain key', () => {
+		const out = enrol({}, ['__proto__'], NOW);
+		expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+		expect(Object.keys(out)).toEqual(['__proto__']);
 	});
 });

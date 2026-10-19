@@ -9,8 +9,10 @@
 	import { onDestroy, untrack } from 'svelte';
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
+	import { lessonById } from '$lib/learn/curriculum';
 	import { learn } from '$lib/stores/learn.svelte';
 	import LearnMap from '$lib/components/learn/LearnMap.svelte';
+	import LessonView from '$lib/components/learn/LessonView.svelte';
 	import EarMode from '$lib/components/learn/EarMode.svelte';
 	import ExplainMode from '$lib/components/learn/ExplainMode.svelte';
 	import ReviewMode from '$lib/components/learn/ReviewMode.svelte';
@@ -32,6 +34,13 @@
 		return shown.find((m) => m.id === wanted)?.id ?? 'map';
 	});
 
+	// A lesson is a place on the map: `?lesson=<id>` (an unknown id is the map).
+	const lesson = $derived.by(() => {
+		if (mode !== 'map') return null;
+		const id = page.url.searchParams.get('lesson');
+		return id ? lessonById(id) : null;
+	});
+
 	// Changing mode ends whatever the last one was playing.
 	let lastMode: Mode | null = null;
 	$effect(() => {
@@ -50,7 +59,7 @@
 </script>
 
 <svelte:head>
-	<title>Learn · Vamp</title>
+	<title>{lesson ? `${lesson.title} · ` : ''}Learn · Vamp</title>
 </svelte:head>
 
 <main class="learn-page">
@@ -80,6 +89,11 @@
 		<ReviewMode />
 	{:else if mode === 'lab'}
 		<LabMode />
+	{:else if lesson}
+		<!-- A new lesson is a new view: its own steps, owners and Space action. -->
+		{#key lesson.id}
+			<LessonView {lesson} />
+		{/key}
 	{:else}
 		<LearnMap />
 	{/if}

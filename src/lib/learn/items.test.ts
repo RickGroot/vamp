@@ -12,6 +12,7 @@ const SHIPPED_IDS = [
 	'fn-three-chords',
 	'fn-four-chords',
 	'fn-rock-chords',
+	'fn-borrowed',
 	'fn-whole-key',
 	'fn-minor-key',
 	'fn-sevenths',

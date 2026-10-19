@@ -1,16 +1,19 @@
-// Learn progress: one Leitner record per quiz item, kept in localStorage under
-// `vamp:learn`. Small (a few dozen items), read synchronously at start-up, so
+// Learn progress: one Leitner record per quiz item, and where you are in each
+// lesson, kept in localStorage under `vamp:learn`. Small (a few dozen items), read synchronously at start-up, so
 // the Ear mode can say what is due on its first render — the draft.ts pattern.
 //
 // `migrateLearn` is THE coercion gate for it, the twin of migrateProgression
 // and migrateDrill: every read goes through it, and it trusts nothing — ids
 // are checked against a strict pattern (so `__proto__` and friends never become
 // keys), boxes are clamped to 1–5, dates must be finite and inside the
-// schedule, counters are bounded, and the number of items is capped.
+// schedule, counters are bounded, and the number of items is capped. Lesson
+// progress (`lessons`, Phase 3) is optional: progress saved before lessons
+// existed has none and still loads, so LEARN_VERSION stays 1.
 //
 // Pure apart from the storage it is handed (a DraftStorage, so tests pass a
 // Map-backed fake). Never throws. Must NOT import stores.
 
+import { LESSONS, type LessonProgress } from '$lib/learn/curriculum';
 import { QUIZ_ITEMS } from '$lib/learn/items';
 import { BOX_DAYS, BOX_MAX, BOX_MIN, DAY_MS, type ItemProgress } from '$lib/learn/srs';
 import type { DraftStorage } from './draft';
@@ -19,6 +22,9 @@ export const LEARN_KEY = 'vamp:learn';
 export const LEARN_VERSION = 1;
 /** Far more than the catalogue will ever hold; a cap, not a budget. */
 export const MAX_ITEMS = 256;
+export const MAX_LESSONS = 256;
+/** More steps than any lesson will have: a bound, not a budget. */
+export const MAX_STEP = 63;
 const MAX_SEEN = 1_000_000;
 /** Lowercase words joined by dashes: what QUIZ_ITEMS ids look like. */
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -26,10 +32,12 @@ const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 export interface LearnProgress {
 	version: typeof LEARN_VERSION;
 	items: Record<string, ItemProgress>;
+	/** By lesson id. Optional: absent in progress saved before lessons existed. */
+	lessons?: Record<string, LessonProgress>;
 }
 
 export function emptyLearn(): LearnProgress {
-	return { version: LEARN_VERSION, items: {} };
+	return { version: LEARN_VERSION, items: {}, lessons: {} };
 }
 
 const finite = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -52,26 +60,54 @@ function coerceItem(raw: unknown, now: number): ItemProgress | null {
 	return { box, due, seen, last };
 }
 
+function coerceLesson(raw: unknown, now: number): LessonProgress | null {
+	if (!isRecord(raw)) return null;
+	const stepRaw = finite(raw.step);
+	const step = stepRaw === null ? 0 : Math.min(MAX_STEP, Math.max(0, Math.floor(stepRaw)));
+	// Finished in the future (a wrong clock, a hand edit) reads as finished now.
+	const doneRaw = finite(raw.done);
+	const done = doneRaw === null ? 0 : Math.min(Math.max(0, doneRaw), now);
+	return { step, done };
+}
+
 /**
- * Coerce anything into valid progress. Known items are read first, so a flood
- * of unknown ids can't push real progress past the cap; unknown but well-formed
- * ids are kept (a newer version's items survive a trip through an older one).
+ * Coerce one id → record map. Known ids are read first, so a flood of unknown
+ * ids can't push real progress past the cap; unknown but well-formed ids are
+ * kept (a newer version's items survive a trip through an older one).
  */
-export function migrateLearn(raw: unknown, now: number = Date.now()): LearnProgress {
-	const out = emptyLearn();
-	if (!isRecord(raw) || !isRecord(raw.items)) return out;
-	const src = raw.items;
+function coerceRecords<T>(
+	src: Record<string, unknown>,
+	knownIds: string[],
+	cap: number,
+	coerce: (raw: unknown) => T | null
+): Record<string, T> {
+	const out: Record<string, T> = {};
 	const own = (id: string) => Object.prototype.hasOwnProperty.call(src, id);
-	const known = QUIZ_ITEMS.map((item) => item.id).filter(own);
+	const known = knownIds.filter(own);
 	const knownSet = new Set(known);
 	const others = Object.keys(src).filter((id) => !knownSet.has(id) && ID_RE.test(id));
 	let count = 0;
 	for (const id of [...known, ...others]) {
-		if (count >= MAX_ITEMS) break;
-		const item = coerceItem(src[id], now);
-		if (!item) continue;
-		out.items[id] = item;
+		if (count >= cap) break;
+		const value = coerce(src[id]);
+		if (!value) continue;
+		out[id] = value;
 		count++;
+	}
+	return out;
+}
+
+/** Coerce anything into valid progress. Items and lessons are read independently. */
+export function migrateLearn(raw: unknown, now: number = Date.now()): LearnProgress {
+	const out = emptyLearn();
+	if (!isRecord(raw)) return out;
+	if (isRecord(raw.items)) {
+		const ids = QUIZ_ITEMS.map((item) => item.id);
+		out.items = coerceRecords(raw.items, ids, MAX_ITEMS, (v) => coerceItem(v, now));
+	}
+	if (isRecord(raw.lessons)) {
+		const ids = LESSONS.map((lesson) => lesson.id);
+		out.lessons = coerceRecords(raw.lessons, ids, MAX_LESSONS, (v) => coerceLesson(v, now));
 	}
 	return out;
 }

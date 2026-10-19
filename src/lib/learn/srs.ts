@@ -9,7 +9,8 @@
 // - Box n comes back after BOX_DAYS[n - 1] days.
 //
 // Phase 1 records results only; building a review session from what is due
-// comes with the Review mode (Phase 4). Time is injected, never read here.
+// comes with the Review mode (Phase 4). Finishing a lesson (Phase 3) enrols the
+// exercises it taught. Time is injected, never read here.
 //
 // Pure.
 
@@ -48,4 +49,23 @@ export function recordResult(prev: ItemProgress | undefined, correct: boolean, n
 	// An early right answer leaves the schedule alone; anything else reschedules.
 	const next = correct && !due ? p.due : now + BOX_DAYS[box - 1] * DAY_MS;
 	return { box, due: next, seen: p.seen + 1, last: now };
+}
+
+/**
+ * Put items into the schedule, in box 1 and due now: what finishing a lesson
+ * does with the exercises it taught. An item that is already scheduled keeps
+ * its place — a lesson must never send what you know back to box 1.
+ */
+export function enrol(
+	items: Record<string, ItemProgress>,
+	itemIds: readonly string[],
+	now: number
+): Record<string, ItemProgress> {
+	const out = { ...items };
+	for (const id of itemIds) {
+		if (Object.prototype.hasOwnProperty.call(out, id)) continue;
+		// defineProperty, not assignment: an id of '__proto__' must stay a plain key.
+		Object.defineProperty(out, id, { value: newProgress(now), enumerable: true, writable: true, configurable: true });
+	}
+	return out;
 }
