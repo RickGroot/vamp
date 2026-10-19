@@ -232,6 +232,45 @@ marked **HOME** in ink, the status says the payoff in full ink, and the next ste
 Under the cards, **COMING UP**: a greyed tracklist of the modes not built yet,
 names only, no links.
 
+**Ear** is one exercise at a time, picked from an **EXERCISE** select grouped by
+kind (Chords in a key · Loops · Chord quality). Its card reads top to bottom:
+- **The head:** the exercise's name in the condensed display face, in its own case
+  (it's a name, like a drill's), its one-line lede under it, and where it stands in
+  the review schedule at the right as a label: **NEW**, **DUE FOR REVIEW**,
+  **REVIEW TOMORROW**, **REVIEW IN 4 DAYS**. Information, never a score: no
+  streaks, no points, no percentages.
+- **The deck**, as on the map: the key printed on an ink underline (its root drawn
+  by `ChordSymbol`, then "major" / "minor"), **Play** as a block of the key's ink,
+  then the status. A chord-quality question has no key ("Any root"), so its Play is
+  the field at rest. The status narrates the run ("First the key: hear where home
+  is", "Chord 2 of 4") and, once you've answered, says the verdict in full ink.
+- **Your answer**, for a question in a key: one printed box per chord, **CHORD 1**,
+  **CHORD 2** … with a "?" until you tap. The box to fill next is underlined heavy
+  in ink; the chord sounding now gets a second ink rule. Ink only, so nothing on
+  the card hints at a chord's quality before you answer.
+- **The pad:** printed keys with a 2px ink border, square. A numeral key holds just
+  the numeral in the display face, never uppercased, sized to the key by its
+  length (V big, ♭VImaj7 still inside a 56px phone key). A loop or quality key
+  holds a name in its own case, a loop's formula under it in numerals. Before the
+  question has been played the keys are greyed: hear it first. **UNDO** takes back
+  the last tap.
+- **Marking is ink and words.** A wrong numeral is struck through with a drawn ink
+  rule and **IT WAS V** printed under it; a right one says **RIGHT**. On a choice
+  pad the right answer keeps full ink with a second rule and says **RIGHT ANSWER**
+  (or **YOUR ANSWER · RIGHT**), a wrong pick has its name struck and says **YOUR
+  ANSWER**, and the rest step back to grey. Never green and red.
+- **The reveal**, only after you answer: **WHAT YOU HEARD**, the question's chords
+  as the map's chips (wash, a 6px tab of each chord's quality ink, the numeral
+  under it), each one tap from being heard on its own. A loop adds its name, one
+  line on how to tell it by ear, and why it works.
+- **Next question** is the inked primary button and plays the new question at
+  once; **JUST THE CHORDS** (or **JUST THE LOOP**) replays the question without
+  its cadence.
+
+On a phone Play stretches to fill the row beside the key (at 320 it takes its own
+row) with the status under both, and below 400px four or more answer boxes or
+chips go two to a row, still read left to right, top to bottom.
+
 Three rules specific to Learn:
 - **Numerals are never uppercased.** Case is meaning (ii is minor, II major), so
   numerals go through `Numeral`, which sets `text-transform: none` and draws ♭ / ♯
@@ -245,3 +284,6 @@ Three rules specific to Learn:
   card's Play block is the key's colour, set locally, never the chord's.)
 - **Chords and numerals are SAID to assistive tech.** The drawn face is hidden and a
   spoken form sits beside it: "E flat minor seven", "two minor".
+- **A quiz gives nothing away before it's answered.** No chord colour on the slots
+  or the pad, and Play takes the key's ink, never the question's chord's. Colour
+  arrives with the reveal, where it means what it always means: the chord's quality.
