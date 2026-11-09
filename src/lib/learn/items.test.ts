@@ -22,7 +22,10 @@ const SHIPPED_IDS = [
 	'loop-jazz',
 	'quality-major-minor',
 	'quality-triads',
-	'quality-sevenths'
+	'quality-sevenths',
+	'fn-minor-five',
+	'fn-minor-ending',
+	'loop-minor'
 ];
 
 describe('quiz item ids', () => {

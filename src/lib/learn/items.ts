@@ -113,6 +113,21 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		spec: { kind: 'function', mode: 'minor', chords: [c(0, 'm'), c(5, 'm'), c(7), c(8), c(10)], length: 4 }
 	},
 	{
+		// Lesson 4.1's quiz: the minor v and the major V side by side.
+		id: 'fn-minor-five',
+		title: 'Two fives',
+		lede: 'A minor home with its minor v and its major V, and the two flat chords around them.',
+		// No minor iv: i–v–i–v in one key is iv–i–iv–i in another, the same four symbols.
+		spec: { kind: 'function', mode: 'minor', chords: [c(0, 'm'), c(7, 'm'), c(7), c(8), c(10)], length: 4 }
+	},
+	{
+		// Lesson 4.3's quiz: a major chord on the minor home.
+		id: 'fn-minor-ending',
+		title: 'Major ending',
+		lede: 'A minor key where home can come back as a major chord.',
+		spec: { kind: 'function', mode: 'minor', chords: [c(0, 'm'), c(0), c(5, 'm'), c(7), c(8)], length: 4 }
+	},
+	{
 		id: 'fn-sevenths',
 		title: 'Seventh chords',
 		lede: 'The four sevenths a jazz tune in a major key is made of.',
@@ -156,6 +171,14 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		title: 'Jazz loops',
 		lede: 'Turnarounds and ii–V–Is, in sevenths.',
 		spec: { kind: 'loop', loops: ['jazz-251', 'minor-251', 'turnaround', 'turnaround-iii', 'doowop-sevenths'] }
+	},
+
+	{
+		// Lesson 4.2's quiz: the minor loops, none a rotation of another.
+		id: 'loop-minor',
+		title: 'Minor loops',
+		lede: 'Four minor-key loops with no seventh chords. Which one is it?',
+		spec: { kind: 'loop', loops: ['andalusian', 'aeolian', 'minor-circle', 'epic'] }
 	},
 
 	// ---- Chord quality: one chord, no key ----

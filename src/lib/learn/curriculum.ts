@@ -3,8 +3,9 @@
 // Ten tracks (docs/learning-research.md §5) in a suggested order that forks
 // after the four-chord loops into a pop/rock side and a jazz side, joining
 // again for colour, harmony beyond function and changing key. `after` SUGGESTS
-// an order; it never locks a track. Only the shared start and the first track
-// of each side have lessons so far; the rest are listed as coming later.
+// an order; it never locks a track. The shared start, the pop/rock side's two
+// tracks (borrowed chords, minor keys) and the first jazz track have lessons so
+// far; the rest are listed as coming later.
 //
 // A lesson is a few short steps: listen (the band plays it), read (a paragraph
 // or two), quiz (an Ear exercise, items.ts) and try (the passage opens in
@@ -234,7 +235,7 @@ export const TRACKS: Track[] = [
 		side: 'pop',
 		after: ['borrowed'],
 		summary: 'Minor homes, the major chord that pulls back to them, and the falling bass lines of minor songs.',
-		lessons: []
+		lessons: ['minor-home', 'minor-falling-bass', 'minor-picardy']
 	},
 	{
 		id: 'sevenths',
@@ -775,6 +776,160 @@ export const LESSONS: Lesson[] = [
 					mode: 'major',
 					bars: [[c(0)], [c(5)], [c(5, 'm')], [c(0)]],
 					tempo: 76,
+					groove: { pattern: 'arpeggio', bass: 'root', bassInstrument: 'upright' }
+				}
+			}
+		]
+	},
+
+	// ---- 4 Minor keys (pop & rock) ----
+	{
+		id: 'minor-home',
+		track: 'minor-keys',
+		title: 'A minor home',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-minor-five'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A minor home, {iv}, then a minor {v}, then home again. Listen to how little that third chord pushes you back.',
+				mode: 'minor',
+				chords: [c(0, 'm'), c(5, 'm'), c(7, 'm'), c(0, 'm')],
+				hold: 4
+			},
+			{
+				kind: 'listen',
+				text: 'The same journey with the fifth chord turned major. Now {V} leans on home, and home answers.',
+				mode: 'minor',
+				chords: [c(0, 'm'), c(5, 'm'), c(7), c(0, 'm')],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'In the natural minor scale the seventh note sits a whole step under home, so a minor {v} has no note pressing up into home.',
+					'Lift that one note a half step and {v} becomes {V}: its middle note now leads straight to home. That lifted note is the whole idea of harmonic minor.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-minor-five',
+				text: 'A minor key with both fives. Name each chord, and watch the case of the letter.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch and change the third chord between minor {v} and major {V}. Which one makes you want the loop to go round again?',
+				song: {
+					name: 'Two fives',
+					mode: 'minor',
+					bars: [[c(0, 'm')], [c(5, 'm')], [c(7, 'm')], [c(0, 'm')]],
+					tempo: 84,
+					instrument: 'piano',
+					groove: { pattern: 'arpeggio', bass: 'root', bassInstrument: 'upright' }
+				}
+			}
+		]
+	},
+	{
+		id: 'minor-falling-bass',
+		track: 'minor-keys',
+		title: 'Falling bass lines',
+		skills: ['hear', 'read', 'use'],
+		items: ['loop-minor'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The bass walks down from home one step at a time. The last chord, {V}, is major, and it tugs you back to the top.',
+				mode: 'minor',
+				cadence: true,
+				loop: 'andalusian'
+			},
+			{
+				kind: 'read',
+				text: [
+					'Four notes falling from home to the fifth step is an old shape in minor music, often called a lament bass. This loop is one way to put chords on it, and it is the sound of flamenco.',
+					'Because the last chord is a major {V}, the loop does not drift: it pulls.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'One chord, and a single note sliding down inside it: {i}, {imaj7}, {i7}, then {i} with a sixth added.',
+				mode: 'minor',
+				chords: [c(0, 'm'), c(0, 'mMaj7'), c(0, 'm7'), c(0, 'm6')],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'The root never moves. One note inside the chord slides down a half step at a time: from home to the note just under it, lower again, then to the sixth. A line moving inside a held chord like this is known as a line cliché.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'loop-minor',
+				text: 'Four loops that live in a minor key. Which one is it?',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then swap the last chord for a minor {v} and hear how the pull back to the top goes slack.',
+				song: {
+					name: 'Falling bass',
+					mode: 'minor',
+					bars: [[c(0, 'm')], [c(10)], [c(8)], [c(7)]],
+					tempo: 100,
+					instrument: 'guitar',
+					groove: ROCK_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'minor-picardy',
+		track: 'minor-keys',
+		title: 'Ending in major',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-minor-ending'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A minor passage that ends on a major home chord. Listen for the last chord, {I}, brightening like a window opening.',
+				mode: 'minor',
+				cadence: true,
+				chords: [c(0, 'm'), c(5, 'm'), c(7), c(0)],
+				hold: 4
+			},
+			{
+				kind: 'listen',
+				text: 'The same passage again, but ending on {i}. Compare the two endings.',
+				mode: 'minor',
+				cadence: true,
+				chords: [c(0, 'm'), c(5, 'm'), c(7), c(0, 'm')],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'Raising the third of the last chord turns a minor home into a major one. Centuries of church music used this Picardy third to end a minor piece in the light.',
+					'It is borrowing in reverse. A major key borrows minor chords, like {iv}; here a minor key borrows one major chord, {I}, and only at the very end.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-minor-ending',
+				text: 'Minor keys where home may come back major. Name each chord.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then change the last chord back to {i} and hear the ending darken again.',
+				song: {
+					name: 'Bright ending',
+					mode: 'minor',
+					bars: [[c(0, 'm')], [c(5, 'm')], [c(7)], [c(0)]],
+					tempo: 72,
+					instrument: 'piano',
 					groove: { pattern: 'arpeggio', bass: 'root', bassInstrument: 'upright' }
 				}
 			}

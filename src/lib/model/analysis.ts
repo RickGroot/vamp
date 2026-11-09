@@ -310,6 +310,37 @@ const PATTERNS: PatternDef[] = [
 		listen: 'Try the Phrygian dominant scale over the final V chord.'
 	},
 	{
+		// Home only: vi–V–IV–V in a major key is the same chords heard from vi,
+		// and is named by the key's own patterns, not as a second tonic.
+		id: 'aeolian',
+		name: 'Aeolian vamp',
+		home: true,
+		variants: [
+			{
+				steps: [s(0, 'min'), s(10, 'maj', 'dom'), s(8, 'maj'), s(10, 'maj', 'dom')],
+				formula: 'i–♭VII–♭VI–♭VII'
+			}
+		],
+		blurb: 'The Aeolian vamp, i–♭VII–♭VI–♭VII: a minor home that steps down two whole steps and climbs back, all in the natural minor scale.',
+		why: 'Every chord belongs to the natural minor, and no major V ever arrives, so nothing is pulled back to i: it just keeps circling.',
+		listen: 'Play the natural minor scale over the whole loop, then raise its seventh note and hear the loop stop fitting.'
+	},
+	{
+		// Home only: vi–ii–V–I in a major key is the same chords from vi.
+		id: 'minor-circle',
+		name: 'Minor circle of fifths',
+		home: true,
+		variants: [
+			{
+				steps: [s(0, 'min'), s(5, 'min'), s(10, 'maj', 'dom'), s(3, 'maj')],
+				formula: 'i–iv–♭VII–♭III'
+			}
+		],
+		blurb: 'The first four steps of the circle of fifths in a minor key: i–iv–♭VII–♭III, each root a fifth below the last.',
+		why: 'Every root falls a fifth, the strongest push in harmony, yet all four chords stay in the natural minor, so it drifts rather than cadences.',
+		listen: 'Follow the bass: it falls a fifth every bar. Add ♭VI, ii° and V to carry the circle all the way round to i.'
+	},
+	{
 		id: 'mixolydian',
 		name: 'Mixolydian rock',
 		home: true,
