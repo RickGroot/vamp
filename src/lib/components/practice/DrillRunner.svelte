@@ -42,7 +42,7 @@
 	<header class="runner__head">
 		<KeyCompass tonic={shown?.writtenRoot ?? ''} notes={phrasePcs} size={80} />
 		<div class="runner__what">
-			<h2 class="runner__title">{practice.definition.name}</h2>
+			<h2 class="runner__title">{practice.title}</h2>
 			<p class="hint runner__sub">
 				<!-- A song-sourced drill has no meaningful "key" to show — it follows
 				     the changes — so name the sketch instead. -->

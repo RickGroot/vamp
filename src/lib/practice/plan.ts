@@ -17,8 +17,15 @@ import { countInFor, type PlaybackPlan } from '$lib/audio/plan';
 import { barBeats, beatsToQuarters } from '$lib/model/time';
 import type { ClickFeel } from '$lib/audio/drills';
 import type { DrumStyle, Groove, InstrumentId, TimeSignature } from '$lib/model/types';
+import { lickBacking, swingLead } from '$lib/licks/plan';
+import type { LickRun } from '$lib/licks/types';
 import { concertMidi } from './resolve';
 import type { DrillRun } from './types';
+
+/** A drill or a lick: both resolve to the same run shape; a lick adds its changes. */
+export type PracticeRun = DrillRun | LickRun;
+
+export const isLickRun = (run: PracticeRun): run is LickRun => 'chords' in run;
 
 /**
  * The meter the run was RESOLVED in: a drill over your own changes takes the
@@ -26,7 +33,7 @@ import type { DrillRun } from './types';
  * click, the bar length and the staff's barlines must all follow it, or a 3/4
  * song is drilled over a 4/4 click.
  */
-export function runMeter(run: DrillRun): TimeSignature {
+export function runMeter(run: PracticeRun): TimeSignature {
 	return run.options.timeSignature ?? run.definition.timeSignature;
 }
 
@@ -63,7 +70,7 @@ function backingEvents(
 	return buildCompEvents([], totalQuarters, runMeter(run), groove, opts.clickFeel);
 }
 
-export function drillPlan(run: DrillRun, opts: DrillPlanOptions): PlaybackPlan {
+export function drillPlan(run: PracticeRun, opts: DrillPlanOptions): PlaybackPlan {
 	const ts = runMeter(run);
 	const offset = run.options.offset;
 
@@ -86,6 +93,22 @@ export function drillPlan(run: DrillRun, opts: DrillPlanOptions): PlaybackPlan {
 	}));
 
 	const totalQuarters = run.totalQuarters;
+
+	// A lick brings its own band (its changes, in its style's groove) and may
+	// swing. The notation is not touched: only the plan's line moves.
+	if (isLickRun(run)) {
+		const band = lickBacking(run, ts, opts.backing, opts.clickFeel, opts.instrument);
+		return {
+			source: 'drill',
+			events: [...(run.definition.feel === 'swing' ? swingLead(lead, ts) : lead), ...band.events],
+			totalQuarters,
+			tempo: run.phrases[0]?.tempo ?? run.options.tempo,
+			quartersPerBar: beatsToQuarters(barBeats(ts), ts),
+			voices: { chords: opts.instrument, bass: band.bass, drums: band.drums },
+			countIn: opts.countIn ? countInFor(ts) : null
+		};
+	}
+
 	return {
 		source: 'drill',
 		events: [...lead, ...backingEvents(run, opts, totalQuarters)],

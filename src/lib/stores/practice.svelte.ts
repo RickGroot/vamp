@@ -21,10 +21,13 @@ import { drillLibrary } from './drillLibrary.svelte';
 import { flattenSlots } from '$lib/model/slots';
 import { loopBars } from '$lib/model/time';
 import type { DrillChord, DrillDefinition } from '$lib/practice/types';
-import { drillPlan, type DrillBacking } from '$lib/practice/plan';
+import { drillPlan, type DrillBacking, type PracticeRun } from '$lib/practice/plan';
+import { lickById } from '$lib/licks/library';
+import { resolveLick } from '$lib/licks/resolve';
+import type { LickDefinition } from '$lib/licks/types';
 import { rangeFor, DEFAULT_RANGE_ID, INSTRUMENT_RANGES } from '$lib/practice/range';
 import { resolveDrill } from '$lib/practice/resolve';
-import type { DrillDirection, DrillRun, Register } from '$lib/practice/types';
+import type { DrillDirection, Register } from '$lib/practice/types';
 
 const KEY = 'vamp:practice';
 
@@ -45,6 +48,12 @@ export const BACKINGS: { id: DrillBacking; label: string }[] = [
 	{ id: 'click', label: 'Click' },
 	{ id: 'drums', label: 'Drums' },
 	{ id: 'none', label: 'Nothing' }
+];
+/** The same three choices for a lick, which always brings its band. */
+export const LICK_BACKINGS: { id: DrillBacking; label: string }[] = [
+	{ id: 'click', label: 'Band + click' },
+	{ id: 'drums', label: 'Band + drums' },
+	{ id: 'none', label: 'Band only' }
 ];
 
 interface PracticePrefs {
@@ -122,7 +131,7 @@ class PracticeStore {
 	 * over every note of a twelve-key run would cost more than it could ever save,
 	 * and it is only ever replaced, never mutated.
 	 */
-	private playing = $state.raw<DrillRun | null>(null);
+	private playing = $state.raw<PracticeRun | null>(null);
 	private lastRep = -1;
 
 	constructor() {
@@ -161,13 +170,24 @@ class PracticeStore {
 		drillLibrary.byId(this.drillId) ?? drillById(this.drillId) ?? BUILT_IN_DRILLS[0]
 	);
 
+	/**
+	 * The chosen lick, when `drillId` names one. Licks share the drill slot (one
+	 * thing is chosen at a time), so `definition` is then just the fallback drill
+	 * and nothing that shows the choice should read it: use `title`/`description`.
+	 */
+	lick = $derived<LickDefinition | null>(lickById(this.drillId) ?? null);
+
+	/** The chosen drill's or lick's name, and its one-line description. */
+	title = $derived(this.lick?.name ?? this.definition.name);
+	description = $derived(this.lick?.description ?? this.definition.description);
+
 	/** Custom drills the user has saved, newest first. */
 	get customDrills(): DrillDefinition[] {
 		return drillLibrary.items;
 	}
 
 	/** True when the chosen drill runs over the editor's changes, not a key cycle. */
-	usesSong = $derived(needsChords(this.definition));
+	usesSong = $derived(!this.lick && needsChords(this.definition));
 
 	/**
 	 * The editor's progression as changes, CONCERT pitch — read live from the
@@ -206,20 +226,25 @@ class PracticeStore {
 	 * What Start would play with the CURRENT settings — so the notation previews
 	 * it before a note sounds. Resolved once per change, however many read it.
 	 */
-	preview = $derived.by<DrillRun>(() => {
-		const song = this.usesSong;
-		return resolveDrill(this.definition, {
+	preview = $derived.by<PracticeRun>(() => {
+		const common = {
 			root: this.root,
 			keyMode: this.keyMode,
 			reps: this.reps,
 			offset: this.offset,
 			range: this.range,
 			register: this.register,
-			direction: this.direction || undefined,
 			tempo: this.tempo,
 			tempoStep: this.tempoStep,
 			tempoMax: this.tempoMax,
-			restBars: this.restBars,
+			restBars: this.restBars
+		};
+		// A lick brings its own changes and meter, and is played as written.
+		if (this.lick) return resolveLick(this.lick, common);
+		const song = this.usesSong;
+		return resolveDrill(this.definition, {
+			...common,
+			direction: this.direction || undefined,
 			// A song-sourced drill follows the song's changes AND its meter.
 			chords: song ? this.songChords : undefined,
 			timeSignature: song ? progression.current.timeSignature : undefined
@@ -230,7 +255,7 @@ class PracticeStore {
 	 * The run on screen. While playing, the frozen run is authoritative, so a
 	 * settings change mid-drill can never desync the notation from the audio.
 	 */
-	run = $derived<DrillRun>(this.playing ?? this.preview);
+	run = $derived<PracticeRun>(this.playing ?? this.preview);
 
 	/** Which repetition is sounding (0-based), or null when stopped. */
 	get rep(): number | null {
