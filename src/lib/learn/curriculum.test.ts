@@ -45,6 +45,9 @@ const SHIPPED_LESSON_IDS = [
 	'borrowed-flat-seven',
 	'borrowed-climbing-home',
 	'borrowed-minor-four',
+	'minor-home',
+	'minor-falling-bass',
+	'minor-picardy',
 	'sevenths-four-sevenths',
 	'sevenths-two-five-one',
 	'sevenths-guide-tones',
@@ -90,9 +93,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start and the first track of each side; the rest come later', () => {
+	it('build the shared start, the pop side and the first jazz track; the rest come later', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'sevenths']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths']);
 	});
 
 	it('fork after the loops and join again', () => {

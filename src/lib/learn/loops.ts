@@ -131,6 +131,22 @@ export const LOOPS: Loop[] = [
 		about: 'Steps down from the minor home to a major V that pulls straight back.'
 	},
 	{
+		id: 'aeolian',
+		name: 'Aeolian vamp',
+		mode: 'minor',
+		chords: [c(0, 'm'), c(10), c(8), c(10)],
+		patternId: 'aeolian',
+		about: 'Steps down from the minor home and straight back up through the same chord; no V anywhere.'
+	},
+	{
+		id: 'minor-circle',
+		name: 'Minor circle',
+		mode: 'minor',
+		chords: [c(0, 'm'), c(5, 'm'), c(10), c(3)],
+		patternId: 'minor-circle',
+		about: 'Two minor chords, then two major ones, the bass falling a fifth every time.'
+	},
+	{
 		id: 'turnaround',
 		name: 'Turnaround',
 		mode: 'major',
