@@ -203,6 +203,13 @@ interface DrumHit {
 	accent?: boolean;
 }
 
+/**
+ * Where a swung off-beat eighth lands, in quarters after the beat. The swing
+ * hi-hat and a swing lick's line (licks/plan.ts) both read it, so the line
+ * can never drift off the drummer.
+ */
+export const SWING_OFFBEAT = 0.66;
+
 /** One bar of drum hits at quarter-note offsets, scaled to the bar length. */
 function drumBarHits(style: DrumStyle, barQ: number): DrumHit[] {
 	const hits: DrumHit[] = [];
@@ -214,7 +221,7 @@ function drumBarHits(style: DrumStyle, barQ: number): DrumHit[] {
 	if (style === 'swing') {
 		for (let q = 0; q < barQ; q += 1) {
 			add(q, 'hihat');
-			add(q + 0.66, 'hihat');
+			add(q + SWING_OFFBEAT, 'hihat');
 		}
 	} else {
 		for (let q = 0; q < barQ; q += 0.5) add(q, 'hihat');

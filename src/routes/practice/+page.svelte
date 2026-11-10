@@ -10,6 +10,7 @@
 	import { view } from '$lib/stores/view.svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { drillById } from '$lib/practice/patterns';
+	import { lickById } from '$lib/licks/library';
 	import DrillRunner from '$lib/components/practice/DrillRunner.svelte';
 	import DrillPicker from '$lib/components/practice/DrillPicker.svelte';
 
@@ -26,7 +27,7 @@
 		// drillLibrary.error rather than breaking the page.
 		void drillLibrary.refresh();
 		const wanted = page.url.searchParams.get('drill');
-		if (wanted && drillById(wanted)) practice.setDrill(wanted);
+		if (wanted && (drillById(wanted) || lickById(wanted))) practice.setDrill(wanted);
 	});
 
 	// Space plays the drill here, not the song (the layout still stops anything).

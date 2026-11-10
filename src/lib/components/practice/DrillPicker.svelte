@@ -7,9 +7,11 @@
 		REST_OPTIONS,
 		REGISTERS,
 		DIRECTIONS,
-		BACKINGS
+		BACKINGS,
+		LICK_BACKINGS
 	} from '$lib/stores/practice.svelte';
 	import { BUILT_IN_DRILLS, GUIDE_TONE_DRILLS } from '$lib/practice/patterns';
+	import { LICK_STYLES, LICK_STYLE_NAMES, licksOfStyle } from '$lib/licks/library';
 	import { drillLibrary } from '$lib/stores/drillLibrary.svelte';
 	import DrillEditor from './DrillEditor.svelte';
 
@@ -82,16 +84,41 @@
 	</div>
 
 	<div class="group">
+		<h3 class="label group__title">Licks</h3>
+		{#each LICK_STYLES as style (style)}
+			<div class="picker__drills" role="group" aria-label="{LICK_STYLE_NAMES[style]} licks">
+				<h4 class="label group__sub">{LICK_STYLE_NAMES[style]}</h4>
+				{#each licksOfStyle(style) as lick (lick.id)}
+					<button
+						class="drill"
+						class:drill--on={practice.drillId === lick.id}
+						type="button"
+						aria-pressed={practice.drillId === lick.id}
+						onclick={() => practice.setDrill(lick.id)}
+					>
+						<span class="drill__name">{lick.name}</span>
+						<span class="drill__desc">{lick.description}</span>
+					</button>
+				{/each}
+			</div>
+		{/each}
+		<p class="group__note hint">
+			Each lick brings its own changes and band. Pick the keys and range below; the line is fitted to
+			your instrument in every key.
+		</p>
+	</div>
+
+	<div class="group">
 		<div class="group__head">
 			<h3 class="label group__title">Your own</h3>
-			{#if !editing}
+			{#if !editing && !practice.lick}
 				<button class="bar-btn" type="button" onclick={() => (editing = true)}>
 					{practice.definition.builtIn ? 'Customise this drill' : 'Edit this drill'}
 				</button>
 			{/if}
 		</div>
 
-		{#if editing}
+		{#if editing && !practice.lick}
 			{#key editorKey}
 				<DrillEditor onclose={() => (editing = false)} />
 			{/key}
@@ -191,8 +218,9 @@
 				</select>
 			</div>
 
-			<!-- Direction is meaningless for a line that follows the changes. -->
-			{#if !practice.usesSong}
+			<!-- Direction is meaningless for a line that follows the changes, and a
+			     lick is played as written. -->
+			{#if !practice.usesSong && !practice.lick}
 				<div class="opt">
 					<label class="label" for="p-direction">Direction</label>
 					<select
@@ -265,7 +293,7 @@
 			<div class="opt">
 				<label class="label" for="p-backing">Backing</label>
 				<select id="p-backing" value={practice.backing} onchange={(e) => practice.setBacking(select(e) as never)}>
-					{#each BACKINGS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
+					{#each practice.lick ? LICK_BACKINGS : BACKINGS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
 				</select>
 			</div>
 
@@ -283,7 +311,7 @@
 			{/if}
 
 			<div class="opt">
-				<label class="label" for="p-inst">Line sound</label>
+				<label class="label" for="p-inst">{practice.lick ? 'Sound' : 'Line sound'}</label>
 				<select id="p-inst" value={practice.instrument} onchange={(e) => practice.setInstrument(select(e) as never)}>
 					{#each INSTRUMENT_ORDER as id (id)}<option value={id}>{INSTRUMENT_LABELS[id]}</option>{/each}
 				</select>
@@ -326,6 +354,12 @@
 		margin: 0;
 		font-weight: 400;
 		color: var(--color-text-faint);
+	}
+
+	/* A style's name, spanning the whole row of its licks. */
+	.group__sub {
+		grid-column: 1 / -1;
+		margin: var(--space-2) 0 0;
 	}
 
 	.drill-wrap {
