@@ -3,9 +3,7 @@
 // Ten tracks (docs/learning-research.md §5) in a suggested order that forks
 // after the four-chord loops into a pop/rock side and a jazz side, joining
 // again for colour, harmony beyond function and changing key. `after` SUGGESTS
-// an order; it never locks a track. The shared start, the pop/rock side's two
-// tracks (borrowed chords, minor keys) and the first jazz track have lessons so
-// far; the rest are listed as coming later.
+// an order; it never locks a track. Every track has lessons.
 //
 // A lesson is a few short steps: listen (the band plays it), read (a paragraph
 // or two), quiz (an Ear exercise, items.ts) and try (the passage opens in
@@ -297,7 +295,7 @@ export const TRACKS: Track[] = [
 		side: 'joined',
 		after: ['beyond-function'],
 		summary: 'Visiting a key and moving to one: pivot chords, sudden shifts and the lift up a step.',
-		lessons: []
+		lessons: ['changing-key-visit', 'changing-key-pivot', 'changing-key-direct', 'changing-key-lift']
 	}
 ];
 
@@ -2018,6 +2016,199 @@ export const LESSONS: Lesson[] = [
 					tempo: 90,
 					instrument: 'piano',
 					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'changing-key-visit',
+		track: 'changing-key',
+		title: 'Visiting a key',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-rhythm-changes'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Home, then {VI7} pulls toward {ii}. After {VI7} the ear expects {ii}, and gets it, so {ii} sounds like home for a moment. Then {V} and {I} bring you back.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0), c(9, '7'), c(2, 'm'), c(7), c(0)],
+				hold: 4
+			},
+			{
+				kind: 'listen',
+				text: 'A longer visit. {II7} points at {Vmaj7}, and for a bar it sounds as if the key moved. It did not: {ii7} and {V7} take you home to {Imaj7}.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0, 'maj7'), c(9, 'm7'), c(2, '7'), c(7, 'maj7'), c(2, 'm7'), c(7, '7'), c(0, 'maj7')],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'Most chords of a key can be leaned on this way: play the dominant a fifth above one and it feels like home for a moment. Track 6 met that chord. Here we only listen to what it does to the key: nothing. {ii} is still {ii}, only dressed as a home. Your song marks a leaning chord when it reads the tune in this key.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-rhythm-changes',
+				text: 'The chords of a jazz bridge: dominants that lean on other chords, beside the plain ones. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then change {VI7} to a plain {vi}. The lean toward {ii} goes away.',
+				song: {
+					name: 'A visit',
+					mode: 'major',
+					bars: [[c(0)], [c(9, '7')], [c(2, 'm')], [c(7, '7')]],
+					tempo: 92,
+					instrument: 'piano',
+					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'changing-key-pivot',
+		track: 'changing-key',
+		title: 'Pivot chords',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-whole-key'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Home, {vi}, {II7}, {V}, then back to {I}. Chords like these can be a visit or a move; what comes next decides. Here {I} comes back, so home never left.',
+				mode: 'major',
+				cadence: true,
+				home: true,
+				chords: [c(0), c(9, 'm'), c(2, '7'), c(7), c(0)],
+				hold: 4
+			},
+			{
+				kind: 'listen',
+				text: 'The same first four chords as before, but now {iii}, {vi}, {II7}, {V} follow and {I} does not come back. By the end {V} sounds like home: the key has moved.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0), c(9, 'm'), c(2, '7'), c(7), c(4, 'm'), c(9, 'm'), c(2, '7'), c(7)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'A pivot chord belongs to both keys and does a different job in each. Moving up a fifth, four chords are shared: {I}, {iii}, {vi} and {V}. Here {vi} is the minor chord on the second step of the new key. Numerals stay counted from the key you started in, so the new home is {V}.'
+				]
+			},
+			{
+				kind: 'read',
+				text: [
+					'A visit lasts a chord or two; a move lasts a phrase and ends with a full cadence in the new key. The relative minor is the closest case: its home is {vi}, and it shares every chord. Your song reads a whole tune in one key, which may be the new one; the key picker lets you choose.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-whole-key',
+				text: 'A pivot starts as an ordinary chord of the first key. Hearing a move itself has no exercise yet, so this one drills those everyday chords.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop all eight bars, then only the last four. The long loop pulls {V} back to {I}; the short one rests on {V} as home.',
+				song: {
+					name: 'Pivot',
+					mode: 'major',
+					bars: [[c(0)], [c(9, 'm')], [c(2, '7')], [c(7)], [c(4, 'm')], [c(9, 'm')], [c(2, '7')], [c(7)]],
+					tempo: 100,
+					instrument: 'piano',
+					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'changing-key-direct',
+		track: 'changing-key',
+		title: 'Without a bridge',
+		skills: ['hear', 'read', 'use'],
+		items: [],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The same four-chord phrase twice: first from {I}, then a major third higher from {III}. Nothing leads in. The new key just begins.',
+				mode: 'major',
+				chords: [c(0), c(5), c(7), c(0), c(4), c(9), c(11), c(4)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'This is a direct modulation, a common way to change key. The old key finishes its sentence and a new one starts a major third higher, with no chord shared between them. There is no hinge to hear, so the jump itself is the effect. Numerals stay counted from the first key, so the new key proves itself with {III}, {VI}, {VII}, {III}.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'Same destination, but now {VII7} comes first and points at {III}. The jump is announced, so it lands more softly.',
+				mode: 'major',
+				chords: [c(0), c(5), c(7), c(0), c(11, '7'), c(4), c(9), c(11), c(4)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'The dominant of the new key, placed just before it, is the lean from Visiting a key, except that this time you stay. It softens the jump.'
+				]
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then delete bar five, the {VII7}, and you have the first passage again.',
+				song: {
+					name: 'No bridge',
+					mode: 'major',
+					bars: [[c(0)], [c(5)], [c(7)], [c(0)], [c(11, '7')], [c(4)], [c(9)], [c(11)], [c(4)]],
+					tempo: 92,
+					instrument: 'piano',
+					groove: POP_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'changing-key-lift',
+		track: 'changing-key',
+		title: 'The lift',
+		skills: ['hear', 'read', 'use'],
+		items: [],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The loop once from {I}, then again from {II}: every chord a whole step higher. The shape is the same; only the ground moves.',
+				mode: 'major',
+				chords: [c(0), c(7), c(9, 'm'), c(5), c(2), c(9), c(11, 'm'), c(7)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'Pop and gospel often end with a lift: the last chorus repeats a step higher, nicknamed the truck driver’s gear change. It comes with little or no preparation, and that is the point. Every chord moves the same distance, so the shape survives and the ear hears new energy. Numerals stay counted from the first key, so the lifted loop starts on {II}.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'Now a half step: {I}, {vi}, {ii}, {V}, then the same four from {bII}. The last chord of the first phrase sits a tritone from the first of the second, so the join is rough.',
+				mode: 'major',
+				chords: [c(0), c(9, 'm'), c(2, 'm'), c(7), c(1), c(10, 'm'), c(3, 'm'), c(8)],
+				hold: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then change bars five to eight back to the first four chords. The lift is gone, and so is the rise in energy. Undo brings your own sketch back.',
+				song: {
+					name: 'The lift',
+					mode: 'major',
+					bars: [[c(0)], [c(7)], [c(9, 'm')], [c(5)], [c(2)], [c(9)], [c(11, 'm')], [c(7)]],
+					tempo: 100,
+					instrument: 'guitar',
+					groove: POP_GROOVE
 				}
 			}
 		]

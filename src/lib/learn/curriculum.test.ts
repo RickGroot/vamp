@@ -67,7 +67,11 @@ const SHIPPED_LESSON_IDS = [
 	'beyond-modal-vamps',
 	'beyond-pedal-point',
 	'beyond-chromatic-mediants',
-	'beyond-major-thirds'
+	'beyond-major-thirds',
+	'changing-key-visit',
+	'changing-key-pivot',
+	'changing-key-direct',
+	'changing-key-lift'
 ];
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -109,9 +113,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start, the pop side, the first three jazz tracks, Colour and Beyond function; the rest come later', () => {
+	it('every track is built', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour', 'beyond-function']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour', 'beyond-function', 'changing-key']);
 	});
 
 	it('fork after the loops and join again', () => {
@@ -360,6 +364,8 @@ describe('order and progress', () => {
 	it('numbers lessons by track', () => {
 		expect(lessonNumber(lessonById('home-hear-home')!)).toBe('0.1');
 		expect(lessonNumber(lessonById('sevenths-two-five-one')!)).toBe('5.2');
+		expect(lessonNumber(lessonById('changing-key-visit')!)).toBe('10.1');
+		expect(lessonNumber(lessonById('changing-key-lift')!)).toBe('10.4');
 		expect(lessonsOf(trackById('borrowed')!).map((l) => l.id)).toEqual(trackById('borrowed')!.lessons);
 		expect(lessonAfter(MAP_ORDER[0])).toBe(MAP_ORDER[1]);
 		expect(lessonAfter(MAP_ORDER[MAP_ORDER.length - 1])).toBeNull();
@@ -420,6 +426,18 @@ describe('order and progress', () => {
 			)
 		);
 		expect(nextLesson(all)?.id).toBe('beyond-modal-vamps');
+	});
+
+	it('reaches Changing key once Tracks 0 to 9 are done, and when only Track 10 is open', () => {
+		const tracks = ['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour', 'beyond-function'];
+		const all = Object.fromEntries(
+			tracks.flatMap((t, n) => trackById(t)!.lessons.map((id, i) => [id, done(500 + n * 10 + i)]))
+		);
+		expect(nextLesson(all)?.id).toBe('changing-key-visit');
+		const everythingElse = Object.fromEntries(
+			LESSONS.filter((l) => l.track !== 'changing-key').map((l, i) => [l.id, done(700 + i)])
+		);
+		expect(nextLesson(everythingElse)?.id).toBe('changing-key-visit');
 	});
 
 	it('suggests nothing once every lesson is done, and ignores inherited keys', () => {
