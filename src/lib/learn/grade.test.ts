@@ -293,3 +293,93 @@ describe('gradeNotes on the passing chord (Track 7)', () => {
 		}
 	});
 });
+
+// ---- gradeLine ---------------------------------------------------------------
+
+import { gradeLine, mod12, MIN_HEARD, MAX_LINE } from './grade';
+
+{ // block scope: the pitch constants below shadow the key-info C above
+const C = 60, D = 62, E = 64, F = 65, G = 67, A = 69, B = 71;
+type Row = [string, number[], number[], string, number[], number, 'right' | 'wrong' | 'none', [number, number][]?];
+const H = 'h', X = 'x';
+const GOLDEN: Row[] = [
+	['1 exact', [C, E, G, E], [C, E, G, E], 'hhhh', [], 0, 'right'],
+	['2 octaves', [C, E, G], [C + 12, E - 12, G + 24], 'hhh', [], 0, 'right'],
+	['3 wrong note', [C, E, G, E], [C, F, G, E], 'hxhh', [1], 0, 'wrong', [[0, 0], [2, 2], [3, 3]]],
+	['4 dropped repeat', [C, C, D], [C, D], 'hxh', [], 0, 'wrong', [[0, 0], [2, 1]]],
+	['5 one stray', [C, E, G], [C, D, E, G], 'hhh', [1], 0, 'right', [[0, 0], [1, 2], [2, 3]]],
+	['6 two strays', [C, E, G], [C, D, E, F, G], 'hhh', [1, 3], 0, 'wrong'],
+	['7 swapped', [C, D, E], [C, E, D], 'hxh', [], 1, 'wrong', [[0, 0], [2, 1]]],
+	['8 cut short', [C, E, G, E], [C, E], 'hhxx', [], 0, 'wrong'],
+	['9 nothing played', [C, E], [], 'xx', [], 0, 'none'],
+	['10 repeated first', [C, E, G], [C, C, E, G], 'hhh', [1], 0, 'right', [[0, 0], [1, 2], [2, 3]]],
+	['11 reversed', [C, D, E], [E, D, C], 'xxh', [], 2, 'wrong', [[2, 0]]],
+	['12 negative midi', [-1, 2], [11, 2], 'hh', [], 0, 'right'],
+	['13 trailing', [C, E, G], [C, E, G, A, B, D], 'hhh', [], 3, 'right'],
+	['14 repeated last', [C, E, G], [C, E, G, G], 'hhh', [], 1, 'right', [[0, 0], [1, 1], [2, 2]]],
+	['15 stray and trailing', [C, E, G], [C, D, E, G, A], 'hhh', [1], 1, 'right'],
+	['16 two strays and trailing', [C, E, G], [C, D, E, F, G, A], 'hhh', [1, 3], 1, 'wrong'],
+	['17 wrong last', [C, E, G], [C, E, A], 'hhx', [], 1, 'wrong']
+];
+
+describe('gradeLine: golden rows', () => {
+	for (const [name, exp, play, marks, strays, trailing, verdict, matched] of GOLDEN) {
+		it(name, () => {
+			const g = gradeLine(exp, play);
+			expect(g.verdict).toBe(verdict);
+			expect(g.marks.map((m) => (m === 'hit' ? H : X)).join('')).toBe(marks);
+			expect(g.strays).toEqual(strays);
+			expect(g.trailing).toBe(trailing);
+			expect(g.missed).toBe(marks.split('').filter((c) => c === X).length);
+			if (matched) expect(g.matched).toEqual(matched);
+		});
+	}
+});
+
+describe('gradeLine: details', () => {
+	it('mod12 is safe for negatives', () => {
+		expect(mod12(-1)).toBe(11);
+		expect(mod12(-13)).toBe(11);
+		expect(mod12(12)).toBe(0);
+		expect(mod12(61)).toBe(1);
+	});
+	it('respects maxStray', () => {
+		expect(gradeLine([C, E, G], [C, D, E, F, G], { maxStray: 2 }).verdict).toBe('right');
+		expect(gradeLine([C, E, G], [C, D, E, G], { maxStray: 0 }).verdict).toBe('wrong');
+		expect(gradeLine([C, E, G], [C, E, G, A, B, D], { maxStray: 0 }).verdict).toBe('right');
+	});
+	it('MIN_HEARD: fewer notes than that is no attempt, unless the line is shorter', () => {
+		expect(MIN_HEARD).toBe(2);
+		expect(gradeLine([C, E, G], [C]).verdict).toBe('none');
+		expect(gradeLine([C], [C]).verdict).toBe('right');
+		expect(gradeLine([C, E, G], [C, E]).verdict).toBe('wrong');
+		expect(gradeLine([], [C, E]).verdict).toBe('none');
+		expect(gradeLine([C, E], []).marks).toEqual(['missed', 'missed']);
+	});
+	it('is deterministic and leaves frozen input alone', () => {
+		const e = Object.freeze([C, E, G]) as number[];
+		const p = Object.freeze([C, D, E, G]) as number[];
+		expect(gradeLine(e, p)).toEqual(gradeLine(e, p));
+	});
+	it('finishes a 256-note played line against 64 expected', () => {
+		const exp = Array.from({ length: MAX_LINE }, (_, i) => 60 + (i % 7));
+		const played = Array.from({ length: 256 }, (_, i) => 60 + ((i * 3) % 11));
+		expect(gradeLine(exp, played).expected).toBe(MAX_LINE);
+	});
+	it('bookkeeping holds over 200 seeded pairs', () => {
+		let s = 12345;
+		const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+		for (let k = 0; k < 200; k++) {
+			const exp = Array.from({ length: 1 + Math.floor(rand() * 10) }, () => 48 + Math.floor(rand() * 24));
+			const played = Array.from({ length: Math.floor(rand() * 14) }, () => 48 + Math.floor(rand() * 24));
+			const g = gradeLine(exp, played);
+			expect(g.matched.length + g.missed).toBe(g.expected);
+			expect(g.matched.length + g.strays.length + g.trailing).toBe(g.played);
+			for (let i = 1; i < g.matched.length; i++) {
+				expect(g.matched[i][0]).toBeGreaterThan(g.matched[i - 1][0]);
+				expect(g.matched[i][1]).toBeGreaterThan(g.matched[i - 1][1]);
+			}
+		}
+	});
+});
+}

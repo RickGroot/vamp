@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BOX_DAYS, DAY_MS, recordResult } from '$lib/learn/srs';
 import { QUIZ_ITEMS } from '$lib/learn/items';
 import { LESSONS } from '$lib/learn/curriculum';
+import { LICK_ITEMS } from '$lib/learn/lickItems';
 import type { DraftStorage } from './draft';
 import {
 	emptyLearn,
@@ -375,5 +376,56 @@ describe('backup: learnForBackup and importLearn', () => {
 		const out = readLearn(storage, NOW);
 		expect(Object.keys(out.items)).toHaveLength(MAX_ITEMS);
 		expect(out.items['fn-three-chords']).toBeDefined(); // a real item is kept first
+	});
+});
+
+describe('lick items in progress', () => {
+	it('a call- id survives write and read', () => {
+		const { storage } = fakeStorage();
+		const progress = emptyLearn();
+		progress.items['call-blues-thirds'] = recordResult(undefined, true, NOW);
+		writeLearn(storage, progress);
+		expect(readLearn(storage, NOW).items['call-blues-thirds']).toEqual(progress.items['call-blues-thirds']);
+	});
+
+	it('a colon id is dropped', () => {
+		const item = recordResult(undefined, true, NOW);
+		const out = migrateLearn({ items: { 'lick:lick-blues-thirds': item } }, NOW);
+		expect(out.items).toEqual({});
+	});
+
+	it('an unknown well-formed call id survives', () => {
+		const item = recordResult(undefined, true, NOW);
+		expect(migrateLearn({ items: { 'call-deleted-lick': item } }, NOW).items['call-deleted-lick']).toBeDefined();
+	});
+
+	it('the lick ids are kept first when junk fills the cap', () => {
+		const item = recordResult(undefined, true, NOW);
+		const items: Record<string, unknown> = {};
+		for (let i = 0; i < 300; i++) items[`junk-${i}`] = item;
+		for (const l of LICK_ITEMS) items[l.id] = item;
+		const out = migrateLearn({ items }, NOW);
+		for (const l of LICK_ITEMS) expect(out.items[l.id]).toBeDefined();
+		expect(Object.keys(out.items)).toHaveLength(MAX_ITEMS);
+	});
+
+	it('mergeLearn merges lick items', () => {
+		const a = emptyLearn();
+		const b = emptyLearn();
+		a.items['call-blues-thirds'] = recordResult(undefined, true, NOW);
+		b.items['call-blues-minor'] = recordResult(undefined, false, NOW);
+		const m = mergeLearn(a, b);
+		expect(Object.keys(m.items).sort()).toEqual(['call-blues-minor', 'call-blues-thirds']);
+	});
+
+	it('a backup round trip carries a lick id', () => {
+		const { storage } = fakeStorage();
+		const progress = emptyLearn();
+		progress.items['call-jazz-flat-nine'] = recordResult(undefined, true, NOW);
+		writeLearn(storage, progress);
+		const backup = learnForBackup(storage);
+		storage.removeItem(LEARN_KEY);
+		expect(importLearn(storage, backup, NOW)).not.toBeNull();
+		expect(readLearn(storage, NOW).items['call-jazz-flat-nine']).toBeDefined();
 	});
 });

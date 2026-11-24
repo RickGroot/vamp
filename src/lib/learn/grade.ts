@@ -51,8 +51,6 @@ const NUMERAL_SUFFIXES = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'mMaj7', 'm7
 
 const QUALITY_IDS = Object.keys(QUALITIES) as QualityId[];
 
-const mod12 = (n: number) => ((n % 12) + 12) % 12;
-
 /** A pitch-class set as a sorted key, so two sets compare as strings. */
 const setKey = (pcs: Iterable<number>) => [...new Set(pcs)].sort((a, b) => a - b).join(',');
 
@@ -140,4 +138,77 @@ export function gradeNotes(q: Question, notes: readonly number[], at = 0): Notes
 	if (value === null) return { value, correct: false };
 	if (q.kind === 'function') return { value, correct: at < q.answer.length && sameNumeral(value, q.answer[at]) };
 	return { value, correct: value === q.answer };
+}
+
+// ---- a played line (Licks, call and response) --------------------------------
+
+/** Extra notes (between the matched ones) a line may hold and still be right. */
+export const MAX_STRAY = 1;
+/** Fewer notes heard than this (or the line's length, if shorter) is no attempt. */
+export const MIN_HEARD = 2;
+/** The longest expected line gradeLine is built for (the DP is n x m). */
+export const MAX_LINE = 64;
+
+/** A pitch class 0-11, safe for negative MIDI numbers. */
+export const mod12 = (n: number): number => ((n % 12) + 12) % 12;
+
+export interface LineGrade {
+	verdict: 'right' | 'wrong' | 'none';
+	/** One per expected note: heard in order, or missed. */
+	marks: ('hit' | 'missed')[];
+	/** Indices into `played` of extra notes BEFORE the last matched one. */
+	strays: number[];
+	/** Notes played after the last matched one. */
+	trailing: number;
+	/** [expected index, played index] pairs, ascending in both. */
+	matched: [number, number][];
+	missed: number;
+	expected: number;
+	played: number;
+}
+
+/**
+ * Grade a played line against the expected one by PITCH CLASS (any octave
+ * counts), in order: the longest common subsequence decides which expected
+ * notes were heard. Right = every note heard and at most `maxStray` extras in
+ * between (a slip on the way is fine; trailing notes after the line are not
+ * counted). Fewer than MIN_HEARD notes played is `none`: no attempt to judge.
+ */
+export function gradeLine(expected: number[], played: number[], opts: { maxStray?: number } = {}): LineGrade {
+	const maxStray = opts.maxStray ?? MAX_STRAY;
+	const e = expected.map(mod12);
+	const p = played.map(mod12);
+	const n = e.length;
+	const m = p.length;
+	const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+	for (let i = n - 1; i >= 0; i--)
+		for (let j = m - 1; j >= 0; j--)
+			dp[i][j] = e[i] === p[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+	const matched: [number, number][] = [];
+	const hit: boolean[] = new Array<boolean>(n).fill(false);
+	const used: boolean[] = new Array<boolean>(m).fill(false);
+	let i = 0;
+	let j = 0;
+	while (i < n && j < m) {
+		if (e[i] === p[j]) {
+			matched.push([i, j]);
+			hit[i] = true;
+			used[j] = true;
+			i++;
+			j++;
+		} else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+		else j++;
+	}
+	const last = matched.length ? matched[matched.length - 1][1] : -1;
+	const strays: number[] = [];
+	for (let k = 0; k < last; k++) if (!used[k]) strays.push(k);
+	const trailing = m - 1 - last;
+	const missed = hit.filter((h) => !h).length;
+	const verdict: LineGrade['verdict'] =
+		m === 0 || n === 0 || m < Math.min(MIN_HEARD, n)
+			? 'none'
+			: missed === 0 && strays.length <= maxStray
+				? 'right'
+				: 'wrong';
+	return { verdict, marks: hit.map((h) => (h ? 'hit' : 'missed')), strays, trailing, matched, missed, expected: n, played: m };
 }

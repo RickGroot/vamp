@@ -18,7 +18,7 @@
 // Map-backed fake). Never throws. Must NOT import stores.
 
 import { LESSONS, type LessonProgress } from '$lib/learn/curriculum';
-import { QUIZ_ITEMS } from '$lib/learn/items';
+import { CATALOGUE } from '$lib/learn/lickItems';
 import { BOX_DAYS, BOX_MAX, BOX_MIN, DAY_MS, type ItemProgress } from '$lib/learn/srs';
 import type { DraftStorage } from './draft';
 
@@ -106,7 +106,7 @@ export function migrateLearn(raw: unknown, now: number = Date.now()): LearnProgr
 	const out = emptyLearn();
 	if (!isRecord(raw)) return out;
 	if (isRecord(raw.items)) {
-		const ids = QUIZ_ITEMS.map((item) => item.id);
+		const ids = CATALOGUE.map((item) => item.id);
 		out.items = coerceRecords(raw.items, ids, MAX_ITEMS, (v) => coerceItem(v, now));
 	}
 	if (isRecord(raw.lessons)) {

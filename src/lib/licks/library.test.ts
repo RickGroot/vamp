@@ -9,6 +9,7 @@ import { SCALE_ROOTS } from '$lib/model/scales';
 import { voicedToVexKey } from '$lib/notation/vex';
 import { rangeFor } from '$lib/practice/range';
 import type { DrillRunOptions } from '$lib/practice/types';
+import { MAX_LINE } from '$lib/learn/grade';
 import { BUILT_IN_LICKS, LICK_STYLES, lickById, licksOfStyle } from './library';
 import { lickBeats, resolveLick } from './resolve';
 import { isRestToken, isValidToken, tokenToNote } from './tokens';
@@ -166,6 +167,15 @@ describe('the built-in lick library', () => {
 					expect(bar.reduce((a, s) => a + s.beats, 0)).toBeCloseTo(4, 9);
 				}
 			}
+		}
+	});
+});
+
+describe('call and response limits', () => {
+	it('every built-in has at most MAX_LINE sounding notes', () => {
+		for (const l of BUILT_IN_LICKS) {
+			const n = l.notes.filter((t) => !isRestToken(t)).length;
+			expect(n).toBeLessThanOrEqual(MAX_LINE);
 		}
 	});
 });

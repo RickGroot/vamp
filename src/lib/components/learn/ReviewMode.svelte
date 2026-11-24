@@ -14,41 +14,50 @@
 	// would start the Sketch song.
 	import { base } from '$app/paths';
 	import { unlockAudio } from '$lib/audio/context';
-	import { KIND_TITLES, QUIZ_ITEMS, quizItemById, type QuizItem } from '$lib/learn/items';
-	import { buildSession, DAY_MS, effectiveDue, scheduled, SESSION_SIZE } from '$lib/learn/srs';
+	import {
+		CATALOGUE,
+		catalogueItemById,
+		itemLabel,
+		isLickItem,
+		kindTitle,
+		type CatalogueItem
+	} from '$lib/learn/lickItems';
+	import {
+		backWhen,
+		buildCappedSession,
+		effectiveDue,
+		inDays,
+		scheduled,
+		SESSION_SIZE,
+		withAnswer
+	} from '$lib/learn/srs';
 	import { learn } from '$lib/stores/learn.svelte';
 	import { learnProgress } from '$lib/stores/learnProgress.svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
+	import LickCard from './LickCard.svelte';
 	import QuizCard from './QuizCard.svelte';
 
 	type Phase = 'start' | 'session' | 'end';
 
 	let phase = $state<Phase>('start');
 	/** Frozen when the session starts; answers don't reshuffle it. */
-	let session = $state.raw<QuizItem[]>([]);
+	let session = $state.raw<CatalogueItem[]>([]);
 	let index = $state(0);
-	let answers = $state.raw<{ id: string; correct: boolean }[]>([]);
+	/** One slot per question, by its place: a card that answers twice replaces its own entry. */
+	let answers = $state.raw<({ id: string; correct: boolean } | undefined)[]>([]);
+	const given = $derived(answers.filter((a): a is { id: string; correct: boolean } => !!a));
 	/** Practising ahead of schedule: said on the card, not counted any differently. */
 	let early = $state(false);
 	/** The clock the overview reads, refreshed whenever it is shown. */
 	let now = $state(Date.now());
 
-	const list = $derived(scheduled(learnProgress.items, QUIZ_ITEMS, now));
+	const list = $derived(scheduled(learnProgress.items, CATALOGUE, now));
 	const due = $derived(list.filter((s) => s.due <= now));
 	const upcoming = $derived(list.filter((s) => s.due > now));
 	/** The session Start would begin: built ahead so the button can say its length. */
-	const planned = $derived(buildSession(learnProgress.items, QUIZ_ITEMS, now, Math.random));
+	const planned = $derived(buildCappedSession(learnProgress.items, CATALOGUE, now, Math.random));
 
-	/** How far off a time is, in words: 'tomorrow', 'in 4 days'. */
-	function inDays(at: number, from: number): string {
-		const days = Math.ceil((at - from) / DAY_MS);
-		return days <= 1 ? 'tomorrow' : `in ${days} days`;
-	}
-
-	/** When something is back, in words. */
-	const when = (at: number, from: number) => (at <= from ? 'due now' : `back ${inDays(at, from)}`);
-
-	function begin(items: QuizItem[], ahead: boolean) {
+	function begin(items: CatalogueItem[], ahead: boolean) {
 		if (items.length === 0) return;
 		void unlockAudio(); // inside the tap: the first card plays as it mounts
 		session = items;
@@ -66,12 +75,14 @@
 	function startEarly() {
 		now = Date.now();
 		const last = upcoming[upcoming.length - 1]?.due ?? now;
-		begin(buildSession(learnProgress.items, QUIZ_ITEMS, last, Math.random), true);
+		begin(buildCappedSession(learnProgress.items, CATALOGUE, last, Math.random), true);
 	}
 
 	function answered(correct: boolean) {
+		// A correction arriving after End review must not touch a finished summary.
+		if (phase !== 'session') return;
 		const item = session[index];
-		if (item) answers = [...answers, { id: item.id, correct }];
+		if (item) answers = withAnswer(answers, index, item.id, correct);
 	}
 
 	function advance() {
@@ -84,7 +95,7 @@
 	function finish() {
 		learn.stop();
 		now = Date.now();
-		phase = answers.length > 0 ? 'end' : 'start';
+		phase = answers.some(Boolean) ? 'end' : 'start';
 	}
 
 	function done() {
@@ -95,9 +106,9 @@
 	/** What you reviewed, each exercise once, in the order it first came up. */
 	const reviewed = $derived.by(() => {
 		const seen = new Map<string, number>();
-		for (const a of answers) seen.set(a.id, (seen.get(a.id) ?? 0) + 1);
+		for (const a of given) seen.set(a.id, (seen.get(a.id) ?? 0) + 1);
 		return [...seen].flatMap(([id, count]) => {
-			const item = quizItemById(id);
+			const item = catalogueItemById(id);
 			const p = learnProgress.get(id);
 			return item ? [{ item, count, back: p ? effectiveDue(p, now) : now }] : [];
 		});
@@ -110,10 +121,10 @@
 	});
 </script>
 
-{#snippet itemRow(item: QuizItem, note: string)}
+{#snippet itemRow(item: CatalogueItem, note: string)}
 	<li class="row">
-		<span class="row__name">{item.title}</span>
-		<span class="label row__kind">{KIND_TITLES[item.spec.kind]}</span>
+		<span class="row__name">{itemLabel(item)}</span>
+		<span class="label row__kind">{kindTitle(item)}</span>
 		<span class="hint row__when">{note}</span>
 	</li>
 {/snippet}
@@ -130,26 +141,37 @@
 		<!-- One card per question: a new card is a new owner, a new Space action,
 		     and the last question's runs forgotten. -->
 		{#key index}
-			<QuizCard
-				{item}
-				autoplay
-				onanswer={answered}
-				onnext={advance}
-				nextLabel={index + 1 < session.length ? 'Next question' : 'Finish review'}
-			/>
+			{#if isLickItem(item)}
+				<!-- A lick waits for the Play tap, like everywhere in Learn: no autoplay. -->
+				<LickCard
+					{item}
+					onanswer={answered}
+					onnext={advance}
+					onskip={advance}
+					nextLabel={index + 1 < session.length ? 'Next question' : 'Finish review'}
+				/>
+			{:else}
+				<QuizCard
+					{item}
+					autoplay
+					onanswer={answered}
+					onnext={advance}
+					nextLabel={index + 1 < session.length ? 'Next question' : 'Finish review'}
+				/>
+			{/if}
 		{/key}
 	</div>
 {:else if phase === 'end'}
 	<section class="card" aria-labelledby="review-end-title">
 		<h2 id="review-end-title" class="display card__title">Reviewed</h2>
 		<p class="card__lede">
-			{answers.length === 1 ? 'One question' : `${answers.length} questions`} across {reviewed.length === 1
+			{given.length === 1 ? 'One question' : `${given.length} questions`} across {reviewed.length === 1
 				? 'one exercise'
 				: `${reviewed.length} exercises`}. Here is when each comes back.
 		</p>
 		<ul class="rows">
 			{#each reviewed as r (r.item.id)}
-				{@render itemRow(r.item, `${r.count === 1 ? '1 question' : `${r.count} questions`} · ${when(r.back, now)}`)}
+				{@render itemRow(r.item, `${r.count === 1 ? '1 question' : `${r.count} questions`} · ${backWhen(r.back, now)}`)}
 			{/each}
 		</ul>
 		<p class="hint card__note">
@@ -190,7 +212,7 @@
 			{@const soonest = upcoming[0]}
 			<h2 id="review-title" class="display card__title">Nothing due</h2>
 			<p class="card__lede">
-				Next back: <span class="card__name">{soonest.item.title}</span>, {inDays(soonest.due, now)}.
+				Next back: <span class="card__name">{itemLabel(soonest.item)}</span>, {inDays(soonest.due, now)}.
 			</p>
 			<div class="actions">
 				<button class="bar-btn actions__go" onclick={startEarly}>Practise early</button>
@@ -215,7 +237,7 @@
 			<h2 id="later-title" class="display later__title">Coming back</h2>
 			<ul class="rows">
 				{#each upcoming as s (s.item.id)}
-					{@render itemRow(s.item, when(s.due, now))}
+					{@render itemRow(s.item, backWhen(s.due, now))}
 				{/each}
 			</ul>
 		</section>

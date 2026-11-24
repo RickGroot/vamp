@@ -129,7 +129,7 @@ A new Learn mode, **Licks** (`?mode=licks`). It joins `MODES` only when its phas
 2. **The call:** the lick over its changes, in the card's key.
 3. **Your turn:** the same changes again, without the lick.
 
-Both passes are one plan, so there is no seam between them, and the cue tells the card which half is sounding. The producer is `lickCallPlan(run)` beside `learnPlan`, source `'learn'`, owner `lick:<lick id>:<serial>`. The owner rules match QuizCard: forget on Next, on a key change and on destroy.
+Both passes are one plan, so there is no seam between them, and the cue tells the card which half is sounding. The producer is `lickCallRun` (`learn/lickCall.ts`) on top of `learnPlan`, source `'learn'`, owner `lick:<item id>:<serial>`. The owner rules match QuizCard: forget on Next, on a key change and on destroy.
 
 **Sound before symbol.** The staff stays hidden until after your turn, matching the quiz rule that nothing is given away before the answer. Then it reveals the notes, with anything you got wrong marked.
 
@@ -142,12 +142,12 @@ Both passes are one plan, so there is no seam between them, and the cue tells th
 
 **Without a keyboard:** after your turn, Got it / Not yet. That is recorded the same way, through `learnProgress.record`.
 
-**Review.** Progress is keyed `lick:<lick id>` in `vamp:learn` items (box, due, seen, last). Leitner and `buildSession` stay unchanged; Review's catalogue grows to quiz items plus licks. ReviewMode renders a LickCard for a lick item and a QuizCard for the rest, with the same `autoplay` / `onanswer` / `onnext` props.
+**Review.** Progress is keyed `call-<slug>` (the lick id without `lick-`) in `vamp:learn` items (box, due, seen, last). Leitner and `buildSession` stay unchanged; Review's catalogue grows to quiz items plus licks. ReviewMode renders a LickCard for a lick item and a QuizCard for the rest, with the same `autoplay` / `onanswer` / `onnext` props.
 
 - **Enrolment:** the first answer in Learn enrols a lick. Practising it in Practice does not.
 - **Deleted licks:** a custom lick's progress stays when the lick is deleted. Review already skips ids it no longer knows without deleting them.
 
-**Key and range in Learn:** Learn has no range setting. The card plays in a random key from `KEY_ROOTS` (or one you pick), and the staff uses the pitch select's offset. Which range Learn fits to is an open question.
+**Key and range in Learn:** Learn has no range setting. The card plays in a random key from `KEY_ROOTS` (or one you pick), and the staff uses the pitch select's offset. Settled in Phase 3: Learn fits to the keys range (`CALL_RANGE`) in the middle register, whatever the Practice range.
 
 ## Adding your own licks
 
@@ -190,7 +190,10 @@ Each phase is one commit, checked by hand before it lands, as with Learn.
    - `drillPlan` with chord backing (`slotIndex: null`) and lead swing.
    - Picker and runner.
 2. **Your own licks.** LickEditor, the `licks` store (DB 3), `lickLibrary` store (the twin of `drillLibrary`), backup and import message.
-3. **Call and response in Learn.** The Licks mode, LickCard, `lickCallPlan`, self-check, review items.
+3. **Call and response in Learn.** (BUILT 2026-11-24)
+   - Phase 2 (your own licks) is still to come; Phase 3 was built on the built-ins only.
+   - The Licks mode (`?mode=licks`, last tab), LickCard (self-check only), `lickCallRun` (`learn/lickCall.ts`), review items (`learn/lickItems.ts`), Review rendering a LickCard.
+   - No MIDI grading yet: Phase 4 adds it. Got it / Not yet is the only answer.
 4. **MIDI grading.** `captureNotes` in the midi store, `gradeLine`, the Keyboard toggle on LickCard.
 
 ## Architecture fit
@@ -256,7 +259,7 @@ Proposed in this design and not put to you as cards (cheap to change before Phas
 - `_` for the octave below, `8`–`14` for the octave above.
 - A lick is fitted to range as a whole, never folded per note.
 - Learn hides the staff until after your turn.
-- Review item ids are `lick:<lick id>`.
+- Review item ids are `call-<slug>` (the stored id grammar has no colon).
 - The first answer in Learn enrols a lick.
 - The four phases and their order.
 
@@ -267,11 +270,12 @@ Still open, for a later round:
 - **Fit a lick into your own song's changes** (find a ii–V–I in the song and drop the lick there). [NEEDS CLARIFICATION]
 - ~~**Library size and styles per phase**~~ Resolved in Phase 1: 8 licks (blues 2, rock 2, jazz 4). Later phases add to it; ids never change.
 - **As built in Phase 1** (differs from or settles the text above): blues plays a swing kit with root bass on an upright; Backing for a lick is Band + click / Band + drums (the style's kit, no click) / Band only, and the band always plays; custom licks (Customise) wait for Phase 2.
+- **As built in Phase 3** (differs from or settles the text above): progress is keyed `call-<slug>` (the lick id without its `lick-` prefix), not `lick:<lick id>`, because the stored id grammar (`ID_RE`) has no colon; the card's owner stays `lick:<item id>:<serial>` since owners are never persisted. The producer is `lickCallRun` (a `LearnRun` plus the turn marker), built on `learnPlan`, not a separate `lickCallPlan`. Range and tempo are settled: the keys range (`CALL_RANGE`), default tempo 90 with 70 / 90 / 110 on the card, drums as backing and a piano voice. The expected line is in concert pitch (`expected`). Rhythm is not graded in v1. A review session holds at most 3 lick questions (`buildCappedSession`); a lick card never autoplays. Known limit: the turn is as long as the lick (2 to 4 bars). In Review a lick has a Skip that moves on without recording; Stopping in your turn still lets you say how it went.
 - **MIDI recording of licks** (play a lick in on a keyboard instead of typing it). [NEEDS CLARIFICATION]
 
 ## Open questions
 
 - The octave-below marker: `_5`, or something more musician-friendly?
-- Learn's range: a generous default, or Practice's saved range?
+- ~~Learn's range: a generous default, or Practice's saved range?~~ Resolved in Phase 3: the keys range, middle register.
 - Should Practice offer an ungraded "your turn" pass, with the band playing the changes again during the rest bars? Or is that Learn's job only?
 - Should Practice let you change a lick's groove for the session (a jazz lick over a bossa)?

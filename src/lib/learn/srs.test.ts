@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
 	BOX_DAYS,
 	BOX_MAX,
+	backWhen,
+	buildCappedSession,
 	buildSession,
+	inDays,
+	MAX_LICKS_PER_SESSION,
+	withAnswer,
 	DAY_MS,
 	dueItems,
 	effectiveDue,
@@ -207,5 +212,95 @@ describe('review sessions', () => {
 		expect(scheduled(progress, QUIZ_ITEMS, NOW).map((s) => s.item.id)).toEqual(['fn-three-chords', 'loop-pop']);
 		expect(dueItems(progress, QUIZ_ITEMS, NOW).map((i) => i.id)).toEqual(['fn-three-chords']);
 		expect(isDue(progress['fn-three-chords'], NOW)).toBe(true);
+	});
+});
+
+describe('review wording, answers and the lick cap', () => {
+	const NOW = Date.UTC(2026, 9, 19, 12);
+	const lcg = (seed: number) => {
+		let x = seed >>> 0;
+		return () => {
+			x = (x * 1664525 + 1013904223) >>> 0;
+			return x / 0x100000000;
+		};
+	};
+	const SEEDS = Array.from({ length: 40 }, (_, i) => i * 7919 + 1);
+	const due = (daysAgo: number): ItemProgress => ({ box: 1, due: NOW - daysAgo * DAY_MS, seen: 1, last: NOW - (daysAgo + 1) * DAY_MS });
+	const lick = (id: string) => ({ id, spec: { kind: 'lick' } });
+	const quiz = (id: string) => ({ id, spec: { kind: 'function' } });
+	const noRepeats = (ids: string[]) => ids.every((id, i) => i === 0 || id !== ids[i - 1]);
+
+	it('inDays and backWhen', () => {
+		expect(inDays(NOW, NOW)).toBe('tomorrow');
+		expect(inDays(NOW + DAY_MS, NOW)).toBe('tomorrow');
+		expect(inDays(NOW + 1.0001 * DAY_MS, NOW)).toBe('in 2 days');
+		expect(inDays(NOW + 3.2 * DAY_MS, NOW)).toBe('in 4 days');
+		expect(backWhen(NOW, NOW)).toBe('due now');
+		expect(backWhen(NOW - 5, NOW)).toBe('due now');
+		expect(backWhen(NOW + 3.2 * DAY_MS, NOW)).toBe('back in 4 days');
+	});
+
+	it('withAnswer replaces, never mutates, and extends', () => {
+		const a = [{ id: 'x', correct: false }];
+		const b = withAnswer(a, 0, 'y', true);
+		expect(a).toEqual([{ id: 'x', correct: false }]);
+		expect(b).toEqual([{ id: 'y', correct: true }]);
+		const c = withAnswer(a, 2, 'z', true);
+		expect(c).toHaveLength(3);
+		expect(c[1]).toBeUndefined();
+	});
+
+	it('a single-kind session of 3 lick items repeats each at most 3 times, never in a row', () => {
+		const items = [lick('a'), lick('b'), lick('c')];
+		const progress = { a: due(3), b: due(2), c: due(1) };
+		for (const seed of SEEDS) {
+			const ids = buildSession(progress, items, NOW, lcg(seed)).map((i) => i.id);
+			expect(noRepeats(ids)).toBe(true);
+			for (const id of ['a', 'b', 'c']) expect(ids.filter((x) => x === id).length).toBeLessThanOrEqual(3);
+		}
+	});
+
+	it('unknown ids are skipped and the progress is untouched', () => {
+		const progress = { a: due(1), ghost: due(2) };
+		const before = JSON.stringify(progress);
+		expect(scheduled(progress, [lick('a')], NOW).map((s) => s.item.id)).toEqual(['a']);
+		expect(dueItems(progress, [lick('a')], NOW).map((i) => i.id)).toEqual(['a']);
+		expect(JSON.stringify(progress)).toBe(before);
+	});
+
+	it('caps lick questions and keeps every quiz item', () => {
+		const licks = ['l1', 'l2', 'l3', 'l4', 'l5'].map(lick);
+		const quizzes = ['q1', 'q2', 'q3', 'q4'].map(quiz);
+		const items = [...licks, ...quizzes];
+		const progress: Record<string, ItemProgress> = {};
+		items.forEach((it, i) => (progress[it.id] = due(10 - i)));
+		for (const seed of SEEDS) {
+			const out = buildCappedSession(progress, items, NOW, lcg(seed), 12).map((i) => i.id);
+			expect(out.filter((id) => id.startsWith('l')).length).toBeLessThanOrEqual(MAX_LICKS_PER_SESSION);
+			for (const q of quizzes) expect(out).toContain(q.id);
+			expect(noRepeats(out)).toBe(true);
+		}
+	});
+
+	it('only licks due: at most 3 questions, from the 3 most overdue, the rest stay due', () => {
+		const licks = ['l1', 'l2', 'l3', 'l4', 'l5'].map(lick);
+		const progress: Record<string, ItemProgress> = {};
+		licks.forEach((it, i) => (progress[it.id] = due(10 - i)));
+		for (const seed of SEEDS) {
+			const out = buildCappedSession(progress, licks, NOW, lcg(seed)).map((i) => i.id);
+			expect(out.length).toBeLessThanOrEqual(3);
+			for (const id of out) expect(['l1', 'l2', 'l3']).toContain(id);
+		}
+		expect(dueItems(progress, licks, NOW)).toHaveLength(5);
+	});
+
+	it('a set without licks equals buildSession for the same seed', () => {
+		const items = ['q1', 'q2', 'q3'].map(quiz);
+		const progress = { q1: due(3), q2: due(2), q3: due(1) };
+		for (const seed of SEEDS) {
+			expect(buildCappedSession(progress, items, NOW, lcg(seed)).map((i) => i.id)).toEqual(
+				buildSession(progress, items, NOW, lcg(seed)).map((i) => i.id)
+			);
+		}
 	});
 });

@@ -17,15 +17,17 @@
 	import ExplainMode from '$lib/components/learn/ExplainMode.svelte';
 	import ReviewMode from '$lib/components/learn/ReviewMode.svelte';
 	import LabMode from '$lib/components/learn/LabMode.svelte';
+	import LicksMode from '$lib/components/learn/LicksMode.svelte';
 
-	type Mode = 'map' | 'ear' | 'song' | 'review' | 'lab';
+	type Mode = 'map' | 'ear' | 'song' | 'review' | 'lab' | 'licks';
 
 	const MODES: { id: Mode; label: string; ready: boolean }[] = [
 		{ id: 'map', label: 'Map', ready: true },
 		{ id: 'ear', label: 'Ear', ready: true },
 		{ id: 'song', label: 'Your song', ready: true },
 		{ id: 'review', label: 'Review', ready: true },
-		{ id: 'lab', label: 'Lab', ready: true }
+		{ id: 'lab', label: 'Lab', ready: true },
+		{ id: 'licks', label: 'Licks', ready: true }
 	];
 	const shown = MODES.filter((m) => m.ready);
 
@@ -89,6 +91,8 @@
 		<ReviewMode />
 	{:else if mode === 'lab'}
 		<LabMode />
+	{:else if mode === 'licks'}
+		<LicksMode />
 	{:else if lesson}
 		<!-- A new lesson is a new view: its own steps, owners and Space action. -->
 		{#key lesson.id}
@@ -179,8 +183,9 @@
 		}
 	}
 
-	/* Five modes share 288px at 320 wide: tighter gaps and tracking, as the
-	   header's nav does below 400px, so the row doesn't wrap. */
+	/* Six modes don't fit one 288px row at 320 wide: tighter gaps and tracking,
+	   as the header's nav does below 400px, so the row wraps to two lines
+	   instead of scrolling sideways. */
 	@media (max-width: 400px) {
 		.modes {
 			gap: 0 var(--space-3);

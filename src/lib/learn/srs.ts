@@ -188,3 +188,58 @@ export function buildSession<T extends SessionItem>(
 	}
 	return out;
 }
+
+// ---- review wording and caps (Licks, Phase 3) ---------------------------------
+
+/** "tomorrow" or "in N days": when `at` comes round, counted from `from`. */
+export function inDays(at: number, from: number): string {
+	const days = Math.ceil((at - from) / DAY_MS);
+	return days <= 1 ? 'tomorrow' : `in ${days} days`;
+}
+
+/** "due now" or "back tomorrow" / "back in N days". */
+export const backWhen = (at: number, from: number): string => (at <= from ? 'due now' : `back ${inDays(at, from)}`);
+
+/** Lick questions one review session holds at most: they take minutes each. */
+export const MAX_LICKS_PER_SESSION = 3;
+
+/**
+ * Replace the answer at `index` with `{id, correct}`; never mutates the input.
+ * An index past the end extends the array with holes.
+ */
+export function withAnswer<A extends { id: string; correct: boolean }>(
+	answers: readonly (A | undefined)[],
+	index: number,
+	id: string,
+	correct: boolean
+): (A | undefined)[] {
+	const next = answers.slice();
+	next[index] = { id, correct } as A;
+	return next;
+}
+
+/**
+ * `buildSession`, but at most `cap.max` questions of `cap.kind` (and so at most
+ * that many items of it, the most overdue). Capped items are left due: nothing
+ * is rescheduled here. The same never-twice-in-a-row rule holds after the cut.
+ */
+export function buildCappedSession<T extends SessionItem>(
+	progress: Record<string, ItemProgress>,
+	items: readonly T[],
+	now: number,
+	rand: () => number,
+	n: number = SESSION_SIZE,
+	cap: { kind: string; max: number } = { kind: 'lick', max: MAX_LICKS_PER_SESSION }
+): T[] {
+	const due = dueItems(progress, items, now);
+	const keep = new Set(due.filter((i) => i.spec.kind === cap.kind).slice(0, cap.max).map((i) => i.id));
+	const pool = items.filter((i) => i.spec.kind !== cap.kind || keep.has(i.id));
+	let seen = 0;
+	const out: T[] = [];
+	for (const q of buildSession(progress, pool, now, rand, n)) {
+		if (q.spec.kind === cap.kind && ++seen > cap.max) continue;
+		if (out.length > 0 && out[out.length - 1].id === q.id) continue;
+		out.push(q);
+	}
+	return out;
+}

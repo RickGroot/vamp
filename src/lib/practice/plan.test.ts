@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { Note } from 'tonal';
-import { drillPlan, runMeter, type DrillPlanOptions } from './plan';
+import { drillPlan, leadEvents, runMeter, type DrillPlanOptions } from './plan';
 import { resolveDrill } from './resolve';
 import { drillById } from './patterns';
 import { rangeFor } from './range';
 import type { DrillRunOptions } from './types';
+import { lickById } from '$lib/licks/library';
+import { resolveLick } from '$lib/licks/resolve';
 
 const KEYS = rangeFor('keys');
 const chroma = (m: number) => ((m % 12) + 12) % 12;
@@ -146,4 +148,21 @@ describe('drillPlan', () => {
 	it('loads the chosen lead instrument', () => {
 		expect(build({}, { instrument: 'rhodes' }).voices.chords).toBe('rhodes');
 	});
+});
+
+describe('leadEvents', () => {
+	for (const offset of [0, 2]) {
+		it(`is the lead of drillPlan for a drill at offset ${offset}`, () => {
+			const run = resolveDrill(drillById('scale-1235')!, runOpts({ offset }));
+			const plan = drillPlan(run, planOpts({ backing: 'none' }));
+			expect(leadEvents(run, offset)).toEqual(plan.events.filter((e) => e.kind === 'lead'));
+		});
+		it(`is the lead of drillPlan for a straight lick at offset ${offset}`, () => {
+			const lick = lickById('lick-rock-mixolydian')!;
+			expect(lick.feel).toBe('straight');
+			const run = resolveLick(lick, runOpts({ offset }));
+			const plan = drillPlan(run, planOpts());
+			expect(leadEvents(run, offset)).toEqual(plan.events.filter((e) => e.kind === 'lead'));
+		});
+	}
 });

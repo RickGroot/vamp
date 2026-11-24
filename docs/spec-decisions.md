@@ -2,6 +2,14 @@
 
 Decisions locked in with Spec Deck, newest first. Claude checks this log before asking, so a settled question isn't asked again. To revisit one, ask Claude to deal it as a card.
 
+## 2026-11-24 · licks · Phase 3 (build)
+Document: `docs/licks-design.md`
+
+- **Review item ids**: `call-<slug>` (the lick id without `lick-`), not `lick:<id>`, because the persisted id grammar has no colon _(settled by the code, `storage/learn.ts` `ID_RE`)_
+- **The call-and-response producer**: `lickCallRun` on top of `learnPlan`, not a separate `lickCallPlan` _(Claude's recommendation)_
+- **Range and tempo in Learn**: the fixed keys range, default tempo 90 (70 / 90 / 110 selectable) _(Claude's recommendation)_
+- **Rhythm**: not graded in v1; only the pitches' order is, in Phase 4 _(as decided in round 1)_
+
 ## 2026-11-09 · licks · round 1 (spec)
 Document: `docs/licks-design.md`
 

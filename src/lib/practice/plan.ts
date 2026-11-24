@@ -70,27 +70,33 @@ function backingEvents(
 	return buildCompEvents([], totalQuarters, runMeter(run), groove, opts.clickFeel);
 }
 
-export function drillPlan(run: PracticeRun, opts: DrillPlanOptions): PlaybackPlan {
-	const ts = runMeter(run);
-	const offset = run.options.offset;
-
-	// The drill line. Notes are WRITTEN pitch, so playback converts back to
-	// concert — the single offset seam, applied here and nowhere else.
-	//
-	// A rest still emits an event with `midi: []`: it carries a cueIndex, so the
-	// runner's highlight and progress keep advancing through the rest, exactly
-	// like a rest slot in a song.
-	const lead: CompEvent[] = run.notes.map((note, i) => ({
+/**
+ * The drill line's lead events. Notes are WRITTEN pitch, so this converts back
+ * to concert: the single offset seam, applied here and nowhere else.
+ *
+ * A rest still emits an event with `midi: []`: it carries a cueIndex, so the
+ * runner's highlight and progress keep advancing through the rest, exactly
+ * like a rest slot in a song. NEVER set slotIndex: that is the flattenSlots
+ * global index the editor's chord highlight keys on, and a drill setting it
+ * would light up the user's song. cueIndex is the separate channel for
+ * generated plans.
+ */
+export function leadEvents(run: PracticeRun, offset: number): CompEvent[] {
+	return run.notes.map((note, i) => ({
 		atQuarters: note.atQuarters,
 		durQuarters: note.durQuarters,
 		midi: note.midi === null ? [] : [concertMidi(note.midi, offset)],
 		kind: 'lead',
-		// NEVER set slotIndex: that is the flattenSlots global index the editor's
-		// chord highlight keys on, and a drill setting it would light up the user's
-		// song. cueIndex is the separate channel for generated plans.
 		slotIndex: null,
 		cueIndex: i
 	}));
+}
+
+export function drillPlan(run: PracticeRun, opts: DrillPlanOptions): PlaybackPlan {
+	const ts = runMeter(run);
+	const offset = run.options.offset;
+
+	const lead: CompEvent[] = leadEvents(run, offset);
 
 	const totalQuarters = run.totalQuarters;
 
