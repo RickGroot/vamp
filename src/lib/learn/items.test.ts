@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Chord } from 'tonal';
 import { isValidChordSymbol } from '$lib/audio/chord';
 import { numeralOf, parseNumeral } from '$lib/model/numerals';
 import { buildPresetChord, PRESET_ROOTS } from '$lib/model/presets';
@@ -32,7 +33,10 @@ const SHIPPED_IDS = [
 	'fn-fifths-fall',
 	'fn-substitutes',
 	'fn-back-door',
-	'fn-passing-dim'
+	'fn-passing-dim',
+	'quality-ninths',
+	'quality-suspended',
+	'quality-altered'
 ];
 
 describe('quiz item ids', () => {
@@ -126,6 +130,19 @@ describe('quality items', () => {
 			if (item.spec.kind !== 'quality') continue;
 			expect(item.spec.qualities.length, item.id).toBeGreaterThanOrEqual(2);
 			for (const q of item.spec.qualities) expect(QUALITIES[q], `${item.id}: ${q}`).toBeDefined();
+		}
+	});
+
+	it('no two qualities share a pitch-class set on any root (a keyboard answer must be unambiguous)', () => {
+		const rotations = (c: string) => Array.from({ length: 12 }, (_, k) => c.slice(k) + c.slice(0, k));
+		const ids = Object.keys(QUALITIES) as QualityId[];
+		for (const a of ids) {
+			for (const b of ids) {
+				if (a === b) continue;
+				const ca = Chord.get('C' + QUALITIES[a].suffix).chroma;
+				const cb = Chord.get('C' + QUALITIES[b].suffix).chroma;
+				expect(rotations(ca), `${a} vs ${b}`).not.toContain(cb);
+			}
 		}
 	});
 });

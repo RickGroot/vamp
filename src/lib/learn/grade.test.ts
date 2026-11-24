@@ -154,7 +154,9 @@ describe('gradeNotes', () => {
 		expect(readNotes(fn, [60])).toBeNull();
 		expect(readNotes(fn, [60, 72, 84])).toBeNull();
 		expect(readNotes(fn, [60, 61, 62])).toBeNull();
-		expect(readNotes(triads, [60, 65, 67])).toBeNull(); // Csus4 is no quality on the list
+		expect(readNotes(triads, [60, 62, 64])).toBeNull(); // C D E: a cluster that is no chord
+		// Csus4 is a quality now: read as sus4, and wrong where the pad has no sus4.
+		expect(gradeNotes(triads, [60, 65, 67])).toEqual({ value: 'sus4', correct: false });
 	});
 
 	it('an added seventh counts only where the question asks for it', () => {
@@ -255,6 +257,23 @@ describe('gradeNotes', () => {
 		for (const id of Object.keys(QUALITIES) as (keyof typeof QUALITIES)[]) {
 			const q: QualityQuestion = { ...seventhQualities, answer: id, options: [id] };
 			expect(readNotes(q, voice(`D${QUALITIES[id].suffix}`)), id).toBe(id);
+		}
+	});
+});
+
+describe('quality questions over the colour qualities (Track 8)', () => {
+	it('every quality, on every root, in every inversion with and without doubling, reads as itself', () => {
+		const ids = Object.keys(QUALITIES) as (keyof typeof QUALITIES)[];
+		for (const id of ids) {
+			const q: QualityQuestion = { ...seventhQualities, answer: id, options: ids };
+			for (const root of KEY_ROOTS.major) {
+				const symbol = `${root}${QUALITIES[id].suffix}`;
+				for (const inv of inversions(symbol)) {
+					for (const doubled of [false, true]) {
+						expect(readNotes(q, voice(symbol, inv, { doubled })), `${symbol} /${inv} ${doubled}`).toBe(id);
+					}
+				}
+			}
 		}
 	});
 });

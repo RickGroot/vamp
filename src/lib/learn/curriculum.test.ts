@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isValidChordSymbol } from '$lib/audio/chord';
 import { barBeats } from '$lib/model/time';
 import { plainText } from '$lib/model/harmony';
+import { detectProgressions } from '$lib/model/analysis';
 import { parseNumeral } from '$lib/model/numerals';
 import { TEMPO_MAX, TEMPO_MIN } from '$lib/model/factory';
 import { migrateProgression } from '$lib/storage/db';
@@ -58,7 +59,11 @@ const SHIPPED_LESSON_IDS = [
 	'jazz-forms-fifths',
 	'dominants-tritone',
 	'dominants-back-door',
-	'dominants-passing'
+	'dominants-passing',
+	'colour-extensions',
+	'colour-suspended',
+	'colour-altered',
+	'colour-chord-scales'
 ];
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -100,9 +105,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start, the pop side and the first three jazz tracks; the rest come later', () => {
+	it('build the shared start, the pop side, the first three jazz tracks and Colour; the rest come later', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour']);
 	});
 
 	it('fork after the loops and join again', () => {
@@ -256,6 +261,27 @@ describe('listen steps', () => {
 	});
 });
 
+describe('colour try songs', () => {
+	it('are still named as a two, five, one in all 12 roots', () => {
+		const find = (name: string) => {
+			const t = tries.find(({ step }) => step.song.name === name);
+			expect(t, name).toBeDefined();
+			return t!.step.song;
+		};
+		for (const [name, id] of [
+			['Coloured two, five, one', 'jazz-251'],
+			['Dark two, five, one', 'minor-251']
+		] as const) {
+			const song = find(name);
+			for (const tonic of KEY_ROOTS[song.mode]) {
+				const built = buildTrySong(song, tonic);
+				const found = detectProgressions(built.bars, { tonic, mode: song.mode }).map((d) => d.patternId);
+				expect(found, `${name} in ${tonic}`).toContain(id);
+			}
+		}
+	});
+});
+
 describe('try steps', () => {
 	it('build a Sketch song that survives migrateProgression, in all 12 roots', () => {
 		for (const { step, at } of tries) {
@@ -347,7 +373,18 @@ describe('order and progress', () => {
 		};
 		expect(nextLesson({ ...shared, ...jazz })?.id).toBe('dominants-tritone');
 		const dominants = Object.fromEntries(trackById('dominants')!.lessons.map((id, i) => [id, done(400 + i)]));
-		expect(nextLesson({ ...shared, ...jazz, ...dominants })?.id).toBe('borrowed-flat-seven');
+		// Colour lists Track 7 among its `after` tracks, so finishing 7 carries the jazz side on to Colour.
+		expect(nextLesson({ ...shared, ...jazz, ...dominants })?.id).toBe('colour-extensions');
+	});
+
+	it('reaches Colour once Tracks 0 to 7 are done, and continues in it', () => {
+		const all = Object.fromEntries(
+			['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants'].flatMap((t, n) =>
+				trackById(t)!.lessons.map((id, i) => [id, done(500 + n * 10 + i)])
+			)
+		);
+		expect(nextLesson(all)?.id).toBe('colour-extensions');
+		expect(nextLesson({ ...all, 'colour-extensions': done(900) })?.id).toBe('colour-suspended');
 	});
 
 	it('suggests nothing once every lesson is done, and ignores inherited keys', () => {

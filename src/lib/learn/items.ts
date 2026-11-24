@@ -18,7 +18,7 @@ import type { KeyInfo } from '$lib/model/key';
 import type { PresetChord } from '$lib/model/presets';
 
 /** The chord qualities the ear can be asked to tell apart. */
-export type QualityId = 'major' | 'minor' | 'dim' | 'aug' | '7' | 'maj7' | 'm7' | 'm7b5';
+export type QualityId = 'major' | 'minor' | 'dim' | 'aug' | '7' | 'maj7' | 'm7' | 'm7b5' | 'maj9' | '9' | 'm9' | 'sus4' | '7sus4' | '7b9' | '7#9' | '7#11';
 
 export const QUALITIES: Record<QualityId, { suffix: string; name: string }> = {
 	major: { suffix: '', name: 'Major' },
@@ -28,7 +28,15 @@ export const QUALITIES: Record<QualityId, { suffix: string; name: string }> = {
 	'7': { suffix: '7', name: 'Dominant seventh' },
 	maj7: { suffix: 'maj7', name: 'Major seventh' },
 	m7: { suffix: 'm7', name: 'Minor seventh' },
-	m7b5: { suffix: 'm7b5', name: 'Half-diminished' }
+	m7b5: { suffix: 'm7b5', name: 'Half-diminished' },
+	maj9: { suffix: 'maj9', name: 'Major ninth' },
+	'9': { suffix: '9', name: 'Dominant ninth' },
+	m9: { suffix: 'm9', name: 'Minor ninth' },
+	sus4: { suffix: 'sus4', name: 'Suspended fourth' },
+	'7sus4': { suffix: '7sus4', name: 'Suspended seventh' },
+	'7b9': { suffix: '7b9', name: 'Dominant flat ninth' },
+	'7#9': { suffix: '7#9', name: 'Dominant sharp ninth' },
+	'7#11': { suffix: '7#11', name: 'Dominant sharp eleventh' }
 };
 
 /** Name the numerals of a short progression, heard after the key's cadence. */
@@ -304,6 +312,25 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		title: 'Four sevenths',
 		lede: 'The four sevenths of jazz, one at a time.',
 		spec: { kind: 'quality', qualities: ['maj7', '7', 'm7', 'm7b5'] }
+	},
+	// ---- Chord quality: colour (Track 8) ----
+	{
+		id: 'quality-ninths',
+		title: 'Three ninths',
+		lede: 'A major, a dominant and a minor chord, each with a ninth on top.',
+		spec: { kind: 'quality', qualities: ['maj9', '9', 'm9'] }
+	},
+	{
+		id: 'quality-suspended',
+		title: 'Suspended or not',
+		lede: 'A fourth where the third should be, on a triad and on a seventh.',
+		spec: { kind: 'quality', qualities: ['major', 'sus4', '7', '7sus4'] }
+	},
+	{
+		id: 'quality-altered',
+		title: 'Altered dominants',
+		lede: 'A plain dominant seventh and three ways to bend it.',
+		spec: { kind: 'quality', qualities: ['7', '7b9', '7#9', '7#11'] }
 	}
 ];
 

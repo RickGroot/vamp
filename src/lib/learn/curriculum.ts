@@ -276,7 +276,7 @@ export const TRACKS: Track[] = [
 		side: 'joined',
 		after: ['minor-keys', 'dominants'],
 		summary: 'Extensions, altered and suspended dominants, and which scale goes with which chord.',
-		lessons: []
+		lessons: ['colour-extensions', 'colour-suspended', 'colour-altered', 'colour-chord-scales']
 	},
 	{
 		id: 'beyond-function',
@@ -1601,6 +1601,215 @@ export const LESSONS: Lesson[] = [
 					mode: 'major',
 					bars: [[c(0, 'maj7'), c(1, 'dim7')], [c(2, 'm7')], [c(7, '7')]],
 					tempo: 120,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	// ---- 8 Colour (joined) ----
+	{
+		id: 'colour-extensions',
+		track: 'colour',
+		title: 'Extensions',
+		skills: ['hear', 'read', 'use'],
+		items: ['quality-ninths'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The same two, five, one twice. First with plain sevenths, then with a ninth added to each chord.',
+				mode: 'major',
+				chords: [
+					c(2, 'm7', 2),
+					c(7, '7', 2),
+					c(0, 'maj7', 4),
+					c(2, 'm9', 2),
+					c(7, '9', 2),
+					c(0, 'maj9', 4)
+				],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'An extension is a note from further up the stack of thirds: the ninth, the eleventh, the thirteenth. It leaves the chord’s job alone and changes only its colour.',
+					'A {ii7} with a ninth is still a {ii7}, and a {V7} with a ninth or a thirteenth is still a {V7}.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'A dominant seventh, then the same chord with a thirteenth on top. Home follows.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(7, '7', 4), c(7, '13', 4), c(0, 'maj9', 4)],
+				hold: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'quality-ninths',
+				text: 'One chord at a time, no key. Is it a major ninth, a dominant ninth or a minor ninth?',
+				questions: 6
+			},
+			{
+				kind: 'read',
+				text: [
+					'Ninths sit well on major, minor and dominant sevenths. Thirteenths are most at home on dominants. The eleventh is the one to watch: on a major or dominant chord it rubs against the third. When a chord sounds muddy, take the top note away first.'
+				]
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch, then play the same bars again with plain sevenths. Listen for what the extra note adds and what it hides.',
+				song: {
+					name: 'Coloured two, five, one',
+					mode: 'major',
+					bars: [[c(2, 'm9')], [c(7, '13')], [c(0, 'maj9')], [c(0, 'maj9')]],
+					tempo: 110,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'colour-suspended',
+		track: 'colour',
+		title: 'Suspended chords',
+		skills: ['hear', 'read', 'use'],
+		items: ['quality-suspended'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A suspended chord trades its third for the fourth. It hangs in the air, then the fourth falls and the chord settles.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(7, 'sus4', 4), c(7, '', 4), c(0, '', 4)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'With no third, a suspended chord is neither major nor minor, so it hangs. The fourth usually falls a half step or a step to the third, which is where it settles: a suspended {V} onto {V}, a suspended {V7} onto {V7}.',
+					'A bar of the suspension followed by a bar or half a bar of the resolution is the usual shape.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'A two, five, one where the five arrives suspended, then turns into the usual dominant seventh.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(2, 'm7', 4), c(7, '7sus4', 4), c(7, '7', 4), c(0, 'maj7', 4)],
+				hold: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'quality-suspended',
+				text: 'Triad or seventh, suspended or not. Name each chord, no key.',
+				questions: 6
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch. Then change the suspended chord in the third bar to a plain one and hear how much of the lift it was carrying.',
+				song: {
+					name: 'Hanging fifth',
+					mode: 'major',
+					bars: [[c(0)], [c(5)], [c(7, 'sus4'), c(7)], [c(0)]],
+					tempo: 100,
+					groove: POP_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'colour-altered',
+		track: 'colour',
+		title: 'Altered dominants',
+		skills: ['hear', 'read', 'use'],
+		items: ['quality-altered'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A dominant seventh, then the same chord with a flat ninth, a sharp ninth and a raised eleventh. Each adds a different edge before home.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(7, '7', 4), c(7, '7b9', 4), c(7, '7#9', 4), c(7, '7#11', 4), c(0, 'maj7', 4)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'To alter a dominant, bend an upper note by a half step: lower the ninth, raise the ninth, or raise the eleventh. It is still a {V7}, with friction for the next chord to clear.',
+					'The flat ninth leans hardest: it sits a half step above the root and wants to fall. The sharp ninth is gritty and bluesy, and pulls less. The raised eleventh is bright and floating.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'The dark pairing: a half-diminished chord, a dominant with a flat ninth, then a minor home.',
+				mode: 'minor',
+				cadence: true,
+				chords: [c(2, 'm7b5', 4), c(7, '7b9', 4), c(0, 'm7', 4)],
+				hold: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'quality-altered',
+				text: 'A dominant seventh and three ways to colour it. Name each chord, no key.',
+				questions: 6
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch. Then retype 7b9 as 7#9 on the dominant and hear the pull to the minor chord loosen and a blues edge arrive.',
+				song: {
+					name: 'Dark two, five, one',
+					mode: 'minor',
+					bars: [[c(2, 'm7b5')], [c(7, '7b9')], [c(0, 'm7')], [c(0, 'm7')]],
+					tempo: 120,
+					groove: { pattern: 'block', bass: 'root', bassInstrument: 'upright', drums: 'bossa' }
+				}
+			}
+		]
+	},
+	{
+		id: 'colour-chord-scales',
+		track: 'colour',
+		title: 'Chords and scales',
+		skills: ['hear', 'read', 'use'],
+		items: [],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'One minor seventh chord, held. Play or sing a scale that fits it and none of its notes should clash. You supply the scale; the band only holds the chord.',
+				mode: 'major',
+				chords: [c(2, 'm7', 8)],
+				passes: 2
+			},
+			{
+				kind: 'read',
+				text: [
+					'Match the scale to the chord’s job, as a rule of thumb. A major seventh takes major, or lydian for a lift. A minor seventh as a two takes dorian. A dominant takes mixolydian, or the blues scale for grit. A half-diminished chord takes locrian, usually with its second raised.',
+					'Sketch’s Scales section can show any of these, from any root, on the staff and the fretboard.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'A dominant with a raised eleventh, held. Play mixolydian over it with the fourth raised, called lydian dominant, and hear that note match the chord.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(7, '7#11', 8)],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'Altered dominants borrow from the minor scales. For a flat ninth heading to a minor chord, use harmonic minor starting a fourth above the dominant’s root. For an altered sound, use melodic minor starting a half step above that root. For a raised eleventh, use melodic minor starting a fifth above it.',
+					'Set the Scales section to those roots.'
+				]
+			},
+			{
+				kind: 'try',
+				text: 'Turn on the Woodshed drone to hold the key note, open Scales, and play the scale that fits each chord as it comes round.',
+				song: {
+					name: 'Scale practice',
+					mode: 'major',
+					bars: [[c(2, 'm7')], [c(2, 'm7')], [c(7, '7')], [c(7, '7')], [c(0, 'maj7')], [c(0, 'maj7')], [c(5, 'maj7')], [c(0, 'maj7')]],
+					tempo: 90,
 					groove: SWING_GROOVE
 				}
 			}
