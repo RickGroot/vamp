@@ -179,6 +179,22 @@ export const LOOPS: Loop[] = [
 		about: 'Four dominant sevenths in a row, each the V7 of the next, the last pulling toward home. No major or minor chord anywhere to rest on.'
 	},
 	{
+		id: 'tritone-251',
+		name: 'Tritone ii–V–I',
+		mode: 'major',
+		chords: [c(2, 'm7'), c(1, '7'), c(0, 'maj7')],
+		patternId: 'tritone-251',
+		about: 'A ii–V–I where the bass slides down by half steps into home.'
+	},
+	{
+		id: 'backdoor-251',
+		name: 'Backdoor ii–V–I',
+		mode: 'major',
+		chords: [c(5, 'm7'), c(10, '7'), c(0, 'maj7')],
+		patternId: 'backdoor',
+		about: 'A minor four, a dominant a whole step below home, then home: a ii–V–I from the side.'
+	},
+	{
 		id: 'jazz-251',
 		name: 'ii–V–I',
 		mode: 'major',

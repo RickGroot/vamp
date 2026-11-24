@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Chord, Note } from 'tonal';
 import { isValidChordSymbol } from '$lib/audio/chord';
 import { numeralOf } from '$lib/model/numerals';
+import { buildPresetChord } from '$lib/model/presets';
 import { KEY_ROOTS } from './keys';
 import { isRotation, loopById } from './loops';
 import { QUALITIES, QUIZ_ITEMS, quizItemById } from './items';
@@ -211,5 +212,52 @@ describe('questionRun', () => {
 		const tonic = Note.chroma(q.key.tonic)!;
 		const triad = [tonic, (tonic + 3) % 12, (tonic + 7) % 12];
 		expect(first.midi.every((m) => triad.includes(m % 12))).toBe(true);
+	});
+});
+
+describe('featured chords (must)', () => {
+	const MUST_ITEMS = ['fn-substitutes', 'fn-back-door', 'fn-passing-dim'];
+
+	it('keeps every must chord inside the item’s own chords', () => {
+		for (const id of MUST_ITEMS) {
+			const spec = item(id).spec;
+			if (spec.kind !== 'function') throw new Error('kind');
+			expect(spec.must?.length, id).toBeGreaterThan(0);
+			for (const m of spec.must!) expect(spec.chords, id).toContainEqual(m);
+		}
+	});
+
+	it('plays a featured chord in every question, and never a chord after itself', () => {
+		for (const id of MUST_ITEMS) {
+			const spec = item(id).spec;
+			if (spec.kind !== 'function') throw new Error('kind');
+			const rand = lcg(id.length * 37);
+			let previous: Question | null = null;
+			for (let i = 0; i < 400; i++) {
+				const q: Question = makeQuestion(item(id), rand, previous);
+				if (q.kind !== 'function') throw new Error('kind');
+				const wanted = spec.must!.map((m) => buildPresetChord(q.key.tonic, m));
+				expect(q.chords.some((s) => wanted.includes(s)), `${id}: ${q.chords.join(' ')}`).toBe(true);
+				q.chords.forEach((s, j) => {
+					if (j > 0) expect(s, `${id}: ${q.chords.join(' ')}`).not.toBe(q.chords[j - 1]);
+				});
+				previous = q;
+			}
+		}
+	});
+
+	it('leaves every other function item random as before', () => {
+		for (const it of QUIZ_ITEMS) {
+			if (it.spec.kind === 'function' && !MUST_ITEMS.includes(it.id)) expect(it.spec.must, it.id).toBeUndefined();
+		}
+	});
+
+	it('holds exactly one diminished seventh on the passing-chord pad', () => {
+		for (const seed of SEEDS) {
+			const q = makeQuestion(item('fn-passing-dim'), lcg(seed));
+			if (q.kind !== 'function') throw new Error('kind');
+			expect(q.options.filter((o) => o.includes('°7'))).toEqual(['bii°7']);
+			for (const a of q.answer) expect(q.options).toContain(a);
+		}
 	});
 });

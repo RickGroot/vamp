@@ -55,7 +55,10 @@ const SHIPPED_LESSON_IDS = [
 	'jazz-forms-turnarounds',
 	'jazz-forms-blues',
 	'jazz-forms-rhythm-changes',
-	'jazz-forms-fifths'
+	'jazz-forms-fifths',
+	'dominants-tritone',
+	'dominants-back-door',
+	'dominants-passing'
 ];
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -97,9 +100,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start, the pop side and the first two jazz tracks; the rest come later', () => {
+	it('build the shared start, the pop side and the first three jazz tracks; the rest come later', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants']);
 	});
 
 	it('fork after the loops and join again', () => {
@@ -342,7 +345,9 @@ describe('order and progress', () => {
 			...sevenths,
 			...Object.fromEntries(trackById('jazz-forms')!.lessons.map((id, i) => [id, done(300 + i)]))
 		};
-		expect(nextLesson({ ...shared, ...jazz })?.id).toBe('borrowed-flat-seven');
+		expect(nextLesson({ ...shared, ...jazz })?.id).toBe('dominants-tritone');
+		const dominants = Object.fromEntries(trackById('dominants')!.lessons.map((id, i) => [id, done(400 + i)]));
+		expect(nextLesson({ ...shared, ...jazz, ...dominants })?.id).toBe('borrowed-flat-seven');
 	});
 
 	it('suggests nothing once every lesson is done, and ignores inherited keys', () => {

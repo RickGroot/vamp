@@ -267,7 +267,7 @@ export const TRACKS: Track[] = [
 		side: 'jazz',
 		after: ['jazz-forms'],
 		summary: 'Any chord can have its own five: secondary dominants, tritone substitutes and passing chords.',
-		lessons: []
+		lessons: ['dominants-tritone', 'dominants-back-door', 'dominants-passing']
 	},
 	{
 		id: 'colour',
@@ -1458,6 +1458,149 @@ export const LESSONS: Lesson[] = [
 						[c(9, 'm7')]
 					],
 					tempo: 110,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	// ---- 7 Dominants everywhere ----
+	{
+		id: 'dominants-tritone',
+		track: 'dominants',
+		title: 'Tritone substitutes',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-substitutes'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A two-five-one where the bass slides down a half step at a time. The middle chord does the work of a five without being one.',
+				mode: 'major',
+				cadence: true,
+				loop: 'tritone-251'
+			},
+			{
+				kind: 'read',
+				text: [
+					'{V7} and {bII7} share their two guide tones: the third of one is the seventh of the other. Swap one for the other and the line still resolves, with the bass gliding a half step into {Imaj7}.',
+					'Track 6 gave every chord its own five; this swaps that five for another. Your song labels such a chord, and the Lab can try the swap on your tune.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'First the plain {V7}, then its stand-in {bII7}. Same landing, a different road to it.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(2, 'm7'), c(7, '7'), c(0, 'maj7'), c(2, 'm7'), c(1, '7'), c(0, 'maj7')]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-substitutes',
+				text: 'Substitute dominants beside the plain ones, after the key has played. Name each chord.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Play it in Sketch, then swap {bII7} for {V7} and back. Listen to the bass, not the chords.',
+				song: {
+					name: 'Tritone two, five, one',
+					mode: 'major',
+					bars: [[c(2, 'm7')], [c(1, '7')], [c(0, 'maj7')], [c(0, 'maj7')]],
+					tempo: 120,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'dominants-back-door',
+		track: 'dominants',
+		title: 'The back door',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-back-door'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A minor four, then a dominant a whole step under home. It reaches home from the other side.',
+				mode: 'major',
+				cadence: true,
+				loop: 'backdoor-251'
+			},
+			{
+				kind: 'read',
+				text: [
+					'{bVII7} reaches {Imaj7} with no {V7} at all. Its seventh falls a half step onto the fifth of home, while its root rises a whole step into the root of {Imaj7}.',
+					'Jazz players call it the back door. It sounds softer than the front one, because nothing in it leans on a half step from below.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'First the front door, {V7} into {Imaj7}. Then the back door, {bVII7} into {Imaj7}. Both land; only the road differs.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(7, '7'), c(0, 'maj7'), c(10, '7'), c(0, 'maj7')],
+				hold: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-back-door',
+				text: 'Sevenths in a major key with the back door among them, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Play it in Sketch, then change {bVII7} to {V7} and back. Hear how much gentler the back door lands.',
+				song: {
+					name: 'The back door',
+					mode: 'major',
+					bars: [[c(5, 'm7')], [c(10, '7')], [c(0, 'maj7')], [c(0, 'maj7')]],
+					tempo: 120,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'dominants-passing',
+		track: 'dominants',
+		title: 'Passing chords',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-passing-dim', 'loop-jazz'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'A chord slips in between home and the chord above it. It only passes through, and it leans up a half step into the next one.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0, 'maj7', 2), c(1, 'dim7', 2), c(2, 'm7'), c(7, '7'), c(0, 'maj7')],
+				hold: 4
+			},
+			{
+				kind: 'read',
+				text: [
+					'A diminished seventh chord sits a half step under the root of the next chord and leans up into it. Here it is {bii°7}, between {Imaj7} and {ii7}.',
+					'It is built of four notes a minor third apart, so any of them can be its root, and it has no home of its own. That is why it only passes.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-passing-dim',
+				text: 'Now the passing chord, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'loop-jazz',
+				text: 'The jazz loops so far, each played twice. Which one is it?',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Put it in Sketch and loop it. Play the root of each chord, and notice how the passing chord moves your line up a half step.',
+				song: {
+					name: 'Passing through',
+					mode: 'major',
+					bars: [[c(0, 'maj7'), c(1, 'dim7')], [c(2, 'm7')], [c(7, '7')]],
+					tempo: 120,
 					groove: SWING_GROOVE
 				}
 			}

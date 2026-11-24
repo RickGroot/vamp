@@ -39,6 +39,8 @@ export interface FunctionSpec {
 	chords: PresetChord[];
 	/** Chords per question. */
 	length: number;
+	/** When set, every question holds at least one of these (each also in `chords`). */
+	must?: PresetChord[];
 }
 
 /** Name the loop, from four. */
@@ -198,6 +200,48 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		}
 	},
 
+	// ---- Dominants: swap, side door and passing chord (Track 7) ----
+	{
+		// Lesson 7.1's quiz: the plain V7 beside the dominant a tritone away.
+		id: 'fn-substitutes',
+		title: 'Substitute dominants',
+		lede: 'The dominant a half step above home, heard beside the plain five. The chords come in any order.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(0, 'maj7'), c(2, 'm7'), c(7, '7'), c(1, '7'), c(9, 'm7')],
+			length: 4,
+			must: [c(1, '7')]
+		}
+	},
+	{
+		// Lesson 7.2's quiz: the dominant a whole step under home, beside the plain five.
+		id: 'fn-back-door',
+		title: 'The back door',
+		lede: 'The dominant a whole step under home, heard beside the plain five. The chords come in any order.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(0, 'maj7'), c(5, 'm7'), c(10, '7'), c(7, '7'), c(2, 'm7')],
+			length: 4,
+			must: [c(10, '7')]
+		}
+	},
+	{
+		// Lesson 7.3's quiz: a diminished chord a half step under the next root. One
+		// dim7 only: the chord is symmetric, so a second one would share its notes.
+		id: 'fn-passing-dim',
+		title: 'Passing chords',
+		lede: 'A diminished chord that slips between home and the chord above it. The chords come in any order.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(0, 'maj7'), c(1, 'dim7'), c(2, 'm7'), c(7, '7'), c(9, 'm7')],
+			length: 4,
+			must: [c(1, 'dim7')]
+		}
+	},
+
 	// ---- Loops: name it from four ----
 	{
 		id: 'loop-pop',
@@ -227,7 +271,9 @@ export const QUIZ_ITEMS: QuizItem[] = [
 				'turnaround-iii',
 				'turnaround-dominants',
 				'dominant-chain',
-				'doowop-sevenths'
+				'doowop-sevenths',
+				'tritone-251',
+				'backdoor-251'
 			]
 		}
 	},

@@ -403,6 +403,14 @@ const PATTERNS: PatternDef[] = [
 		listen: 'Put it at the end of a phrase and listen for the lift on the last chord.'
 	},
 	{
+		id: 'tritone-251',
+		name: 'Tritone ii–V–I',
+		variants: [{ steps: [s(2, 'min'), s(1, 'dom'), s(0, 'maj')], formula: 'ii–♭II7–I' }],
+		blurb: 'A ii–V–I whose V is swapped for the dominant a tritone away: ♭II7 slides into I.',
+		why: 'The two dominants use the same two notes with the roles swapped: the third of one is the seventh of the other.',
+		listen: 'Play ii–V7–I, then replace the V with the chord a half step above home. Same landing, smoother bass.'
+	},
+	{
 		id: 'backdoor',
 		name: 'Backdoor dominant',
 		variants: [{ steps: [s(10, 'dom'), s(0, 'maj')], formula: '♭VII7–I' }],

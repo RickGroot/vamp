@@ -258,3 +258,18 @@ describe('gradeNotes', () => {
 		}
 	});
 });
+
+describe('gradeNotes on the passing chord (Track 7)', () => {
+	it('reads the diminished seventh in every inversion as the pad’s bii°7', () => {
+		for (let seed = 1; seed <= 40; seed++) {
+			const q = makeQuestion(QUIZ_ITEMS.find((i) => i.id === 'fn-passing-dim')!, lcg(seed * 977));
+			if (q.kind !== 'function') throw new Error('kind');
+			const at = q.answer.indexOf('bii°7');
+			expect(at, `seed ${seed}`).toBeGreaterThanOrEqual(0);
+			const symbol = q.chords[at];
+			for (const inv of inversions(symbol)) {
+				expect(gradeNotes(q, voice(symbol, inv), at), `${symbol} inv ${inv}`).toEqual({ value: 'bii°7', correct: true });
+			}
+		}
+	});
+});

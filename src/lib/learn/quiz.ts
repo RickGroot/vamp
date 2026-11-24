@@ -106,6 +106,15 @@ function functionQuestion(item: QuizItem, rand: () => number, previous?: Questio
 			const choices = vocabulary.filter((s) => s !== chords[i - 1]);
 			chords.push(pick(choices, rand));
 		}
+		if (spec.must?.length) {
+			// A featured chord is forced in: a random draw can miss it, and a lesson's
+			// quiz that never plays the lesson's chord teaches nothing. The chords next
+			// to the slot are not featured ones (none was drawn), so nothing repeats.
+			const wanted = spec.must.map((ch) => buildPresetChord(key.tonic, ch));
+			if (!chords.some((s) => wanted.includes(s))) {
+				chords[Math.min(chords.length - 1, Math.floor(rand() * chords.length))] = pick(wanted, rand);
+			}
+		}
 		const answer = chords.map((s) => numeralOf(s, key));
 		if (previous?.kind !== 'function' || !same(answer, previous.answer)) break;
 	}

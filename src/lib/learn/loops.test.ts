@@ -51,6 +51,8 @@ describe('the loop catalogue', () => {
 		expect(loopNumerals(loop('mario'))).toEqual(['bVI', 'bVII', 'I']);
 		expect(loopNumerals(loop('jazz-251'))).toEqual(['ii7', 'V7', 'Imaj7']);
 		expect(loopNumerals(loop('minor-251'))).toEqual(['iiø7', 'V7', 'i7']);
+		expect(loopNumerals(loop('tritone-251'))).toEqual(['ii7', 'bII7', 'Imaj7']);
+		expect(loopNumerals(loop('backdoor-251'))).toEqual(['iv7', 'bVII7', 'Imaj7']);
 		for (const l of LOOPS) {
 			const want = loopNumerals(l);
 			for (const tonic of KEY_ROOTS[l.mode]) {
@@ -130,7 +132,7 @@ describe('the jazz loop pool', () => {
 		const item = QUIZ_ITEMS.find((i) => i.id === 'loop-jazz')!;
 		if (item.spec.kind !== 'loop') throw new Error('loop-jazz is not a loop item');
 		const pool = item.spec.loops.map(loop);
-		expect(pool).toHaveLength(7);
+		expect(pool).toHaveLength(9);
 		for (let i = 0; i < pool.length; i++) {
 			for (let j = i + 1; j < pool.length; j++) {
 				expect(isRotation(pool[i].chords, pool[j].chords), `${pool[i].id} / ${pool[j].id}`).toBe(false);

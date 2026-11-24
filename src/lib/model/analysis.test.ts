@@ -454,3 +454,23 @@ describe('Track 6 forms: the minor blues and the chain of dominants', () => {
 		}
 	});
 });
+
+describe('the tritone pattern (Track 7)', () => {
+	const ROOTS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+	const at = (root: string, semis: number, quality: string) =>
+		`${Note.simplify(Note.transpose(root, Interval.fromSemitones(semis)))}${quality}`;
+
+	it('names ii7 bII7 Imaj7 in 12 roots, and not the plain ii7 V7 Imaj7', () => {
+		for (const r of ROOTS) {
+			const key: KeyInfo = { tonic: r, mode: 'major' };
+			const tritone = barsOf(at(r, 2, 'm7'), at(r, 1, '7'), at(r, 0, 'maj7'));
+			expect(ids(tritone, key), r).toContain('tritone-251');
+			const plain = barsOf(at(r, 2, 'm7'), at(r, 7, '7'), at(r, 0, 'maj7'));
+			expect(ids(plain, key), r).not.toContain('tritone-251');
+		}
+	});
+
+	it('leaves I–IV–V unnamed', () => {
+		expect(ids(barsOf('C', 'F', 'G'))).toEqual([]);
+	});
+});
