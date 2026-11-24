@@ -25,7 +25,11 @@ const SHIPPED_IDS = [
 	'quality-sevenths',
 	'fn-minor-five',
 	'fn-minor-ending',
-	'loop-minor'
+	'loop-minor',
+	'fn-jazz-blues',
+	'fn-minor-blues',
+	'fn-rhythm-changes',
+	'fn-fifths-fall'
 ];
 
 describe('quiz item ids', () => {

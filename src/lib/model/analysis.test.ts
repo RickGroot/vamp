@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Note } from 'tonal';
+import { Interval, Note } from 'tonal';
 import { chordCore, collapseChanges, detectProgressions, patternInfo, type CoreQuality } from './analysis';
 import { PRESETS, PRESET_ROOTS, buildPresetChords } from './presets';
 import { EXAMPLES, buildExample } from './examples';
@@ -367,6 +367,90 @@ describe('detection snapshot: every example and preset', () => {
 			const chords = buildPresetChords(root, preset);
 			expect(detect(barsOf(...chords), inferKey(chords)), root).toEqual([]);
 			expect(detect(barsOf(...chords), { tonic: root, mode: 'major' }), root).toEqual([]);
+		}
+	});
+});
+
+describe('Track 6 forms: the minor blues and the chain of dominants', () => {
+	const ROOTS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+	const at = (root: string, semis: number, quality: string) =>
+		`${Note.simplify(Note.transpose(root, Interval.fromSemitones(semis)))}${quality}`;
+	const span = (bars: Bar[], key: KeyInfo, id: string) =>
+		detect(bars, key)
+			.filter((d) => d.patternId === id)
+			.map((d) => `${d.startBar}-${d.endBar}`);
+
+	// 12 bars: i i i i | iv iv i i | bVI V i i
+	const minorBlues = (r: string) =>
+		[0, 0, 0, 0, 5, 5, 0, 0, 8, 7, 0, 0].map((d) => at(r, d, d === 0 || d === 5 ? 'm7' : '7'));
+
+	it('names a 12-bar minor blues in all 12 roots', () => {
+		for (const r of ROOTS) {
+			const bars = barsOf(...minorBlues(r));
+			expect(span(bars, { tonic: r, mode: 'minor' }, 'minor-blues'), r).toEqual(['0-11']);
+		}
+	});
+
+	it('names it when Sketch infers the key itself', () => {
+		for (const r of ROOTS) {
+			const bars = barsOf(...minorBlues(r));
+			expect(ids(bars, inferKey(minorBlues(r))), r).toContain('minor-blues');
+		}
+	});
+
+	it('names an 11-bar entry, once the i has come back after the V7', () => {
+		const bars = barsOf(...minorBlues('C').slice(0, 11));
+		expect(ids(bars, { tonic: 'C', mode: 'minor' })).toContain('minor-blues');
+	});
+
+	it('does not name an ordinary minor tune a blues', () => {
+		const minor: KeyInfo = { tonic: 'C', mode: 'minor' };
+		// Triads, eight bars: the shape matches but it is not the blues sound.
+		expect(ids(barsOf('Cm', 'Fm', 'Cm', 'Ab', 'G', 'Cm', 'Cm', 'Cm'), minor)).not.toContain('minor-blues');
+		// Sevenths but a short phrase, six slots: not a whole form.
+		expect(ids(barsOf('Cm7', 'Fm7', 'Cm7', 'Ab7', 'G7', 'Cm7'), minor)).not.toContain('minor-blues');
+		// A dominant seventh on a flat six and a five, but not on the song's tonic.
+		expect(ids(barsOf(...minorBlues('C')), { tonic: 'G', mode: 'minor' })).not.toContain('minor-blues');
+	});
+
+	it('does not call the major blues a minor blues, nor the minor one the 12-bar blues', () => {
+		const major = barsOf('C7', 'C7', 'C7', 'C7', 'F7', 'F7', 'C7', 'C7', 'G7', 'F7', 'C7', 'G7');
+		expect(ids(major)).not.toContain('minor-blues');
+		expect(ids(barsOf(...minorBlues('A')), { tonic: 'A', mode: 'minor' })).not.toContain('blues12');
+	});
+
+	it('names four dominants a fifth apart, in every key, once and twice', () => {
+		for (const r of ROOTS) {
+			const chain = [4, 9, 2, 7].map((d) => at(r, d, '7'));
+			const key: KeyInfo = { tonic: r, mode: 'major' };
+			expect(ids(barsOf(...chain), key), r).toContain('dominant-chain');
+			expect(ids(barsOf(...chain, ...chain), key), r).toContain('dominant-chain');
+		}
+	});
+
+	it('gives the chain a key-neutral formula, whatever chords it is made of', () => {
+		const d = detect(barsOf('C7', 'F7', 'Bb7', 'Eb7')).filter((x) => x.patternId === 'dominant-chain');
+		expect(d).toHaveLength(1);
+		expect(d[0].formula).toBe('four dominant sevenths, each a fifth down');
+	});
+
+	it('reads a chain of five dominants as ONE detection, not two overlapping fours', () => {
+		for (const r of ROOTS) {
+			const chain = [4, 9, 2, 7, 0].map((d) => at(r, d, '7'));
+			const found = detect(barsOf(...chain), { tonic: r, mode: 'major' }).filter((x) => x.patternId === 'dominant-chain');
+			expect(found.map((x) => `${x.startBar}-${x.endBar}`), r).toEqual(['0-4']);
+		}
+	});
+
+	it('does not read a chain that stops being dominants', () => {
+		expect(ids(barsOf('E7', 'A7', 'Dm7', 'G7'))).not.toContain('dominant-chain');
+		expect(ids(barsOf('E7', 'A7', 'D7'))).not.toContain('dominant-chain');
+	});
+
+	it('still names I–VI7–ii–V a turnaround', () => {
+		for (const r of ROOTS) {
+			const t = [0, 9, 2, 7].map((d, i) => at(r, d, ['maj7', '7', 'm7', '7'][i]));
+			expect(ids(barsOf(...t), { tonic: r, mode: 'major' }), r).toContain('turnaround');
 		}
 	});
 });

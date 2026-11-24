@@ -51,7 +51,11 @@ const SHIPPED_LESSON_IDS = [
 	'sevenths-four-sevenths',
 	'sevenths-two-five-one',
 	'sevenths-guide-tones',
-	'sevenths-minor-two-five'
+	'sevenths-minor-two-five',
+	'jazz-forms-turnarounds',
+	'jazz-forms-blues',
+	'jazz-forms-rhythm-changes',
+	'jazz-forms-fifths'
 ];
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -93,9 +97,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start, the pop side and the first jazz track; the rest come later', () => {
+	it('build the shared start, the pop side and the first two jazz tracks; the rest come later', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms']);
 	});
 
 	it('fork after the loops and join again', () => {
@@ -331,7 +335,13 @@ describe('order and progress', () => {
 		// Took the jazz side: stay on it.
 		expect(nextLesson({ ...shared, 'sevenths-four-sevenths': done(100) })?.id).toBe('sevenths-two-five-one');
 		// Finished a whole side: the other side is the only one left.
-		const jazz = Object.fromEntries(trackById('sevenths')!.lessons.map((id, i) => [id, done(200 + i)]));
+		const sevenths = Object.fromEntries(trackById('sevenths')!.lessons.map((id, i) => [id, done(200 + i)]));
+		// Finished Track 5: the jazz side goes on to Track 6.
+		expect(nextLesson({ ...shared, ...sevenths })?.id).toBe('jazz-forms-turnarounds');
+		const jazz = {
+			...sevenths,
+			...Object.fromEntries(trackById('jazz-forms')!.lessons.map((id, i) => [id, done(300 + i)]))
+		};
 		expect(nextLesson({ ...shared, ...jazz })?.id).toBe('borrowed-flat-seven');
 	});
 

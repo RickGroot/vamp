@@ -180,6 +180,24 @@ const PATTERNS: PatternDef[] = [
 		listen: 'Loop the whole form, set drums to swing, and solo with the minor pentatonic of the I over everything.'
 	},
 	{
+		// Anchored on the song's own tonic and written in sevenths: the ♭VI and the V must be
+		// dominant sevenths, so an ordinary minor tune in triads is not called a blues.
+		// minSlots counts raw slots (a repeated i counts), which is why it is only a floor.
+		id: 'minor-blues',
+		name: 'Minor blues',
+		home: true,
+		minSlots: 10,
+		variants: [
+			{
+				steps: [s(0, 'min'), s(5, 'min'), s(0, 'min'), s(8, 'dom'), s(7, 'dom'), s(0, 'min')],
+				formula: 'i7–iv7–i7–♭VI7–V7–i7'
+			}
+		],
+		blurb: 'The minor blues: the 12-bar shape in a minor key, with a flat six and a five in the last four bars.',
+		why: 'The minor i and iv give it a heavy, dark middle; the ♭VI7 slides down to the V7 and the V7 pulls the form round to the top.',
+		listen: 'Loop the whole form and solo with the minor pentatonic of the i, then add the harmonic minor over the V7.'
+	},
+	{
 		id: 'canon',
 		name: 'Canon',
 		variants: [
@@ -226,11 +244,35 @@ const PATTERNS: PatternDef[] = [
 			{
 				steps: [s(4, 'min'), s(9, 'min'), s(2, 'min'), s(7, 'dom', 'maj')],
 				formula: 'iii–vi–ii–V'
+			},
+			{
+				steps: [s(0, 'maj'), s(9, 'dom'), s(2, 'min'), s(7, 'dom', 'maj')],
+				formula: 'I–VI7–ii–V'
 			}
 		],
 		blurb: 'A turnaround: an ending that points back at the beginning, built to loop.',
 		why: 'vi and ii keep the bassline falling toward the V, whose pull relaunches the I.',
 		listen: "Loop just these bars and feel the 'recycle' — jazz tunes use this in the last two bars of the form."
+	},
+	{
+		// Dominant sevenths, each a fifth below the last (the bridge of a jazz classic is
+		// III7–VI7–II7–V7). Self-anchored on the first chord, so it names the movement in any
+		// key and the formula is key-neutral; the position in the list is arbitrary.
+		id: 'dominant-chain',
+		name: 'Chain of dominants',
+		variants: [
+			{
+				steps: [s(0, 'dom'), s(5, 'dom'), s(10, 'dom'), s(3, 'dom'), s(8, 'dom')],
+				formula: 'five dominant sevenths, each a fifth down'
+			},
+			{
+				steps: [s(0, 'dom'), s(5, 'dom'), s(10, 'dom'), s(3, 'dom')],
+				formula: 'four dominant sevenths, each a fifth down'
+			}
+		],
+		blurb: 'A chain of dominants: each chord is the V7 of the next, so the harmony keeps falling a fifth at a time.',
+		why: 'Each dominant pulls toward the one a fifth below it, so a chain never settles: it travels until a chord that is not a dominant ends it.',
+		listen: 'Loop the chain and play only the third of each chord, then only the seventh: each seventh slides down a half step into the next third.'
 	},
 	{
 		id: 'doowop',

@@ -152,7 +152,7 @@ export const LOOPS: Loop[] = [
 		mode: 'major',
 		chords: [c(0, 'maj7'), c(9, 'm7'), c(2, 'm7'), c(7, '7')],
 		patternId: 'turnaround',
-		about: 'Home, then vi, ii and V, falling in fifths back to the top.'
+		about: 'Home, then vi, ii and V: one step down, then fifths all the way back to the top.'
 	},
 	{
 		id: 'turnaround-iii',
@@ -161,6 +161,22 @@ export const LOOPS: Loop[] = [
 		chords: [c(4, 'm7'), c(9, 'm7'), c(2, 'm7'), c(7, '7')],
 		patternId: 'turnaround',
 		about: 'Falls in fifths from iii; home never sounds, the V points back to it.'
+	},
+	{
+		id: 'turnaround-dominants',
+		name: 'Turnaround with a dominant vi',
+		mode: 'major',
+		chords: [c(0, 'maj7'), c(9, '7'), c(2, 'm7'), c(7, '7')],
+		patternId: 'turnaround',
+		about: 'The turnaround with its vi swapped for a dominant seventh: that chord is the V7 of the ii, and its third pulls up into it.'
+	},
+	{
+		id: 'dominant-chain',
+		name: 'Chain of dominants',
+		mode: 'major',
+		chords: [c(4, '7'), c(9, '7'), c(2, '7'), c(7, '7')],
+		patternId: 'dominant-chain',
+		about: 'Four dominant sevenths in a row, each the V7 of the next, the last pulling toward home. No major or minor chord anywhere to rest on.'
 	},
 	{
 		id: 'jazz-251',

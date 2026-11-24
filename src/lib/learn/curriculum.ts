@@ -253,7 +253,12 @@ export const TRACKS: Track[] = [
 		side: 'jazz',
 		after: ['sevenths'],
 		summary: 'Turnarounds, the jazz and minor blues, rhythm changes, and tunes that fall in fifths.',
-		lessons: []
+		lessons: [
+			'jazz-forms-turnarounds',
+			'jazz-forms-blues',
+			'jazz-forms-rhythm-changes',
+			'jazz-forms-fifths'
+		]
 	},
 	{
 		id: 'dominants',
@@ -300,6 +305,69 @@ const POP_GROOVE: Partial<Groove> = { bass: 'root', bassInstrument: 'electric', 
 const SWING_GROOVE: Partial<Groove> = { bass: 'walking', bassInstrument: 'upright', drums: 'swing' };
 
 const BLUES = [0, 0, 0, 0, 5, 5, 0, 0, 7, 5, 0, 7];
+
+/** The jazz blues: the blues' journey with more stops. A bar that holds two chords gives each two beats. */
+const JAZZ_BLUES: LessonChord[] = [
+	c(0, '7'),
+	c(5, '7'),
+	c(0, '7'),
+	c(7, 'm7', 2),
+	c(0, '7', 2),
+	c(5, '7'),
+	c(6, 'dim7'),
+	c(0, '7'),
+	c(9, '7'),
+	c(2, 'm7'),
+	c(7, '7'),
+	c(0, '7', 2),
+	c(9, '7', 2),
+	c(2, 'm7', 2),
+	c(7, '7', 2)
+];
+
+/** The minor blues: four bars of i, two of iv, two of i, a flat six into the five, and the turn. */
+const MINOR_BLUES: LessonChord[] = [
+	c(0, 'm7'),
+	c(0, 'm7'),
+	c(0, 'm7'),
+	c(0, 'm7'),
+	c(5, 'm7'),
+	c(5, 'm7'),
+	c(0, 'm7'),
+	c(0, 'm7'),
+	c(8, '7'),
+	c(7, '7'),
+	c(0, 'm7'),
+	c(0, 'm7', 2),
+	c(7, '7', 2)
+];
+
+/** The first half of the A section, four bars of two chords: the turnaround, then through iii and VI to ii and V again. */
+const RHYTHM_A: LessonChord[] = [
+	c(0, 'maj7', 2),
+	c(9, 'm7', 2),
+	c(2, 'm7', 2),
+	c(7, '7', 2),
+	c(4, 'm7', 2),
+	c(9, '7', 2),
+	c(2, 'm7', 2),
+	c(7, '7', 2)
+];
+
+/** The bridge: four dominants, each a fifth below the last and two bars long (8 beats). */
+const RHYTHM_BRIDGE: LessonChord[] = [c(4, '7', 8), c(9, '7', 8), c(2, '7', 8), c(7, '7', 8)];
+
+/** A tune falling through the whole key in fifths, then turning toward vi. */
+const FIFTHS_FALL: LessonChord[] = [c(5, 'maj7'), c(11, 'm7b5'), c(4, 'm7'), c(9, 'm7'), c(2, 'm7'), c(7, '7'), c(0, 'maj7')];
+const FIFTHS_TURN: LessonChord[] = [
+	c(2, 'm7'),
+	c(7, '7'),
+	c(0, 'maj7'),
+	c(5, 'maj7'),
+	c(11, 'm7b5'),
+	c(4, '7'),
+	c(9, 'm7')
+];
 
 export const LESSONS: Lesson[] = [
 	// ---- 0 Home ----
@@ -1108,6 +1176,289 @@ export const LESSONS: Lesson[] = [
 					bars: [[c(2, 'm7b5')], [c(7, '7')], [c(0, 'm7')], [c(0, 'm7')]],
 					tempo: 120,
 					groove: { pattern: 'block', bass: 'root', bassInstrument: 'upright', drums: 'bossa' }
+				}
+			}
+		]
+	},
+	// ---- 6 Jazz forms ----
+	{
+		id: 'jazz-forms-turnarounds',
+		track: 'jazz-forms',
+		title: 'Turnarounds',
+		skills: ['hear', 'read', 'use'],
+		items: ['loop-jazz'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Four sevenths in a loop. After the first step down, every root falls a fifth, and the last chord asks for the first. Listen for where it turns round.',
+				mode: 'major',
+				cadence: true,
+				loop: 'turnaround',
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'A turnaround is the end of a chorus that points back at its start. In a major key it is {Imaj7}, {vi7}, {ii7}, {V7}. The first step drops a minor third; from the {vi7} on, each root falls a fifth, and the {V7} pulls back to the {Imaj7}.',
+					'Tunes use it to close one time through the form and open the next.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'Now the sixth chord is a dominant seventh. It pulls toward the {ii7} harder than a minor chord does.',
+				mode: 'major',
+				cadence: true,
+				loop: 'turnaround-dominants',
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'A chord that leads somewhere can be made a dominant seventh. The {VI7} is the five of the {ii7}, so it pushes into it.',
+					'Learn’s Your song view labels chords like this one as secondary dominants, and Sketch names the loop a turnaround either way.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'loop-jazz',
+				text: 'Jazz loops in sevenths, each played twice. Which one is it?',
+				questions: 5
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch. Swap the {VI7} for a plain {vi7} and back, and hear what the dominant adds.',
+				song: {
+					name: 'Turnaround',
+					mode: 'major',
+					bars: [[c(0, 'maj7')], [c(9, '7')], [c(2, 'm7')], [c(7, '7')]],
+					tempo: 120,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'jazz-forms-blues',
+		track: 'jazz-forms',
+		title: 'Jazz and minor blues',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-jazz-blues', 'fn-minor-blues'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Twelve bars again, but busier. Listen for the bars that hold two chords: that is where the changes speed up.',
+				mode: 'major',
+				cadence: true,
+				chords: JAZZ_BLUES,
+				tempo: 120
+			},
+			{
+				kind: 'read',
+				text: [
+					'It is the same journey, not the same bars: more stops on the way. A {v7} and a {I7} lean into the second {IV7}. A diminished chord a half step above that {IV7} slides up into the {I7}.',
+					'Near the end a {VI7} pushes into the {ii7}, and a {ii7} and {V7} turn the form round.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-jazz-blues',
+				text: 'The chords of a jazz blues, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop the jazz blues in Sketch and improvise. Then open Practice and try a drill over your changes.',
+				song: {
+					name: 'Jazz blues',
+					mode: 'major',
+					bars: [
+						[c(0, '7')],
+						[c(5, '7')],
+						[c(0, '7')],
+						[c(7, 'm7'), c(0, '7')],
+						[c(5, '7')],
+						[c(6, 'dim7')],
+						[c(0, '7')],
+						[c(9, '7')],
+						[c(2, 'm7')],
+						[c(7, '7')],
+						[c(0, '7'), c(9, '7')],
+						[c(2, 'm7'), c(7, '7')]
+					],
+					tempo: 132,
+					groove: SWING_GROOVE
+				}
+			},
+			{
+				kind: 'listen',
+				text: 'The blues in a minor key. It is heavier: four bars of home, two of the fourth, two more of home, then a dominant that slides down onto the five.',
+				mode: 'minor',
+				cadence: true,
+				chords: MINOR_BLUES,
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'In the minor blues the {i7} stays four bars and the {iv7} takes two. Then {bVI7} drops a half step onto {V7}, and the {V7} pulls back to {i7}.',
+					'Sketch names the form once the {i7} has come back after the {V7}.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-minor-blues',
+				text: 'The chords of a minor blues, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop the minor blues in Sketch and improvise over the slide from {bVI7} to {V7}.',
+				song: {
+					name: 'Minor blues',
+					mode: 'minor',
+					bars: [
+						[c(0, 'm7')],
+						[c(0, 'm7')],
+						[c(0, 'm7')],
+						[c(0, 'm7')],
+						[c(5, 'm7')],
+						[c(5, 'm7')],
+						[c(0, 'm7')],
+						[c(0, 'm7')],
+						[c(8, '7')],
+						[c(7, '7')],
+						[c(0, 'm7')],
+						[c(0, 'm7'), c(7, '7')]
+					],
+					tempo: 100,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'jazz-forms-rhythm-changes',
+		track: 'jazz-forms',
+		title: 'Rhythm changes',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-rhythm-changes'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The first half of the A section of a famous form: the turnaround, then one step further through {iii7} and {VI7} before it falls to {ii7} and {V7} again.',
+				mode: 'major',
+				cadence: true,
+				chords: RHYTHM_A,
+				tempo: 100
+			},
+			{
+				kind: 'listen',
+				text: 'Then the bridge. Four dominants, two bars each. It starts on {III7} and ends on {V7}.',
+				mode: 'major',
+				cadence: true,
+				chords: RHYTHM_BRIDGE,
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'Rhythm changes are thirty-two bars in four parts: A, A, a bridge, A. The A is a turnaround, kept moving. The bridge is a chain of dominants, {III7}, {VI7}, {II7}, {V7}, each the five of the next, and the last pulls toward home.',
+					'Nothing in the chain is a place to rest, so the ear is carried through and set down on the last A.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-rhythm-changes',
+				text: 'The chords of the form, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop the twelve bars in Sketch. Then add a {ii7} in front of a bridge dominant and hear it lean in. The next track returns to these dominants.',
+				song: {
+					name: 'Rhythm changes excerpt',
+					mode: 'major',
+					bars: [
+						[c(0, 'maj7'), c(9, 'm7')],
+						[c(2, 'm7'), c(7, '7')],
+						[c(4, 'm7'), c(9, '7')],
+						[c(2, 'm7'), c(7, '7')],
+						[c(4, '7')],
+						[c(4, '7')],
+						[c(9, '7')],
+						[c(9, '7')],
+						[c(2, '7')],
+						[c(2, '7')],
+						[c(7, '7')],
+						[c(7, '7')]
+					],
+					tempo: 160,
+					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'jazz-forms-fifths',
+		track: 'jazz-forms',
+		title: 'Falling in fifths',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-fifths-fall'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Seven chords, and almost every root falls a fifth. Listen for the one shorter step, and for the way it rolls downhill into home.',
+				mode: 'major',
+				cadence: true,
+				chords: FIFTHS_FALL,
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'Tunes that follow the circle of fifths move each root a fifth down. In a major key the fall passes through every chord of the key.',
+					'One step is shorter than the rest: {IVmaj7} to {viiø7} is a diminished fifth, where the chain bends to stay inside the key.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'A similar fall, with one chord bent. {viiø7}, {III7}, {vi7} is a minor two, five, one in the relative minor.',
+				mode: 'major',
+				cadence: true,
+				chords: FIFTHS_TURN,
+				tempo: 100
+			},
+			{
+				kind: 'read',
+				text: [
+					'A major two–five–one and the minor one a minor third below it share a key, so a tune can move between them with no change of key. Only one note differs: the {III7} raises a note of the scale, its third.',
+					'Your song marks that chord as a secondary dominant, the five of {vi7}.'
+				]
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-fifths-fall',
+				text: 'A tune falling through a major key, after the key has played. Name each chord.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch. Over the {III7}, try the harmonic minor scale of {vi}: its raised note is the third of the {III7}.',
+				song: {
+					name: 'Falling in fifths',
+					mode: 'major',
+					bars: [
+						[c(2, 'm7')],
+						[c(7, '7')],
+						[c(0, 'maj7')],
+						[c(5, 'maj7')],
+						[c(11, 'm7b5')],
+						[c(4, '7')],
+						[c(9, 'm7')],
+						[c(9, 'm7')]
+					],
+					tempo: 110,
+					groove: SWING_GROOVE
 				}
 			}
 		]

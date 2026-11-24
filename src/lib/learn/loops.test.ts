@@ -5,6 +5,7 @@ import { detectProgressions, patternInfo } from '$lib/model/analysis';
 import { createSlot, newId } from '$lib/model/factory';
 import { numeralOf } from '$lib/model/numerals';
 import type { Bar } from '$lib/model/types';
+import { QUIZ_ITEMS } from './items';
 import { KEY_ROOTS, spellKey } from './keys';
 import { buildLoop, isRotation, loopById, loopNumerals, LOOPS } from './loops';
 
@@ -121,5 +122,19 @@ describe('keys', () => {
 		expect(spellKey('Ab', 'minor')).toBe('G#');
 		expect(KEY_ROOTS.major).toHaveLength(12);
 		expect(new Set(KEY_ROOTS.minor.map((r) => Note.chroma(r))).size).toBe(12);
+	});
+});
+
+describe('the jazz loop pool', () => {
+	it('has no pair of loops that are rotations of each other', () => {
+		const item = QUIZ_ITEMS.find((i) => i.id === 'loop-jazz')!;
+		if (item.spec.kind !== 'loop') throw new Error('loop-jazz is not a loop item');
+		const pool = item.spec.loops.map(loop);
+		expect(pool).toHaveLength(7);
+		for (let i = 0; i < pool.length; i++) {
+			for (let j = i + 1; j < pool.length; j++) {
+				expect(isRotation(pool[i].chords, pool[j].chords), `${pool[i].id} / ${pool[j].id}`).toBe(false);
+			}
+		}
 	});
 });

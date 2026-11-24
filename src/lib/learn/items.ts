@@ -150,6 +150,54 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		}
 	},
 
+	{
+		// Lesson 6.2's quiz: the chords of a jazz blues, the dominants and the ii–V's.
+		id: 'fn-jazz-blues',
+		title: 'Jazz blues chords',
+		lede: 'The chords a jazz blues is made of: dominants on the first, fourth and sixth degrees, and a two–five to turn it round.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(0, '7'), c(5, '7'), c(9, '7'), c(2, 'm7'), c(7, '7'), c(7, 'm7')],
+			length: 4
+		}
+	},
+	{
+		id: 'fn-minor-blues',
+		title: 'Minor blues chords',
+		lede: 'The four chords of a minor blues: the minor one and four, the dominant on the flat six, and the dominant five.',
+		spec: {
+			kind: 'function',
+			mode: 'minor',
+			chords: [c(0, 'm7'), c(5, 'm7'), c(8, '7'), c(7, '7')],
+			length: 4
+		}
+	},
+	{
+		// Lesson 6.3's quiz: the chords of a bridge that travels in dominants.
+		id: 'fn-rhythm-changes',
+		title: 'Rhythm changes',
+		lede: 'Home, the chords of the turnaround and its detours, and the four dominants of the bridge.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(0, 'maj7'), c(2, 'm7'), c(7, '7'), c(9, 'm7'), c(4, 'm7'), c(4, '7'), c(9, '7'), c(2, '7')],
+			length: 4
+		}
+	},
+	{
+		// Lesson 6.4's quiz: a tune that falls in fifths, with its turn into the relative minor.
+		id: 'fn-fifths-fall',
+		title: 'Falling in fifths',
+		lede: 'The sevenths of a major key as a tune falls through them, with one dominant that turns toward the relative minor.',
+		spec: {
+			kind: 'function',
+			mode: 'major',
+			chords: [c(2, 'm7'), c(7, '7'), c(0, 'maj7'), c(5, 'maj7'), c(11, 'm7b5'), c(4, '7'), c(9, 'm7'), c(4, 'm7')],
+			length: 4
+		}
+	},
+
 	// ---- Loops: name it from four ----
 	{
 		id: 'loop-pop',
@@ -169,8 +217,19 @@ export const QUIZ_ITEMS: QuizItem[] = [
 	{
 		id: 'loop-jazz',
 		title: 'Jazz loops',
-		lede: 'Turnarounds and ii–V–Is, in sevenths.',
-		spec: { kind: 'loop', loops: ['jazz-251', 'minor-251', 'turnaround', 'turnaround-iii', 'doowop-sevenths'] }
+		lede: 'Turnarounds, chains of dominants and two–five–ones, in sevenths.',
+		spec: {
+			kind: 'loop',
+			loops: [
+				'jazz-251',
+				'minor-251',
+				'turnaround',
+				'turnaround-iii',
+				'turnaround-dominants',
+				'dominant-chain',
+				'doowop-sevenths'
+			]
+		}
 	},
 
 	{
