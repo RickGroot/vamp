@@ -9,6 +9,8 @@ export interface PresetChord {
 	semitones: number;
 	/** Chord quality suffix appended to the root note, e.g. 'm7', '7', 'maj7'. */
 	quality: string;
+	/** Optional bass note, semitones above the tonic; written as a slash chord when it differs from the root. */
+	bass?: number;
 }
 
 export interface Preset {
@@ -66,10 +68,14 @@ export const PRESETS: Preset[] = [
 ];
 
 /** Build one degree + quality chord in a given root (concert pitch). */
-export function buildPresetChord(root: string, { semitones, quality }: PresetChord): string {
+export function buildPresetChord(root: string, { semitones, quality, bass }: PresetChord): string {
 	const note = Note.simplify(Note.transpose(root, Interval.fromSemitones(semitones)));
 	const symbol = `${note}${quality}`;
-	return isValidChordSymbol(symbol) ? symbol : note;
+	const base = isValidChordSymbol(symbol) ? symbol : note;
+	if (bass === undefined || (((bass - semitones) % 12) + 12) % 12 === 0) return base;
+	const bassNote = Note.simplify(Note.transpose(root, Interval.fromSemitones(bass)));
+	const slashed = `${base}/${bassNote}`;
+	return isValidChordSymbol(slashed) ? slashed : base;
 }
 
 /** Build the concert-pitch chord symbols for a preset in a given root. */

@@ -36,7 +36,11 @@ const SHIPPED_IDS = [
 	'fn-passing-dim',
 	'quality-ninths',
 	'quality-suspended',
-	'quality-altered'
+	'quality-altered',
+	'fn-dorian',
+	'fn-pedal',
+	'fn-mediants',
+	'loop-thirds'
 ];
 
 describe('quiz item ids', () => {

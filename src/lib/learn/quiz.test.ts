@@ -159,6 +159,24 @@ describe('makeQuestion', () => {
 	});
 });
 
+describe('pedal questions', () => {
+	it('answer by the chord above the bass, in every key', () => {
+		const rand = lcg(7);
+		let previous: Question | null = null;
+		for (let i = 0; i < SEEDS.length; i++) {
+			const q = makeQuestion(item('fn-pedal'), rand, previous);
+			previous = q;
+			if (q.kind !== 'function') throw new Error('function question expected');
+			q.chords.forEach((symbol, at) => {
+				expect(isValidChordSymbol(symbol), symbol).toBe(true);
+				// A slash chord is named by its upper chord, whatever it sits over.
+				expect(numeralOf(symbol, q.key), symbol).toBe(q.answer[at]);
+				expect(q.options, symbol).toContain(q.answer[at]);
+			});
+		}
+	});
+});
+
 describe('timedChords', () => {
 	it('gives half a bar each and rings the last chord to its barline', () => {
 		expect(timedChords(['C', 'F', 'G']).map((c) => c.beats)).toEqual([2, 2, 4]);
@@ -216,7 +234,7 @@ describe('questionRun', () => {
 });
 
 describe('featured chords (must)', () => {
-	const MUST_ITEMS = ['fn-substitutes', 'fn-back-door', 'fn-passing-dim'];
+	const MUST_ITEMS = ['fn-substitutes', 'fn-back-door', 'fn-passing-dim', 'fn-dorian'];
 
 	it('keeps every must chord inside the item’s own chords', () => {
 		for (const id of MUST_ITEMS) {

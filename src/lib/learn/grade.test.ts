@@ -82,7 +82,8 @@ function lcg(seed: number): () => number {
  * with the bass doubled an octave down and the top note doubled an octave up.
  */
 function voice(symbol: string, inversion = 0, { doubled = false, base = 52 } = {}): number[] {
-	const pcs = Chord.get(symbol).notes.map((n) => Note.chroma(n)!);
+	// A slash chord is played as its upper chord: the held bass is not a chord tone to invert.
+	const pcs = Chord.get(symbol.split('/')[0]).notes.map((n) => Note.chroma(n)!);
 	const order = [...pcs.slice(inversion), ...pcs.slice(0, inversion)];
 	const out: number[] = [];
 	let last = base - 1;
@@ -95,7 +96,7 @@ function voice(symbol: string, inversion = 0, { doubled = false, base = 52 } = {
 	return doubled ? [out[0] - 12, ...out, out[out.length - 1] + 12] : out;
 }
 
-const inversions = (symbol: string) => Chord.get(symbol).notes.map((_, i) => i);
+const inversions = (symbol: string) => Chord.get(symbol.split('/')[0]).notes.map((_, i) => i);
 
 const C: KeyInfo = { tonic: 'C', mode: 'major' };
 const threeChords: FunctionQuestion = { ...fn, answer: ['V', 'I', 'IV'], chords: ['G', 'C', 'F'] };

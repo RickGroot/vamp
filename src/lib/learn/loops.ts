@@ -147,6 +147,14 @@ export const LOOPS: Loop[] = [
 		about: 'Two minor chords, then two major ones, the bass falling a fifth every time.'
 	},
 	{
+		id: 'third-cycle',
+		name: 'Major-thirds cycle',
+		mode: 'major',
+		chords: [c(0, 'maj7'), c(3, '7'), c(8, 'maj7'), c(11, '7'), c(4, 'maj7'), c(7, '7')],
+		patternId: 'third-cycle',
+		about: 'Six chords that never settle: three major sevenths a major third apart, each one led in by a dominant.'
+	},
+	{
 		id: 'turnaround',
 		name: 'Turnaround',
 		mode: 'major',

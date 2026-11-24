@@ -63,7 +63,11 @@ const SHIPPED_LESSON_IDS = [
 	'colour-extensions',
 	'colour-suspended',
 	'colour-altered',
-	'colour-chord-scales'
+	'colour-chord-scales',
+	'beyond-modal-vamps',
+	'beyond-pedal-point',
+	'beyond-chromatic-mediants',
+	'beyond-major-thirds'
 ];
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -105,9 +109,9 @@ describe('tracks', () => {
 		expect(MAP_ORDER).toHaveLength(LESSONS.length);
 	});
 
-	it('build the shared start, the pop side, the first three jazz tracks and Colour; the rest come later', () => {
+	it('build the shared start, the pop side, the first three jazz tracks, Colour and Beyond function; the rest come later', () => {
 		const built = TRACKS.filter((t) => t.lessons.length > 0).map((t) => t.id);
-		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour']);
+		expect(built).toEqual(['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour', 'beyond-function']);
 	});
 
 	it('fork after the loops and join again', () => {
@@ -261,6 +265,28 @@ describe('listen steps', () => {
 	});
 });
 
+describe('Track 9 passages', () => {
+	it('a pedal passage keeps its bass and its numerals, in all 12 roots', () => {
+		const lesson = LESSONS.find((l) => l.id === 'beyond-pedal-point')!;
+		const step = lesson.steps[0] as ListenStep;
+		for (const tonic of KEY_ROOTS.major) {
+			const p = listenPassage(step, tonic);
+			expect(p.numerals.slice(0, 4), tonic).toEqual(['I', 'IV', 'V', 'I']);
+			expect(p.chords[1], tonic).toMatch(new RegExp(`/${tonic.replace(/[#]/g, '\\#')}$`));
+			expect(p.chords[0], tonic).not.toContain('/');
+		}
+	});
+
+	it('a Home mark only sits on a passage that starts and ends on home', () => {
+		for (const { step, at } of listens) {
+			if (!step.home) continue;
+			const p = listenPassage(step, KEY_ROOTS[step.mode][0]);
+			expect(p.numerals[0], at).toMatch(/^(I|i)$/);
+			expect(p.numerals[p.numerals.length - 1], at).toMatch(/^(I|i)$/);
+		}
+	});
+});
+
 describe('colour try songs', () => {
 	it('are still named as a two, five, one in all 12 roots', () => {
 		const find = (name: string) => {
@@ -385,6 +411,15 @@ describe('order and progress', () => {
 		);
 		expect(nextLesson(all)?.id).toBe('colour-extensions');
 		expect(nextLesson({ ...all, 'colour-extensions': done(900) })?.id).toBe('colour-suspended');
+	});
+
+	it('reaches Beyond function once Tracks 0 to 8 are done', () => {
+		const all = Object.fromEntries(
+			['home', 'three-chords', 'four-chord-loops', 'borrowed', 'minor-keys', 'sevenths', 'jazz-forms', 'dominants', 'colour'].flatMap((t, n) =>
+				trackById(t)!.lessons.map((id, i) => [id, done(500 + n * 10 + i)])
+			)
+		);
+		expect(nextLesson(all)?.id).toBe('beyond-modal-vamps');
 	});
 
 	it('suggests nothing once every lesson is done, and ignores inherited keys', () => {

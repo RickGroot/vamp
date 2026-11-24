@@ -191,6 +191,9 @@ export const SIDE_NAMES: Record<Side, string> = {
 const c = (semitones: number, quality = '', beats?: number): LessonChord =>
 	beats === undefined ? { semitones, quality } : { semitones, quality, beats };
 
+/** A chord over a bass that is not its own root (a slash chord): the bass is semitones above the tonic. */
+const pedal = (semitones: number, quality: string, bass: number): LessonChord => ({ semitones, quality, bass });
+
 export const TRACKS: Track[] = [
 	{
 		id: 'home',
@@ -285,7 +288,7 @@ export const TRACKS: Track[] = [
 		side: 'joined',
 		after: ['colour'],
 		summary: 'Harmony that does not pull home: modal vamps, pedal points, chords a third apart.',
-		lessons: []
+		lessons: ['beyond-modal-vamps', 'beyond-pedal-point', 'beyond-chromatic-mediants', 'beyond-major-thirds']
 	},
 	{
 		id: 'changing-key',
@@ -1811,6 +1814,210 @@ export const LESSONS: Lesson[] = [
 					bars: [[c(2, 'm7')], [c(2, 'm7')], [c(7, '7')], [c(7, '7')], [c(0, 'maj7')], [c(0, 'maj7')], [c(5, 'maj7')], [c(0, 'maj7')]],
 					tempo: 90,
 					groove: SWING_GROOVE
+				}
+			}
+		]
+	},
+	// ---- 9 Beyond function ----
+	{
+		id: 'beyond-modal-vamps',
+		track: 'beyond-function',
+		title: 'Staying on one mode',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-dorian'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Home is the minor chord {i}. The major chord {IV} above it brightens the colour, and the music settles back without any push. This minor colour is called Dorian.',
+				mode: 'minor',
+				chords: [c(0, 'm'), c(5), c(0, 'm')],
+				passes: 2,
+				hold: 4,
+				home: true
+			},
+			{
+				kind: 'read',
+				text: [
+					'A mode is a scale with its own home. A modal vamp stays on one or two chords and lets a single note carry the colour, instead of travelling through a cadence. Over a minor chord with a major chord on the fourth step, the sixth note stays natural: Dorian. Nothing pulls toward an ending; the music breathes and repeats.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'Now a major home with a major chord a whole step above it. {II} brings in a raised fourth that the key does not have: the Lydian colour, bright and floating.',
+				mode: 'major',
+				chords: [c(0), c(2), c(0)],
+				passes: 2,
+				hold: 4,
+				home: true
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-dorian',
+				text: 'A minor home and the chords around it, after the key has played. Name each one, and listen for the major chord on the fourth step.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch and improvise on a minor scale with a natural sixth. Stay on the vamp for a while: the colour lives in that one note.',
+				song: {
+					name: 'Dorian vamp',
+					mode: 'minor',
+					bars: [[c(0, 'm')], [c(5)], [c(0, 'm')], [c(5)]],
+					tempo: 96,
+					instrument: 'rhodes',
+					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'beyond-pedal-point',
+		track: 'beyond-function',
+		title: 'Holding the bass',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-pedal'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'The bass stays on home while the chords above it move from {I} to {IV} to {V} and back. Hear how the held note keeps everything anchored.',
+				mode: 'major',
+				chords: [c(0), pedal(5, '', 0), pedal(7, '', 0), c(0)],
+				hold: 4,
+				home: true
+			},
+			{
+				kind: 'read',
+				text: [
+					'A pedal point is one bass note held while the chords above it change. A chord over a bass that is not its own root is written with a slash: F over C is F/C. A pedal on home keeps even distant chords anchored. A pedal on the fifth builds tension that waits for the bass to move.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'This time the bass holds the fifth, under {I}, {IV} and {V7}. The tension builds while that note stays put, and eases only when the bass finally steps home.',
+				mode: 'major',
+				cadence: true,
+				chords: [pedal(0, '', 7), pedal(5, '', 7), c(7, '7'), c(0)],
+				hold: 4
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-pedal',
+				text: 'The bass holds home under every chord. Listen above it and name the chord on top.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch. The bass keeps the held home note under every chord. Try a melody that returns to that note again and again.',
+				song: {
+					name: 'Pedal point',
+					mode: 'major',
+					bars: [[c(0)], [pedal(5, '', 0)], [pedal(7, '', 0)], [c(0)]],
+					tempo: 92,
+					instrument: 'pad',
+					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'beyond-chromatic-mediants',
+		track: 'beyond-function',
+		title: 'Thirds apart',
+		skills: ['hear', 'read', 'use'],
+		items: ['fn-mediants'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Home, then a major chord a major third above it. The key has a minor chord there, yet the two chords share one note, so {III} still feels related to {I}.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0), c(4)],
+				passes: 2
+			},
+			{
+				kind: 'read',
+				text: [
+					'A chromatic mediant is a major chord a third above or below home that uses a note from outside the key. The four common ones are {bIII}, {III}, {bVI} and {VI}. Each shares a single note with {I}, which keeps the jump smooth while the rest is new. You may know {bIII} and {bVI} as borrowed chords. Film music uses them for sudden wonder.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'The same move downward: from {I} to {bVI}, a major third below. Again one note is shared and the rest is new, but the colour is darker.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0), c(8)],
+				passes: 2
+			},
+			{
+				kind: 'quiz',
+				item: 'fn-mediants',
+				text: 'Major chords a third above or below home, after the key has played. Name each one.',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch: three major chords, each a major third from the last. Sing a note that two neighbours share and hold it across the change.',
+				song: {
+					name: 'Three thirds',
+					mode: 'major',
+					bars: [[c(0)], [c(4)], [c(8)], [c(0)]],
+					tempo: 88,
+					instrument: 'rhodes',
+					groove: TRY_GROOVE
+				}
+			}
+		]
+	},
+	{
+		id: 'beyond-major-thirds',
+		track: 'beyond-function',
+		title: 'Cycling by thirds',
+		skills: ['hear', 'read', 'use'],
+		items: ['loop-thirds'],
+		steps: [
+			{
+				kind: 'listen',
+				text: 'Six chords, three centres. {Imaj7}, {bVImaj7} and {IIImaj7} each sound like home for a moment, and none of them wins.',
+				mode: 'major',
+				loop: 'third-cycle'
+			},
+			{
+				kind: 'read',
+				text: [
+					'Three major thirds stacked fill the octave exactly, so three major-seventh chords a major third apart split it evenly: {Imaj7}, {bVImaj7} and {IIImaj7}. Each is led in by its own dominant seventh, so the loop changes key every two chords. Because the three centres are equal, nothing marks one as home. Players call this shape Coltrane changes.'
+				]
+			},
+			{
+				kind: 'listen',
+				text: 'One step of it: {bIII7} falls a fifth to {bVImaj7}, far from the key. A dominant needs only a target, and any chord can be one.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(3, '7'), c(8, 'maj7')],
+				passes: 2
+			},
+			{
+				kind: 'quiz',
+				item: 'loop-thirds',
+				text: 'Loops in sevenths, one of them cycling by thirds. Which one is it?',
+				questions: 4
+			},
+			{
+				kind: 'try',
+				text: 'Loop it in Sketch at a gentle tempo. Play the major scale of each major seventh over its own bar and over the dominant that leads into it. Sketch names the pattern for you.',
+				song: {
+					name: 'Third cycle',
+					mode: 'major',
+					bars: [
+						[c(0, 'maj7')],
+						[c(3, '7')],
+						[c(8, 'maj7')],
+						[c(11, '7')],
+						[c(4, 'maj7')],
+						[c(7, '7')]
+					],
+					tempo: 90,
+					instrument: 'piano',
+					groove: TRY_GROOVE
 				}
 			}
 		]

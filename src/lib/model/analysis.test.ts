@@ -474,3 +474,30 @@ describe('the tritone pattern (Track 7)', () => {
 		expect(ids(barsOf('C', 'F', 'G'))).toEqual([]);
 	});
 });
+
+describe('major-thirds cycle (symmetric)', () => {
+	const CYCLE = ['Cmaj7', 'Eb7', 'Abmaj7', 'B7', 'Emaj7', 'G7'];
+	const rotate = (a: string[], n: number) => [...a.slice(n), ...a.slice(0, n)];
+	const thirds = (bars: Bar[], key: KeyInfo = C_MAJOR) => detect(bars, key).filter((d) => d.patternId === 'third-cycle');
+
+	it('is named once per lap, never twice, for 6, 8, 9, 12 and 14 changes', () => {
+		for (const n of [6, 8, 9, 12, 14]) {
+			const chords = Array.from({ length: n }, (_, i) => CYCLE[i % 6]);
+			expect(thirds(barsOf(...chords)), `${n} changes`).toHaveLength(1);
+		}
+	});
+
+	it('is named from each major seventh; from a dominant once a second lap gives it a start', () => {
+		for (const r of [0, 2, 4]) expect(thirds(barsOf(...rotate(CYCLE, r))), `rotation ${r}`).toHaveLength(1);
+		for (const r of [1, 3, 5]) {
+			const two = [...rotate(CYCLE, r), ...rotate(CYCLE, r)];
+			expect(thirds(barsOf(...two)), `rotation ${r}, two laps`).toHaveLength(1);
+		}
+		expect(thirds(barsOf('Abmaj7', 'B7', 'Emaj7', 'G7', 'Cmaj7', 'Eb7'), { tonic: 'Ab', mode: 'major' })).toHaveLength(1);
+	});
+
+	it('two laps are one detection, and other loops are not mistaken for it', () => {
+		expect(thirds(barsOf(...CYCLE, ...CYCLE))).toHaveLength(1);
+		expect(ids(barsOf('Cmaj7', 'Am7', 'Dm7', 'G7'))).not.toContain('third-cycle');
+	});
+});

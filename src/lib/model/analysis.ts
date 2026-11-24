@@ -146,6 +146,13 @@ interface PatternDef {
 	anchor?: 'end';
 	/** Only matches when its tonic is the song's key (see the header). */
 	home?: true;
+	/**
+	 * The shape repeats at a fixed interval inside itself (the major-thirds cycle
+	 * under a 4-semitone rotation), so one loop matches from several tonics. For
+	 * the overlap policy below, two readings of it are ONE loop whatever tonic
+	 * they were found from.
+	 */
+	symmetric?: true;
 	/** Minimum raw slot span (blues only — a 6-slot toy isn't a 12-bar form). */
 	minSlots?: number;
 	blurb: string;
@@ -212,6 +219,20 @@ const PATTERNS: PatternDef[] = [
 		blurb: 'The Canon changes — a sequence harmonising a stepwise falling bass.',
 		why: "It's driven by the descending bass line, not by chord function — each pair simply repeats the pattern a step lower.",
 		listen: 'Set bass mode to root and follow the walk-down.'
+	},
+	{
+		id: 'third-cycle',
+		name: 'Major-thirds cycle',
+		symmetric: true,
+		variants: [
+			{
+				steps: [s(0, 'maj'), s(3, 'dom'), s(8, 'maj'), s(11, 'dom'), s(4, 'maj'), s(7, 'dom')],
+				formula: 'Imaj7–♭III7–♭VImaj7–VII7–IIImaj7–V7'
+			}
+		],
+		blurb: 'Three major-seventh chords a major third apart, each reached by its own dominant.',
+		why: 'The three tonal centres divide the octave into equal parts, so no one of them sounds like home for long.',
+		listen: 'Play the major scale of each major-seventh chord over its own bar and hear the key change underfoot.'
 	},
 	{
 		id: 'jazz-251',
@@ -490,6 +511,7 @@ interface RawDetection extends Detection {
 	endChange: number;
 	prio: number;
 	tonic: number;
+	symmetric: boolean;
 }
 
 /** Detect named progressions in the bars, relative to the global key. */
@@ -537,7 +559,8 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 					startChange: i,
 					endChange: i + L - 1,
 					prio,
-					tonic
+					tonic,
+					symmetric: p.symmetric === true
 				});
 			}
 		}
@@ -584,7 +607,7 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 		const sameLoop = kept.some(
 			(k) =>
 				k.patternId === m.patternId &&
-				k.tonic === m.tonic &&
+				(k.tonic === m.tonic || m.symmetric) &&
 				m.startChange <= k.endChange &&
 				k.startChange <= m.endChange
 		);
@@ -592,5 +615,5 @@ export function detectProgressions(bars: Bar[], key: KeyInfo): Detection[] {
 	}
 
 	kept.sort((a, b) => a.startSlot - b.startSlot);
-	return kept.map(({ startChange: _s, endChange: _e, prio: _p, tonic: _t, ...d }) => d);
+	return kept.map(({ startChange: _s, endChange: _e, prio: _p, tonic: _t, symmetric: _y, ...d }) => d);
 }

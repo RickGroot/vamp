@@ -77,6 +77,8 @@ export interface QuizItem {
 }
 
 const c = (semitones: number, quality = ''): PresetChord => ({ semitones, quality });
+/** A chord over a held bass (a slash chord); the bass is semitones above the tonic. */
+const over = (semitones: number, quality: string, bass: number): PresetChord => ({ semitones, quality, bass });
 
 export const QUIZ_ITEMS: QuizItem[] = [
 	// ---- Chords in a key: the cadence sets home, then name each chord ----
@@ -249,6 +251,28 @@ export const QUIZ_ITEMS: QuizItem[] = [
 			must: [c(1, 'dim7')]
 		}
 	},
+	{
+		// Lesson 9.1's quiz: a minor home, its major fourth and the ordinary minor ones.
+		// The key's cadence (i-iv-V-i) is the ordinary minor one, so a major IV stands out against it.
+		id: 'fn-dorian',
+		title: 'Dorian chords',
+		lede: 'A minor home with a major chord on the fourth step, beside the ordinary minor fourth. The key plays its usual minor cadence first, so listen for the brighter chord.',
+		spec: { kind: 'function', mode: 'minor', chords: [c(0, 'm'), c(5, 'm'), c(5), c(10)], length: 4, must: [c(5)] }
+	},
+	{
+		// Lesson 9.2's quiz: the same numerals as ever, heard over a held bass.
+		id: 'fn-pedal',
+		title: 'Over a held bass',
+		lede: 'The bass holds home under every chord. Name the chord played above it, not the bass note.',
+		spec: { kind: 'function', mode: 'major', chords: [c(0), over(5, '', 0), over(7, '', 0), over(10, '', 0)], length: 4 }
+	},
+	{
+		// Lesson 9.3's quiz: major chords a third from home.
+		id: 'fn-mediants',
+		title: 'Chords a third apart',
+		lede: 'Home and the major chords a third above or below it. Name each one.',
+		spec: { kind: 'function', mode: 'major', chords: [c(0), c(3), c(4), c(8), c(9)], length: 3 }
+	},
 
 	// ---- Loops: name it from four ----
 	{
@@ -292,6 +316,15 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		title: 'Minor loops',
 		lede: 'Four minor-key loops with no seventh chords. Which one is it?',
 		spec: { kind: 'loop', loops: ['andalusian', 'aeolian', 'minor-circle', 'epic'] }
+	},
+	{
+		// Lesson 9.4's quiz: the major-thirds cycle among the seventh-chord loops.
+		// It is the only six-chord loop in the pool, so length alone gives it away; the item
+		// still teaches the cycle's shape (see Critic notes in the design).
+		id: 'loop-thirds',
+		title: 'Cycles of thirds',
+		lede: 'Loops in sevenths, one of which never settles on a home. Which loop is it?',
+		spec: { kind: 'loop', loops: ['third-cycle', 'turnaround', 'jazz-251', 'doowop-sevenths'] }
 	},
 
 	// ---- Chord quality: one chord, no key ----
