@@ -264,7 +264,7 @@ export const QUIZ_ITEMS: QuizItem[] = [
 		id: 'fn-pedal',
 		title: 'Over a held bass',
 		lede: 'The bass holds home under every chord. Name the chord played above it, not the bass note.',
-		spec: { kind: 'function', mode: 'major', chords: [c(0), over(5, '', 0), over(7, '', 0), over(10, '', 0)], length: 4 }
+		spec: { kind: 'function', mode: 'major', chords: [c(0), over(5, '', 0), over(7, '', 0)], length: 4 }
 	},
 	{
 		// Lesson 9.3's quiz: major chords a third from home.
@@ -320,7 +320,7 @@ export const QUIZ_ITEMS: QuizItem[] = [
 	{
 		// Lesson 9.4's quiz: the major-thirds cycle among the seventh-chord loops.
 		// It is the only six-chord loop in the pool, so length alone gives it away; the item
-		// still teaches the cycle's shape (see Critic notes in the design).
+		// still teaches the cycle's shape: six chords that never settle, among loops that do.
 		id: 'loop-thirds',
 		title: 'Cycles of thirds',
 		lede: 'Loops in sevenths, one of which never settles on a home. Which loop is it?',

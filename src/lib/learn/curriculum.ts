@@ -267,7 +267,7 @@ export const TRACKS: Track[] = [
 		name: 'Dominants everywhere',
 		side: 'jazz',
 		after: ['jazz-forms'],
-		summary: 'Any chord can have its own five: secondary dominants, tritone substitutes and passing chords.',
+		summary: 'Other roads to a chord: the tritone substitute, the back door and passing chords.',
 		lessons: ['dominants-tritone', 'dominants-back-door', 'dominants-passing']
 	},
 	{
@@ -1206,7 +1206,7 @@ export const LESSONS: Lesson[] = [
 			},
 			{
 				kind: 'listen',
-				text: 'Now the sixth chord is a dominant seventh. It pulls toward the {ii7} harder than a minor chord does.',
+				text: 'Same loop, but the sixth chord is now a dominant seventh, {VI7}. It pulls toward the {ii7} harder than a minor chord does.',
 				mode: 'major',
 				cadence: true,
 				loop: 'turnaround-dominants',
@@ -1216,7 +1216,7 @@ export const LESSONS: Lesson[] = [
 				kind: 'read',
 				text: [
 					'A chord that leads somewhere can be made a dominant seventh. The {VI7} is the five of the {ii7}, so it pushes into it.',
-					'Learn’s Your song view labels chords like this one as secondary dominants, and Sketch names the loop a turnaround either way.'
+					'A dominant that leans on a chord other than home is called a secondary dominant. Your song view labels the {VI7} that way, and Sketch names the loop a turnaround either way.'
 				]
 			},
 			{
@@ -1256,7 +1256,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'read',
 				text: [
-					'It is the same journey, not the same bars: more stops on the way. A {v7} and a {I7} lean into the second {IV7}. A diminished chord a half step above that {IV7} slides up into the {I7}.',
+					'It is the same journey, not the same bars: more stops on the way. A {v7} and a {I7} lean into the second {IV7}. A diminished chord on the note a half step above the {IV7} passes between it and the {I7}.',
 					'Near the end a {VI7} pushes into the {ii7}, and a {ii7} and {V7} turn the form round.'
 				]
 			},
@@ -1375,7 +1375,7 @@ export const LESSONS: Lesson[] = [
 			},
 			{
 				kind: 'try',
-				text: 'Loop the twelve bars in Sketch. Then add a {ii7} in front of a bridge dominant and hear it lean in. The next track returns to these dominants.',
+				text: 'Loop the twelve bars in Sketch. Then add a {ii7} in front of a bridge dominant and hear it lean in.',
 				song: {
 					name: 'Rhythm changes excerpt',
 					mode: 'major',
@@ -1432,7 +1432,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'read',
 				text: [
-					'A major two–five–one and the minor one a minor third below it share a key, so a tune can move between them with no change of key. Only one note differs: the {III7} raises a note of the scale, its third.',
+					'A major two–five–one and the minor one a minor third below it share a key, so a tune can move between them with no change of key. Only one note differs: the third of the {III7} lies outside the major scale.',
 					'Your song marks that chord as a secondary dominant, the five of {vi7}.'
 				]
 			},
@@ -1483,7 +1483,7 @@ export const LESSONS: Lesson[] = [
 				kind: 'read',
 				text: [
 					'{V7} and {bII7} share their two guide tones: the third of one is the seventh of the other. Swap one for the other and the line still resolves, with the bass gliding a half step into {Imaj7}.',
-					'Track 6 gave every chord its own five; this swaps that five for another. Your song labels such a chord, and the Lab can try the swap on your tune.'
+					'An earlier lesson gave chords a five of their own; this swaps a five for another. Your song labels such a chord, and the Lab can try the swap on your tune.'
 				]
 			},
 			{
@@ -1530,7 +1530,7 @@ export const LESSONS: Lesson[] = [
 				kind: 'read',
 				text: [
 					'{bVII7} reaches {Imaj7} with no {V7} at all. Its seventh falls a half step onto the fifth of home, while its root rises a whole step into the root of {Imaj7}.',
-					'Jazz players call it the back door. It sounds softer than the front one, because nothing in it leans on a half step from below.'
+					'Jazz players call it the back door. It sounds softer than the front one, because nothing in it leans on a half step from below. You may know the {bVII} as a borrowed chord.'
 				]
 			},
 			{
@@ -1565,7 +1565,7 @@ export const LESSONS: Lesson[] = [
 		track: 'dominants',
 		title: 'Passing chords',
 		skills: ['hear', 'read', 'use'],
-		items: ['fn-passing-dim', 'loop-jazz'],
+		items: ['fn-passing-dim'],
 		steps: [
 			{
 				kind: 'listen',
@@ -1578,7 +1578,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'read',
 				text: [
-					'A diminished seventh chord sits a half step under the root of the next chord and leans up into it. Here it is {bii°7}, between {Imaj7} and {ii7}.',
+					'A diminished seventh chord sits a half step under the root of the next chord and leans up into it. Here the chart spells it {bii°7}, a half step above {Imaj7} and just under {ii7}.',
 					'It is built of four notes a minor third apart, so any of them can be its root, and it has no home of its own. That is why it only passes.'
 				]
 			},
@@ -1586,12 +1586,6 @@ export const LESSONS: Lesson[] = [
 				kind: 'quiz',
 				item: 'fn-passing-dim',
 				text: 'Now the passing chord, after the key has played. Name each one.',
-				questions: 4
-			},
-			{
-				kind: 'quiz',
-				item: 'loop-jazz',
-				text: 'The jazz loops so far, each played twice. Which one is it?',
 				questions: 4
 			},
 			{
@@ -1790,7 +1784,7 @@ export const LESSONS: Lesson[] = [
 			},
 			{
 				kind: 'listen',
-				text: 'A dominant with a raised eleventh, held. Play mixolydian over it with the fourth raised, called lydian dominant, and hear that note match the chord.',
+				text: 'A dominant with a raised eleventh, held. Play melodic minor from a fifth above its root, or mixolydian with the fourth raised: the same notes, and that raised note matches the chord.',
 				mode: 'major',
 				cadence: true,
 				chords: [c(7, '7#11', 8)],
@@ -1800,7 +1794,7 @@ export const LESSONS: Lesson[] = [
 				kind: 'read',
 				text: [
 					'Altered dominants borrow from the minor scales. For a flat ninth heading to a minor chord, use harmonic minor starting a fourth above the dominant’s root. For an altered sound, use melodic minor starting a half step above that root. For a raised eleventh, use melodic minor starting a fifth above it.',
-					'Set the Scales section to those roots.'
+					'In the Scales section pick Harmonic minor or Melodic minor and set the root to the note named.'
 				]
 			},
 			{
@@ -1836,7 +1830,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'read',
 				text: [
-					'A mode is a scale with its own home. A modal vamp stays on one or two chords and lets a single note carry the colour, instead of travelling through a cadence. Over a minor chord with a major chord on the fourth step, the sixth note stays natural: Dorian. Nothing pulls toward an ending; the music breathes and repeats.'
+					'A mode is a scale with its own home. A modal vamp stays on one or two chords and lets a single note carry the colour, instead of travelling through a cadence. Over a minor chord with a major chord on the fourth step, the sixth note stays natural: Dorian. Nothing pulls toward an ending; the music breathes and repeats. The Borrowed chords track has the major-side cousin, Mixolydian.'
 				]
 			},
 			{
@@ -1935,7 +1929,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'read',
 				text: [
-					'A chromatic mediant is a major chord a third above or below home that uses a note from outside the key. The four common ones are {bIII}, {III}, {bVI} and {VI}. Each shares a single note with {I}, which keeps the jump smooth while the rest is new. You may know {bIII} and {bVI} as borrowed chords. Film music uses them for sudden wonder.'
+					'A chromatic mediant is a major chord a third above or below home, outside the key. The four common ones are {bIII}, {III}, {bVI} and {VI}. Each shares a single note with {I}, which keeps the jump smooth while the rest is new. You may know {bIII} and {bVI} as borrowed chords. This lesson plays {III} and {bVI}. Film music uses them all for sudden wonder.'
 				]
 			},
 			{
@@ -1969,7 +1963,7 @@ export const LESSONS: Lesson[] = [
 	{
 		id: 'beyond-major-thirds',
 		track: 'beyond-function',
-		title: 'Cycling by thirds',
+		title: 'Three keys in a loop',
 		skills: ['hear', 'read', 'use'],
 		items: ['loop-thirds'],
 		steps: [
@@ -2029,39 +2023,39 @@ export const LESSONS: Lesson[] = [
 		steps: [
 			{
 				kind: 'listen',
-				text: 'Home, then {VI7} pulls toward {ii}. After {VI7} the ear expects {ii}, and gets it, so {ii} sounds like home for a moment. Then {V} and {I} bring you back.',
+				text: 'Home, then {VI7} pulls toward {ii7}. The ear expects {ii7} and gets it, so it sounds like home for a moment. Then {V7} and {Imaj7} bring you back.',
 				mode: 'major',
 				cadence: true,
-				chords: [c(0), c(9, '7'), c(2, 'm'), c(7), c(0)],
+				chords: [c(0, 'maj7'), c(9, '7'), c(2, 'm7'), c(7, '7'), c(0, 'maj7')],
 				hold: 4
 			},
 			{
 				kind: 'listen',
-				text: 'A longer visit. {II7} points at {Vmaj7}, and for a bar it sounds as if the key moved. It did not: {ii7} and {V7} take you home to {Imaj7}.',
+				text: 'A different visit. {II7} leans on {V7}, so for a moment {V7} sounds like home. It is not: {V7} falls back to {Imaj7}, and the key never moved.',
 				mode: 'major',
 				cadence: true,
-				chords: [c(0, 'maj7'), c(9, 'm7'), c(2, '7'), c(7, 'maj7'), c(2, 'm7'), c(7, '7'), c(0, 'maj7')],
+				chords: [c(0, 'maj7'), c(9, 'm7'), c(2, '7'), c(7, '7'), c(0, 'maj7')],
 				hold: 4
 			},
 			{
 				kind: 'read',
 				text: [
-					'Most chords of a key can be leaned on this way: play the dominant a fifth above one and it feels like home for a moment. Track 6 met that chord. Here we only listen to what it does to the key: nothing. {ii} is still {ii}, only dressed as a home. Your song marks a leaning chord when it reads the tune in this key.'
+					'A dominant seventh placed a fifth above a chord makes that chord feel like home for a moment. That is a visit: the key has not moved, because the next chord brings you back. Here {VI7} leans on {ii7}, and {II7} leans on {V7}. Your song marks such a chord when it reads the tune in this key.'
 				]
 			},
 			{
 				kind: 'quiz',
 				item: 'fn-rhythm-changes',
-				text: 'The chords of a jazz bridge: dominants that lean on other chords, beside the plain ones. Name each one.',
+				text: 'Dominants that lean on other chords, beside the plain ones. Name each one.',
 				questions: 4
 			},
 			{
 				kind: 'try',
-				text: 'Loop it in Sketch, then change {VI7} to a plain {vi}. The lean toward {ii} goes away.',
+				text: 'Loop it in Sketch, then change {VI7} to a plain {vi7}. The lean toward {ii7} goes away.',
 				song: {
 					name: 'A visit',
 					mode: 'major',
-					bars: [[c(0)], [c(9, '7')], [c(2, 'm')], [c(7, '7')]],
+					bars: [[c(0, 'maj7')], [c(9, '7')], [c(2, 'm7')], [c(7, '7')]],
 					tempo: 92,
 					instrument: 'piano',
 					groove: TRY_GROOVE
@@ -2108,7 +2102,7 @@ export const LESSONS: Lesson[] = [
 			{
 				kind: 'quiz',
 				item: 'fn-whole-key',
-				text: 'A pivot starts as an ordinary chord of the first key. Hearing a move itself has no exercise yet, so this one drills those everyday chords.',
+				text: 'A pivot is made of the everyday chords of a key. This drills hearing them by number, so a pivot is easier to spot. Name each one.',
 				questions: 4
 			},
 			{
