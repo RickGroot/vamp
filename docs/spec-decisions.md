@@ -22,3 +22,8 @@ Document: `docs/licks-design.md`
 - **Library size and styles per phase**: deferred
 - **MIDI recording of licks**: deferred
 - **Keyboard grading of a lick (Licks Phase 4)**: the keyboard's verdict is recorded first; Got it / Not yet may correct it once through `rerecord` _(Claude's recommendation)_
+
+## 2026-11-24 · licks · as built
+Document: `docs/licks-design.md`
+
+- **Skipping a lick in Review**: Review offers "Skip this lick", which moves on and records no verdict (the lick stays due). Deviates from §5.12, which had every review question answered; a lick can't be played back on the spot in every setting (no instrument to hand), and a forced "Not yet" would send it to box 1. _(Claude's call, not yet confirmed)_
