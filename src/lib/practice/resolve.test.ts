@@ -335,6 +335,35 @@ describe('resolveDrill — guide tones over a set of changes', () => {
 		]);
 	});
 
+	// "Practise this" from Sketch, the way it shipped broken: a scale drill's
+	// "fourths" leaked into the song drill and moved the user's changes a fourth
+	// per pass. With the cycle off every pass is the song as written.
+	it('plays the same changes every pass when the cycle is off', () => {
+		const got = resolveDrill(guide, run({ chords: iiVI, reps: 4, keyMode: 'off' }));
+		expect(got.skipped).toHaveLength(0);
+		expect(got.phrases.map((p) => p.concertRoot)).toEqual(['C', 'C', 'C', 'C']);
+		const first = got.notes.filter((n) => n.rep === 0).map((n) => [n.chord, n.midi]);
+		expect(first.length).toBeGreaterThan(0);
+		for (let rep = 1; rep < 4; rep++) {
+			expect(got.notes.filter((n) => n.rep === rep).map((n) => [n.chord, n.midi])).toEqual(first);
+		}
+	});
+
+	// The first pass is ALWAYS the changes as written, whatever root is passed:
+	// the root only names the passes. So the store must root a song drill on the
+	// song's own tonic, or the runner labels a ii–V–I in C with the Start key.
+	it('names each pass from the root it is given, the first pass always as written', () => {
+		for (const root of SCALE_ROOTS) {
+			const got = resolveDrill(guide, run({ chords: iiVI, root, reps: 2, keyMode: 'fourths' }));
+			expect(got.notes.filter((n) => n.rep === 0).map((n) => n.chord)).toEqual([
+				'Dm7',
+				'G7',
+				'Cmaj7'
+			]);
+			expect(got.phrases[0].concertRoot).toBe(root);
+		}
+	});
+
 	// Each repetition re-seeds from the register target rather than continuing
 	// from the last note, so a twelve-key run stays playable instead of climbing
 	// out of range. That means a key may start on the 7th instead of the 3rd —

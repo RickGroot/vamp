@@ -3,6 +3,7 @@
 	// comes from +layout.svelte, so this page owns only its own <main>.
 	import { onDestroy, onMount } from 'svelte';
 	import { base } from '$app/paths';
+	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { practice } from '$lib/stores/practice.svelte';
 	import { progression } from '$lib/stores/progression.svelte';
@@ -21,13 +22,31 @@
 	});
 
 	// "Practise this" on the Sketch page arrives as ?drill=… — honoured once on
-	// mount, so it opens the right drill without overriding a later choice.
+	// mount, then CONSUMED, so a reload or a later choice is never overridden
+	// by it. The nav link carries nothing, so a drill you were in the middle of
+	// is still there when you come back.
 	onMount(() => {
 		// Saved drills live in IndexedDB — fire-and-forget, failures land in
 		// drillLibrary.error rather than breaking the page.
 		void drillLibrary.refresh();
 		const wanted = page.url.searchParams.get('drill');
-		if (wanted && (drillById(wanted) || lickById(wanted))) practice.setDrill(wanted);
+		if (!wanted) return;
+		// The handoff from the song: its drill, at the song's tempo.
+		if (drillById(wanted) || lickById(wanted)) practice.practiseSong(wanted);
+		// Take the parameter out of the address bar the way the layout consumes a
+		// share hash: left there, every reload re-applied it over whatever you
+		// chose since. Deferred one macrotask — SvelteKit's router isn't started
+		// during onMount, and in dev its replaceState throws until it is.
+		const url = new URL(page.url);
+		url.searchParams.delete('drill');
+		const clean = url.pathname + url.search + url.hash;
+		setTimeout(() => {
+			try {
+				replaceState(clean, page.state);
+			} catch {
+				history.replaceState(history.state, '', clean);
+			}
+		}, 0);
 	});
 
 	// Space plays the drill here, not the song (the layout still stops anything).

@@ -19,6 +19,7 @@ import { BUILT_IN_DRILLS, drillById, needsChords } from '$lib/practice/patterns'
 import { progression } from './progression.svelte';
 import { drillLibrary } from './drillLibrary.svelte';
 import { flattenSlots } from '$lib/model/slots';
+import { inferKey } from '$lib/model/key';
 import { loopBars } from '$lib/model/time';
 import type { DrillChord, DrillDefinition } from '$lib/practice/types';
 import { drillPlan, type DrillBacking, type PracticeRun } from '$lib/practice/plan';
@@ -60,6 +61,8 @@ interface PracticePrefs {
 	drillId: string;
 	root: string;
 	keyMode: KeyCycleMode;
+	/** The key cycle for a drill over YOUR changes — its own setting, off by default. */
+	songKeyMode: KeyCycleMode;
 	reps: number;
 	rangeId: string;
 	register: Register;
@@ -80,6 +83,7 @@ const DEFAULTS: PracticePrefs = {
 	drillId: 'scale-1235',
 	root: 'C',
 	keyMode: 'fourths',
+	songKeyMode: 'off',
 	reps: 4,
 	rangeId: DEFAULT_RANGE_ID,
 	register: 'middle',
@@ -102,6 +106,7 @@ class PracticeStore {
 	drillId = $state(DEFAULTS.drillId);
 	root = $state(DEFAULTS.root);
 	keyMode = $state<KeyCycleMode>(DEFAULTS.keyMode);
+	songKeyMode = $state<KeyCycleMode>(DEFAULTS.songKeyMode);
 	reps = $state(DEFAULTS.reps);
 	rangeId = $state(DEFAULTS.rangeId);
 	register = $state<Register>(DEFAULTS.register);
@@ -208,6 +213,22 @@ class PracticeStore {
 	/** A song-sourced drill has nothing to play if every slot is empty. */
 	songIsEmpty = $derived(this.songChords.every((c) => !c.symbol.trim()));
 
+	/**
+	 * The song's own key (CONCERT), as Sketch infers it. A song-sourced drill is
+	 * rooted HERE, never on the hidden "Start key" pref: the first pass is always
+	 * the changes as written, so the root only names the keys — and a C-rooted
+	 * pref called a G song's second pass "F".
+	 */
+	songTonic = $derived(inferKey(this.songChords.map((c) => c.symbol)).tonic);
+
+	/**
+	 * The key cycle in force: a drill over your changes has its own, off by
+	 * default (what you came to practise is the song you wrote, in its key), so
+	 * "through the fourths" chosen for a scale drill never carries over to it.
+	 */
+	cycleMode = $derived<KeyCycleMode>(this.usesSong ? this.songKeyMode : this.keyMode);
+	cycling = $derived(this.cycleMode !== 'off');
+
 	range = $derived(rangeFor(this.rangeId));
 
 	get rangeLabel(): string {
@@ -227,9 +248,10 @@ class PracticeStore {
 	 * it before a note sounds. Resolved once per change, however many read it.
 	 */
 	preview = $derived.by<PracticeRun>(() => {
+		const song = this.usesSong;
 		const common = {
-			root: this.root,
-			keyMode: this.keyMode,
+			root: song ? this.songTonic : this.root,
+			keyMode: this.cycleMode,
 			reps: this.reps,
 			offset: this.offset,
 			range: this.range,
@@ -241,7 +263,6 @@ class PracticeStore {
 		};
 		// A lick brings its own changes and meter, and is played as written.
 		if (this.lick) return resolveLick(this.lick, common);
-		const song = this.usesSong;
 		return resolveDrill(this.definition, {
 			...common,
 			direction: this.direction || undefined,
@@ -349,13 +370,24 @@ class PracticeStore {
 		this.persist();
 		this.restartIfPlaying();
 	}
+	/**
+	 * The handoff from Sketch's "Practise this": the drill, at the SONG's tempo.
+	 * Only the arrival with ?drill= goes through here — the nav link changes
+	 * nothing, so a tempo you set in Practice survives a trip to Sketch and back.
+	 */
+	practiseSong(id: string): void {
+		this.setDrill(id);
+		if (this.usesSong) this.setTempo(progression.current.tempo);
+	}
 	setRoot(root: string): void {
 		this.root = root;
 		this.persist();
 		this.restartIfPlaying();
 	}
+	/** Sets the cycle for the drill on screen: the song's own when it follows the changes. */
 	setKeyMode(mode: KeyCycleMode): void {
-		this.keyMode = mode;
+		if (this.usesSong) this.songKeyMode = mode;
+		else this.keyMode = mode;
 		this.persist();
 		this.restartIfPlaying();
 	}
@@ -435,6 +467,7 @@ class PracticeStore {
 			drillId: this.drillId,
 			root: this.root,
 			keyMode: this.keyMode,
+			songKeyMode: this.songKeyMode,
 			reps: this.reps,
 			rangeId: this.rangeId,
 			register: this.register,
@@ -476,6 +509,11 @@ function read(): PracticePrefs | null {
 			drillId: typeof p.drillId === 'string' && p.drillId ? p.drillId : DEFAULTS.drillId,
 			root: typeof p.root === 'string' && p.root ? p.root : DEFAULTS.root,
 			keyMode: oneOf(p.keyMode, ['off', 'fourths', 'semitone', 'random'], DEFAULTS.keyMode),
+			songKeyMode: oneOf(
+				p.songKeyMode,
+				['off', 'fourths', 'semitone', 'random'],
+				DEFAULTS.songKeyMode
+			),
 			reps: num(p.reps, DEFAULTS.reps, 1, 64),
 			rangeId: INSTRUMENT_RANGES.some((r) => r.id === p.rangeId)
 				? (p.rangeId as string)

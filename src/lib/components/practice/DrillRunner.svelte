@@ -27,10 +27,16 @@
 		)
 	]);
 
+	// A drill over your changes with the cycle off plays the same pass each time
+	// round, so count passes, not keys: "Key 2 of 4: C" reads as a key change.
+	const passes = $derived(practice.usesSong && !practice.cycling);
+
 	const statusText = $derived(
 		practice.isPlaying
 			? total > 1
-				? `Key ${repNumber} of ${total}: ${shown?.writtenRoot ?? ''} at ${shown?.tempo ?? practice.tempo} bpm`
+				? passes
+					? `Pass ${repNumber} of ${total} at ${shown?.tempo ?? practice.tempo} bpm`
+					: `Key ${repNumber} of ${total}: ${shown?.writtenRoot ?? ''} at ${shown?.tempo ?? practice.tempo} bpm`
 				: `Playing at ${shown?.tempo ?? practice.tempo} bpm`
 			: practice.isLoading
 				? 'Loading sounds'
@@ -92,7 +98,9 @@
 	{:else}
 		<DrillStaff notes={phraseNotes} {meter} final={!next} />
 		{#if next}
-			<p class="runner__next hint">Next up · {next.writtenRoot} at {next.tempo} bpm</p>
+			<p class="runner__next hint">
+				{#if passes}Next up · pass {rep + 2} at {next.tempo} bpm{:else}Next up · {next.writtenRoot} at {next.tempo} bpm{/if}
+			</p>
 		{/if}
 	{/if}
 

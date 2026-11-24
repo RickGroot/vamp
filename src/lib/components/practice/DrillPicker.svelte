@@ -77,8 +77,8 @@
 			</p>
 		{:else}
 			<p class="group__note hint">
-				Follows the sketch’s loop range and meter, and never changes it. Set “Then” to cycle the
-				whole progression through keys.
+				Follows the sketch’s loop range, key and meter, and never changes it. Set “Move the
+				changes” to cycle the whole progression through keys.
 			</p>
 		{/if}
 	</div>
@@ -184,7 +184,7 @@
 				<label class="label" for="p-keymode">{practice.usesSong ? 'Move the changes' : 'Then'}</label>
 				<select
 					id="p-keymode"
-					value={practice.keyMode}
+					value={practice.cycleMode}
 					onchange={(e) => practice.setKeyMode(select(e) as never)}
 				>
 					{#each KEY_MODES as mode (mode.id)}<option value={mode.id}>{mode.label}</option>{/each}
@@ -192,7 +192,7 @@
 			</div>
 
 			<div class="opt">
-				<label class="label" for="p-reps">Keys</label>
+				<label class="label" for="p-reps">{practice.usesSong ? 'Times' : 'Keys'}</label>
 				<select id="p-reps" value={practice.reps} onchange={(e) => practice.setReps(Number(select(e)))}>
 					{#each REP_OPTIONS as n (n)}<option value={n}>{n}</option>{/each}
 				</select>
