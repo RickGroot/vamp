@@ -103,7 +103,7 @@
 	const noKey = $derived(!!lick && !call);
 
 	const phase = $derived<CallPhase>(
-		callPhase(learn.phase, learn.cue, call?.turnCue ?? 0, learn.activeFor(owner), clockTurn)
+		callPhase(learn.phase, learn.cue, call?.turnCue ?? 0, learn.owner === owner, clockTurn)
 	);
 	const callSounding = $derived(learn.activeFor(owner));
 	const hearing = $derived(learn.activeFor(`${owner}:hear`));
