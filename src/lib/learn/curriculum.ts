@@ -2038,9 +2038,17 @@ export const LESSONS: Lesson[] = [
 				hold: 4
 			},
 			{
+				kind: 'listen',
+				text: 'A third visit. {III7} leans on {vi7}, so for a moment {vi7} sounds like home. Then {ii7} and {V7} bring you back to {Imaj7}.',
+				mode: 'major',
+				cadence: true,
+				chords: [c(0, 'maj7'), c(4, '7'), c(9, 'm7'), c(2, 'm7'), c(7, '7'), c(0, 'maj7')],
+				hold: 4
+			},
+			{
 				kind: 'read',
 				text: [
-					'A dominant seventh placed a fifth above a chord makes that chord feel like home for a moment. That is a visit: the key has not moved, because the next chord brings you back. Here {VI7} leans on {ii7}, and {II7} leans on {V7}. Your song marks such a chord when it reads the tune in this key.'
+					'A dominant seventh placed a fifth above a chord makes that chord feel like home for a moment. That is a visit: the key has not moved, because the next chord brings you back. Here {VI7} leans on {ii7}, {II7} on {V7} and {III7} on {vi7}. Your song marks such a chord when it reads the tune in this key.'
 				]
 			},
 			{
