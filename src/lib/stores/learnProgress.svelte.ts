@@ -8,7 +8,7 @@
 
 import { browser } from '$app/environment';
 import type { LessonProgress } from '$lib/learn/curriculum';
-import { enrol, recordResult, type ItemProgress } from '$lib/learn/srs';
+import { enrol, recordResult, rerecordResult, type ItemProgress } from '$lib/learn/srs';
 import { readLearn, writeLearn, LEARN_VERSION, MAX_STEP } from '$lib/storage/learn';
 
 /** localStorage, or null where merely touching it throws (some privacy modes). */
@@ -53,6 +53,16 @@ class LearnProgressStore {
 	/** Record one answered question. */
 	record(itemId: string, correct: boolean, now: number = Date.now()): void {
 		this.items = { ...this.items, [itemId]: recordResult(this.get(itemId), correct, now) };
+		this.save();
+	}
+
+	/**
+	 * Replace this question's record: recompute from the record as it was BEFORE
+	 * the question (`before`, undefined for a never-answered item). Used only when
+	 * a self-check corrects a keyboard verdict (srs.ts rerecordResult).
+	 */
+	rerecord(itemId: string, before: ItemProgress | undefined, correct: boolean, now: number = Date.now()): void {
+		this.items = { ...this.items, [itemId]: rerecordResult(before, correct, now) };
 		this.save();
 	}
 

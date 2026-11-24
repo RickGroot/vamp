@@ -16,6 +16,7 @@ import {
 	MAX_PER_ITEM,
 	newProgress,
 	recordResult,
+	rerecordResult,
 	scheduled,
 	SESSION_SIZE,
 	type ItemProgress
@@ -302,5 +303,33 @@ describe('review wording, answers and the lick cap', () => {
 				buildSession(progress, items, NOW, lcg(seed)).map((i) => i.id)
 			);
 		}
+	});
+});
+
+describe('rerecordResult', () => {
+	const cases: [string, ItemProgress | undefined, number][] = [
+		['never answered', undefined, T0],
+		['box 1', { box: 1, due: T0, seen: 1, last: T0 - DAY_MS }, T0],
+		['box 3 and due', { box: 3, due: T0, seen: 4, last: T0 - 4 * DAY_MS }, T0],
+		['box 3 and not due', { box: 3, due: days(3), seen: 4, last: T0 }, T0 + 3600_000]
+	];
+	for (const [name, before, now] of cases)
+		for (const correct of [true, false])
+			it(`${name}: a corrected ${correct ? 'right' : 'wrong'} equals a first ${correct ? 'right' : 'wrong'}`, () => {
+				expect(rerecordResult(before, correct, now)).toEqual(recordResult(before, correct, now));
+			});
+
+	it('right over a recorded wrong is not a box too low', () => {
+		const before: ItemProgress = { box: 3, due: T0, seen: 4, last: T0 - 4 * DAY_MS };
+		const wrong = recordResult(before, false, T0);
+		expect(wrong.box).toBe(1);
+		const fixed = rerecordResult(before, true, T0);
+		expect(fixed.box).toBe(4);
+		expect(fixed.seen).toBe(before.seen + 1);
+	});
+	it('wrong over a recorded right undoes the climb', () => {
+		const before: ItemProgress = { box: 3, due: T0, seen: 4, last: T0 - 4 * DAY_MS };
+		expect(recordResult(before, true, T0).box).toBe(4);
+		expect(rerecordResult(before, false, T0).box).toBe(1);
 	});
 });

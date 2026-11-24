@@ -193,8 +193,8 @@ Each phase is one commit, checked by hand before it lands, as with Learn.
 3. **Call and response in Learn.** (BUILT 2026-11-24)
    - Phase 2 (your own licks) is still to come; Phase 3 was built on the built-ins only.
    - The Licks mode (`?mode=licks`, last tab), LickCard (self-check only), `lickCallRun` (`learn/lickCall.ts`), review items (`learn/lickItems.ts`), Review rendering a LickCard.
-   - No MIDI grading yet: Phase 4 adds it. Got it / Not yet is the only answer.
-4. **MIDI grading.** `captureNotes` in the midi store, `gradeLine`, the Keyboard toggle on LickCard.
+   - MIDI grading: built in Phase 4 (keyboard verdict first, Got it / Not yet can correct it once).
+4. **MIDI grading.** (BUILT 2026-11-24; follow-up: a keyboard grade in Practice, out of scope here) `captureNotes` in the midi store, `gradeLine`, the Keyboard toggle on LickCard.
 
 ## Architecture fit
 

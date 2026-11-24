@@ -26,6 +26,7 @@
 	import { beamGroupQuarters, beamGroups, toMeasures, type Piece } from '$lib/practice/measures';
 	import { barBeats, beatsToQuarters } from '$lib/model/time';
 	import type { DrillNote } from '$lib/practice/types';
+	import type { NoteMark } from '$lib/learn/lickTurn';
 	import type { TimeSignature } from '$lib/model/types';
 	import type { StaveNote as VexStaveNote } from 'vexflow';
 
@@ -37,8 +38,15 @@
 		final?: boolean;
 		/** Upper bound on notes per row; the real figure is fitted to the width. */
 		maxPerRow?: number;
+		/** Per note of `notes` (same indices): 'missed' draws an X notehead, anything else the usual one. Learn's lick grading. */
+		marks?: NoteMark[] | null;
 	}
-	let { notes, meter = { numerator: 4, denominator: 4 }, final = false, maxPerRow = 16 }: Props = $props();
+	let { notes, meter = { numerator: 4, denominator: 4 }, final = false, maxPerRow = 16, marks = null }: Props = $props();
+
+	// The X notehead is VexFlow's own key suffix ('c/4/x'). Checked against the installed
+	// 5.0.0 tables: 'X' maps to SMuFL noteheadXBlack (U+E0A9, half U+E0A8) and the stem
+	// stays, so no overlay fallback is needed. The words (missedWords) carry the marks too.
+	const vexKey = (key: string, mark: NoteMark | undefined) => (mark === 'missed' ? `${key}/x` : key);
 
 	const quartersPerBar = $derived(beatsToQuarters(barBeats(meter), meter));
 	const beamSpan = $derived(beamGroupQuarters(meter));
@@ -87,7 +95,8 @@
 			quartersPerBar,
 			beamSpan,
 			final,
-			notes.map((n) => [n.midi, n.name, n.atQuarters, n.durQuarters, n.chord])
+			notes.map((n) => [n.midi, n.name, n.atQuarters, n.durQuarters, n.chord]),
+			marks ? marks.map((m) => (m === 'missed' ? 1 : 0)) : null
 		])
 	);
 
@@ -153,7 +162,7 @@
 			const key = voicedToVexKey({ midi: n.midi, name: n.name });
 			// Stems follow the staff (up below the middle line, down above it); a beam
 			// then settles one direction for its whole group.
-			const note = new StaveNote({ keys: [key.key], duration, autoStem: true });
+			const note = new StaveNote({ keys: [vexKey(key.key, marks?.[piece.note])], duration, autoStem: true });
 			note.setStyle(inked);
 			const accidental = shownAccidental.get(piece);
 			if (accidental) {

@@ -21,3 +21,4 @@ Document: `docs/licks-design.md`
 - **Fit a lick into your own song's changes**: deferred
 - **Library size and styles per phase**: deferred
 - **MIDI recording of licks**: deferred
+- **Keyboard grading of a lick (Licks Phase 4)**: the keyboard's verdict is recorded first; Got it / Not yet may correct it once through `rerecord` _(Claude's recommendation)_

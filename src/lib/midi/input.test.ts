@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Chord } from 'tonal';
-import { ChordGesture, detectChordSymbol } from './input';
+import { ChordGesture, detectChordSymbol, dispatchMessage, gestureTarget, noteOnOf } from './input';
 
 /** Parse the detected symbol back with tonal to assert root + quality robustly. */
 const parse = (sym: string) => Chord.get(sym);
@@ -127,5 +127,100 @@ describe('ChordGesture', () => {
 		const g = new ChordGesture();
 		feed(g, [on(60), on(64), on(67)]);
 		expect(feed(g, [on(62), on(65), on(69), off(62), off(65), off(69)])).toEqual([]);
+	});
+});
+
+describe('noteOnOf', () => {
+	it('reads a note-on on any channel', () => {
+		expect(noteOnOf(on(60))).toEqual({ note: 60, velocity: 100 });
+		expect(noteOnOf(on(72, 1, 15))).toEqual({ note: 72, velocity: 1 });
+	});
+	it('is null for everything that is not a sounding note-on', () => {
+		expect(noteOnOf(on(60, 0))).toBeNull();
+		expect(noteOnOf(off(60))).toBeNull();
+		expect(noteOnOf([0xb0, 64, 127])).toBeNull();
+		expect(noteOnOf([0xe0, 0, 64])).toBeNull();
+		expect(noteOnOf([0xf8])).toBeNull();
+		expect(noteOnOf([0x90, 60])).toBeNull();
+		expect(noteOnOf([0x90, 128, 100])).toBeNull();
+		expect(noteOnOf([0x90, -1, 100])).toBeNull();
+		expect(noteOnOf([0x90, 60.5, 100])).toBeNull();
+		expect(noteOnOf([0x90, 60, NaN])).toBeNull();
+	});
+});
+
+describe('dispatchMessage', () => {
+	const setup = () => {
+		const notes: [number, number][] = [];
+		const gestures: unknown[] = [];
+		const order: string[] = [];
+		const sinks = {
+			onNote: (n: number, t: number) => {
+				notes.push([n, t]);
+				order.push('note');
+			},
+			onGesture: (g: unknown) => {
+				gestures.push(g);
+				order.push('gesture');
+			}
+		};
+		return { notes, gestures, order, sinks, g: new ChordGesture() };
+	};
+
+	it('hands each note-on its timestamp, in the order played', () => {
+		const s = setup();
+		dispatchMessage(on(64), 10, s.g, s.sinks);
+		dispatchMessage(on(60), 20, s.g, s.sinks);
+		dispatchMessage(on(67), 30, s.g, s.sinks);
+		expect(s.notes).toEqual([[64, 10], [60, 20], [67, 30]]);
+	});
+	it('reports no note for a note-off, and still the gesture', () => {
+		const s = setup();
+		dispatchMessage(on(60), 1, s.g, s.sinks);
+		dispatchMessage(off(60), 2, s.g, s.sinks);
+		expect(s.notes).toHaveLength(1);
+		expect(s.gestures).toHaveLength(1);
+	});
+	it('falls back to the injected clock for a zero timestamp', () => {
+		const s = setup();
+		dispatchMessage(on(60), 0, s.g, s.sinks, () => 777);
+		expect(s.notes).toEqual([[60, 777]]);
+	});
+	it('works with no note sink', () => {
+		const s = setup();
+		dispatchMessage(on(60), 5, s.g, { onGesture: s.sinks.onGesture });
+		dispatchMessage(off(60), 6, s.g, { onGesture: s.sinks.onGesture });
+		expect(s.gestures).toHaveLength(1);
+	});
+	it('fires the note before the gesture', () => {
+		const s = setup();
+		dispatchMessage(on(60), 1, s.g, s.sinks);
+		dispatchMessage(off(60), 2, s.g, s.sinks);
+		expect(s.order).toEqual(['note', 'gesture']);
+	});
+});
+
+describe('gestureTarget', () => {
+	const gest = { notes: [60, 64, 67], symbol: 'C' };
+	const none = { notes: [60], symbol: null };
+	it('follows the precedence noter, captor, song, ignore', () => {
+		expect(gestureTarget({ noter: true, captor: true }, gest)).toBe('swallow');
+		expect(gestureTarget({ noter: false, captor: true }, none)).toBe('captor');
+		expect(gestureTarget({ noter: false, captor: false }, gest)).toBe('song');
+		expect(gestureTarget({ noter: false, captor: false }, none)).toBe('ignore');
+	});
+	it('with a note capture held, nothing reaches the song or a captor', () => {
+		for (const captor of [true, false])
+			for (const g of [gest, none]) {
+				const t = gestureTarget({ noter: true, captor }, g);
+				expect(t).not.toBe('song');
+				expect(t).not.toBe('captor');
+			}
+	});
+	it('is total over the whole product', () => {
+		for (const noter of [true, false])
+			for (const captor of [true, false])
+				for (const g of [gest, none])
+					expect(['swallow', 'captor', 'song', 'ignore']).toContain(gestureTarget({ noter, captor }, g));
 	});
 });

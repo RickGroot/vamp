@@ -86,6 +86,56 @@ export class ChordGesture {
 	}
 }
 
+/** A note-on (any channel, velocity above 0): the note and velocity. Anything else is null. */
+export function noteOnOf(data: ArrayLike<number>): { note: number; velocity: number } | null {
+	if (data.length < 3) return null;
+	if ((data[0] & 0xf0) !== 0x90) return null;
+	const note = data[1];
+	const velocity = data[2];
+	if (!(velocity > 0) || !Number.isInteger(note) || note < 0 || note > 127) return null;
+	return { note, velocity };
+}
+
+export interface MessageSinks {
+	onGesture: (gesture: MidiGesture) => void;
+	/** Every note-on, as it happens: the note and the message's timestamp. */
+	onNote?: (note: number, atMs: number) => void;
+}
+
+/**
+ * One raw message through the note stream and the gesture reader. The note goes
+ * to its sink BEFORE the gesture is fed, so a chord captor never sees a gesture
+ * whose notes the noter has not already seen. Pure apart from the sinks.
+ */
+export function dispatchMessage(
+	data: ArrayLike<number>,
+	timeStamp: number,
+	gesture: ChordGesture,
+	sinks: MessageSinks,
+	now: () => number = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+): void {
+	const on = noteOnOf(data);
+	// A timestamp of 0 (some drivers) is "no timestamp": use the arrival time.
+	if (on && sinks.onNote) sinks.onNote(on.note, timeStamp > 0 ? timeStamp : now());
+	const done = gesture.message(data);
+	if (done) sinks.onGesture(done);
+}
+
+/** Where a finished gesture goes. */
+export type GestureTarget = 'swallow' | 'captor' | 'song' | 'ignore';
+
+/**
+ * The routing rule of the midi store, pure so it is tested. A note capture (a
+ * lick played back) owns the keyboard: nothing else hears it, so a played line
+ * can never become a bar. An Ear question's captor takes every gesture; with
+ * no holder only a named chord reaches the song.
+ */
+export function gestureTarget(held: { noter: boolean; captor: boolean }, gesture: MidiGesture): GestureTarget {
+	if (held.noter) return 'swallow';
+	if (held.captor) return 'captor';
+	return gesture.symbol ? 'song' : 'ignore';
+}
+
 export interface MidiStartResult {
 	ok: boolean;
 	error?: string;
@@ -96,6 +146,7 @@ export class MidiInput {
 	private access: MIDIAccess | null = null;
 	private gesture = new ChordGesture();
 	private onGesture: (gesture: MidiGesture) => void = () => {};
+	private onNote: ((note: number, atMs: number) => void) | undefined;
 	private readonly handler = (e: MIDIMessageEvent) => this.handle(e);
 
 	get supported(): boolean {
@@ -103,9 +154,13 @@ export class MidiInput {
 	}
 
 	/** Every finished gesture goes to `onGesture`, chord or not: the caller decides. */
-	async enable(onGesture: (gesture: MidiGesture) => void): Promise<MidiStartResult> {
+	async enable(
+		onGesture: (gesture: MidiGesture) => void,
+		onNote?: (note: number, atMs: number) => void
+	): Promise<MidiStartResult> {
 		if (!this.supported) return { ok: false, error: "This browser doesn't support Web MIDI." };
 		this.onGesture = onGesture;
+		this.onNote = onNote;
 		try {
 			this.access = await navigator.requestMIDIAccess({ sysex: false });
 		} catch (e) {
@@ -131,8 +186,7 @@ export class MidiInput {
 
 	private handle(e: MIDIMessageEvent): void {
 		if (!e.data) return;
-		const done = this.gesture.message(e.data);
-		if (done) this.onGesture(done);
+		dispatchMessage(e.data, e.timeStamp, this.gesture, { onGesture: this.onGesture, onNote: this.onNote });
 	}
 
 	disable(): void {

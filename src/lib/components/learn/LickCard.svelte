@@ -4,10 +4,18 @@
 	// until the turn is over; you say Got it or Not yet (self-check only), and the
 	// answer is recorded through the same store as an Ear question. Nothing starts
 	// by itself: the key is shown, and a tap on Play begins.
+	//
+	// With the Keyboard on (Chromium Web MIDI) the turn is collected from the
+	// keyboard instead: the notes played are graded by pitch class and in order (no
+	// rhythm, any octave), the verdict is recorded at once, and the staff is marked
+	// with X noteheads on what was missed. Got it / Not yet still works, and may
+	// correct the keyboard once (rerecord from the pre-question snapshot). While the
+	// card holds the keyboard nothing played reaches the song (midi.captureNotes).
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { unlockAudio } from '$lib/audio/context';
 	import { learn } from '$lib/stores/learn.svelte';
 	import { learnProgress } from '$lib/stores/learnProgress.svelte';
+	import { midi } from '$lib/stores/midi.svelte';
 	import { view } from '$lib/stores/view.svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { lickFor, type LickItem } from '$lib/learn/lickItems';
@@ -17,6 +25,7 @@
 		CALL_TEMPOS,
 		callPhase,
 		callStatus,
+		keyboardLine,
 		lickCallRun,
 		pickLickKey,
 		turnDelayMs,
@@ -24,6 +33,19 @@
 		type LickCallRun,
 		type Verdict
 	} from '$lib/learn/lickCall';
+	import {
+		CLOSED_WINDOW,
+		OPEN_ANSWER,
+		answerStep,
+		gradeDue,
+		marksByNote,
+		missedWords,
+		windowStep,
+		type AnswerState,
+		type TurnWindow
+	} from '$lib/learn/lickTurn';
+	import { gradeLine, type LineGrade } from '$lib/learn/grade';
+	import type { ItemProgress } from '$lib/learn/srs';
 	import { DAY_MS, backWhen, isDue } from '$lib/learn/srs';
 	import { LICK_STYLE_NAMES } from '$lib/licks/library';
 	import DrillStaff from '$lib/components/practice/DrillStaff.svelte';
@@ -51,7 +73,13 @@
 	let showNotes = $state(false);
 	let stopped = $state(false);
 	let clockTurn = $state(false);
-	let answer = $state<Verdict | null>(null);
+	// The answer: what is shown, whether it can still be corrected, and who gave it.
+	let ans = $state.raw<AnswerState>(OPEN_ANSWER);
+	const answer = $derived<Verdict | null>(ans.shown);
+	let win = $state.raw<TurnWindow>(CLOSED_WINDOW);
+	let grade = $state.raw<LineGrade | null>(null);
+	// The record as it was BEFORE this question, for the one correction (rerecord).
+	let before: ItemProgress | undefined;
 	let nextButton = $state<HTMLButtonElement>();
 
 	// One owner per question; the item id is in it, so two items over one lick never share one.
@@ -91,6 +119,100 @@
 		return () => clearTimeout(t);
 	});
 
+	const kbdOn = $derived(midi.status === 'on');
+	const MARK_NOW = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+	// Hold the keyboard for as long as the card is mounted with it on, so nothing
+	// played on this card can reach the song. The release also runs on unmount.
+	$effect(() => {
+		if (!kbdOn) return;
+		const release = midi.captureNotes((note, atMs) => {
+			win = windowStep(win, { type: 'note', midi: note, atMs });
+		});
+		return release;
+	});
+
+	// Open / close the turn window from the call's phase. Declared before the arm
+	// below: the first 'ready' closes the window, and arming then re-opens it.
+	$effect(() => {
+		const p = phase;
+		untrack(() => {
+			win = windowStep(win, { type: 'phase', phase: p, atMs: MARK_NOW() });
+			// 'ready' closes the window; an unanswered turn stays armed for the next Play.
+			if (p === 'ready' && kbdOn && ans.shown === null) win = windowStep(CLOSED_WINDOW, { type: 'arm' });
+		});
+	});
+
+	// Armed whenever the keyboard is on and nothing has been answered yet.
+	$effect(() => {
+		const on = kbdOn;
+		untrack(() => {
+			if (on && ans.shown === null) {
+				win = windowStep(win, { type: 'arm' });
+				// Switched on mid-turn: replay the current phase so the window opens.
+				if (phase === 'turn' || phase === 'done') win = windowStep(win, { type: 'phase', phase, atMs: MARK_NOW() });
+			} else win = windowStep(win, { type: 'disarm' });
+		});
+	});
+
+	// Grade when the line is complete and settled, or when the turn is over.
+	$effect(() => {
+		const w = win;
+		const c = call;
+		if (!c || !kbdOn || w.state === 'graded' || w.state === 'closed') return;
+		if (untrack(() => ans.shown) !== null) return;
+		const d = gradeDue(w, c.expected, MARK_NOW());
+		if (d.due) {
+			untrack(() => gradeWindow(w, c));
+			return;
+		}
+		if (d.waitMs === null) return;
+		const t = setTimeout(() => (win = { ...win }), d.waitMs + 1);
+		return () => clearTimeout(t);
+	});
+
+	function gradeWindow(w: TurnWindow, c: LickCallRun) {
+		const g = gradeLine(c.expected, w.notes.map((n) => n.midi));
+		win = windowStep(w, { type: 'graded' });
+		grade = g;
+		if (g.verdict === 'none') {
+			// Too little heard to judge: nothing recorded, the card says so.
+			if (sounding) stop();
+			heard = true;
+			return;
+		}
+		if (sounding) stop();
+		heard = true;
+		showNotes = true;
+		answerWith('keyboard', g.verdict);
+	}
+
+	/** Every verdict goes through answerStep: the keyboard first, one correction after. */
+	function answerWith(from: 'keyboard' | 'self', verdict: Verdict) {
+		const { state, record } = answerStep(ans, { from, verdict });
+		ans = state;
+		if (!record) return;
+		const correct = record.verdict === 'right';
+		if (record.how === 'first') {
+			before = learnProgress.items[item.id];
+			learnProgress.record(item.id, correct);
+		} else {
+			learnProgress.rerecord(item.id, before, correct);
+		}
+		onanswer?.(correct);
+	}
+
+	function toggleKeyboard() {
+		if (midi.status === 'on') midi.disable();
+		else void midi.enable();
+	}
+
+	/** A fresh, armed turn window (when the keyboard is on and nothing is answered). */
+	function rearm() {
+		grade = null;
+		win = kbdOn && ans.shown === null ? windowStep(CLOSED_WINDOW, { type: 'arm' }) : CLOSED_WINDOW;
+	}
+
 	function forgetAll() {
 		learn.forget(owner);
 		learn.forget(`${owner}:note`);
@@ -113,7 +235,10 @@
 			forgetAll();
 			clockTurn = false;
 			stopped = false;
-			if (answer === null) heard = false;
+			if (answer === null) {
+				heard = false;
+				rearm();
+			}
 			// The key that fit the old instrument may not fit this one: pick another unless one was asked for.
 			if (!fixedKey && lick && (!keyName || !lickCallRun(lick, { root: keyName, offset: off, tempo }).ok)) {
 				keyName = chooseKey(keyName ?? undefined);
@@ -133,7 +258,10 @@
 		clockTurn = false;
 		stopped = false;
 		// A second attempt is heard, not read.
-		if (answer === null) showNotes = false;
+		if (answer === null) {
+			showNotes = false;
+			rearm();
+		}
 		void learn.play(call, owner);
 	}
 
@@ -165,12 +293,10 @@
 	}
 
 	function say(correct: boolean) {
-		if (answer !== null || !heard) return;
+		if (ans.locked || !heard) return;
 		if (sounding) stop();
-		learnProgress.record(item.id, correct);
-		answer = correct ? 'right' : 'wrong';
+		answerWith('self', correct ? 'right' : 'wrong');
 		showNotes = true;
-		onanswer?.(correct);
 	}
 
 	function next() {
@@ -181,7 +307,9 @@
 		showNotes = false;
 		stopped = false;
 		clockTurn = false;
-		answer = null;
+		ans = OPEN_ANSWER;
+		before = undefined;
+		rearm();
 		keyName = chooseKey(previous);
 	}
 
@@ -191,14 +319,17 @@
 		tempo = value;
 		clockTurn = false;
 		stopped = false;
-		if (answer === null) heard = false;
+		if (answer === null) {
+			heard = false;
+			rearm();
+		}
 	}
 
 	onMount(() => workspace.register(toggle));
 	onDestroy(forgetAll);
 
 	$effect(() => {
-		if (answer !== null && nextButton) nextButton.focus({ preventScroll: true });
+		if (answer !== null && ans.source === 'self' && nextButton) nextButton.focus({ preventScroll: true });
 	});
 
 	// ---- what the card says ----
@@ -220,25 +351,34 @@
 
 	const status = $derived.by(() => {
 		if (hearing) return 'Listen.';
-		if (stopped && phase === 'ready' && answer === null) return 'Stopped. Play to start again.';
+		if (stopped && phase === 'ready' && answer === null && grade?.verdict !== 'none') return 'Stopped. Play to start again.';
+		// Say what was missed in words too: the X noteheads are not the only carrier.
+		// The strays are already in the line, so only the missed notes are added.
+		const words = ans.source === 'keyboard' && answer === 'wrong' ? missedWords(grade, false) : '';
+		const backTail = back ? ` ${back.charAt(0).toUpperCase() + back.slice(1)}.` : '';
 		const shown: CallPhase = heard && phase === 'ready' ? 'done' : phase;
-		return callStatus({
+		const line = callStatus({
 			phase: shown,
 			missingLick,
 			noKey,
 			fixedKey: !!fixedKey,
-			kbd: false,
-			early: 0,
-			played: 0,
+			kbd: kbdOn,
+			early: win.ring.length,
+			played: win.notes.length,
 			expected: call?.expected.length ?? 0,
-			grade: null,
+			grade,
 			answer,
-			source: answer === null ? null : 'self',
-			back
+			source: ans.source,
+			back: words ? null : back
 		});
+		return words ? `${line} ${words}${backTail}` : line;
 	});
 
 	const staffShown = $derived(showNotes || answer !== null);
+	// X noteheads on the notes a keyboard answer missed; nothing for a self-check.
+	const marks = $derived(
+		call && ans.source === 'keyboard' && grade ? marksByNote(call.staff.notes, grade.marks) : null
+	);
 	const playLabel = $derived(sounding ? 'Stop' : heard ? 'Play again' : 'Play');
 	const modeName = $derived(lick?.mode ?? 'major');
 </script>
@@ -296,6 +436,22 @@
 		</p>
 	{/if}
 
+	{#if midi.supported}
+		<div class="kbd">
+			<button
+				class="bar-btn"
+				class:bar-btn--on={kbdOn}
+				aria-pressed={kbdOn}
+				disabled={midi.status === 'requesting' || sounding}
+				onclick={toggleKeyboard}>Keyboard</button
+			>
+			<p class="hint kbd__line">{keyboardLine({ status: midi.status, device: midi.device, offset: view.offset })}</p>
+		</div>
+		{#if midi.status === 'error' && midi.error}
+			<p class="kbd__error" role="alert">{midi.error}</p>
+		{/if}
+	{/if}
+
 	{#if heard && call}
 		<div class="tools" role="group" aria-label="After your turn">
 			{#if !staffShown}
@@ -307,13 +463,13 @@
 
 	{#if staffShown && call}
 		<div class="staff">
-			<DrillStaff notes={call.staff.notes} meter={lick?.timeSignature} final={true} />
+			<DrillStaff notes={call.staff.notes} meter={lick?.timeSignature} final={true} {marks} />
 		</div>
 	{/if}
 
-	{#if heard && answer === null}
-		<div class="verdict" role="group" aria-label="How did it go?">
-			<span class="label">How did it go?</span>
+	{#if heard && !ans.locked}
+		<div class="verdict" role="group" aria-label={answer === null ? 'How did it go?' : 'Correct the keyboard'}>
+			<span class="label">{answer === null ? 'How did it go?' : 'Disagree? Say how it went'}</span>
 			<button class="bar-btn" onclick={() => say(true)}>Got it</button>
 			<button class="bar-btn" onclick={() => say(false)}>Not yet</button>
 		</div>
@@ -460,6 +616,24 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
+	}
+
+	.kbd {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.kbd__line {
+		flex: 1 1 14rem;
+		margin: 0;
+	}
+
+	.kbd__error {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--danger);
 	}
 
 	.staff {

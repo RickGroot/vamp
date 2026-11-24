@@ -53,6 +53,19 @@ export function recordResult(prev: ItemProgress | undefined, correct: boolean, n
 }
 
 /**
+ * The record that REPLACES a question's first record when the learner's own
+ * word disagrees with the keyboard's. recordResult is asymmetric (wrong always
+ * drops to box 1, right climbs only when due), so a second plain recordResult
+ * would start from the first record: a right after a wrong would land a box
+ * too low, a wrong after a right could not undo the box earned. Recompute from
+ * the snapshot taken before the question instead, so the corrected record is
+ * exactly what that answer would have made as the FIRST one (`seen` counts once).
+ */
+export function rerecordResult(before: ItemProgress | undefined, correct: boolean, now: number): ItemProgress {
+	return recordResult(before, correct, now);
+}
+
+/**
  * Put items into the schedule, in box 1 and due now: what finishing a lesson
  * does with the exercises it taught. An item that is already scheduled keeps
  * its place — a lesson must never send what you know back to box 1.
